@@ -49,14 +49,14 @@ export const FloatingGiftCard: React.FC<FloatingGiftCardProps> = ({
         y: 0,
         rotateX: 0,
         x: mousePosition.x,
-        y: mousePosition.y,
+        // y: mousePosition.y,
       }}
       transition={{
         opacity: { duration: 0.8, delay },
         y: { duration: 0.8, delay },
         rotateX: { duration: 0.8, delay },
         x: { type: 'spring', stiffness: 50, damping: 20 },
-        y: { type: 'spring', stiffness: 50, damping: 20 },
+        // y: { type: 'spring', stiffness: 50, damping: 20 },
       }}
       style={{
         transformStyle: 'preserve-3d',
