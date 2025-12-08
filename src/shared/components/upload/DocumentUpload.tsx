@@ -1,0 +1,170 @@
+// src/shared/components/upload/DocumentUpload.tsx
+import React, { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, X, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+
+const cn = (...classes: (string | undefined | false)[]) => {
+  return classes.filter(Boolean).join(' ');
+};
+
+interface DocumentUploadProps {
+  label: string;
+  accept?: Record<string, string[]>;
+  maxSize?: number;
+  required?: boolean;
+  error?: string;
+  value?: File | null;
+  onChange: (file: File | null) => void;
+  helperText?: string;
+}
+
+export const DocumentUpload: React.FC<DocumentUploadProps> = ({
+  label,
+  accept = { 'application/pdf': ['.pdf'], 'image/*': ['.png', '.jpg', '.jpeg'] },
+  maxSize = 5 * 1024 * 1024, // 5MB
+  required = false,
+  error,
+  value,
+  onChange,
+  helperText,
+}) => {
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      onChange(acceptedFiles[0]);
+    }
+    setIsDragActive(false);
+  }, [onChange]);
+
+  const { getRootProps, getInputProps, isDragReject } = useDropzone({
+    onDrop,
+    accept,
+    maxSize,
+    multiple: false,
+    onDragEnter: () => setIsDragActive(true),
+    onDragLeave: () => setIsDragActive(false),
+  });
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(null);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  return (
+    <div className="w-full">
+      {/* Label */}
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+
+      {/* Upload Area */}
+      <motion.div
+        {...getRootProps()}
+        className={cn(
+          'relative border-2 border-dashed rounded-xl p-6 transition-all cursor-pointer',
+          isDragActive && 'border-blue-500 bg-blue-50',
+          isDragReject && 'border-red-500 bg-red-50',
+          error && 'border-red-500',
+          !isDragActive && !isDragReject && !error && 'border-gray-300 hover:border-blue-400 hover:bg-gray-50',
+          value && 'border-green-500 bg-green-50'
+        )}
+        whileHover={{ scale: value ? 1 : 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <input {...getInputProps()} />
+
+        <AnimatePresence mode="wait">
+          {!value ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-center"
+            >
+              <motion.div
+                animate={isDragActive ? { scale: [1, 1.2, 1] } : {}}
+                transition={{ duration: 0.5, repeat: isDragActive ? Infinity : 0 }}
+              >
+                <Upload className={cn(
+                  'mx-auto h-12 w-12 mb-3',
+                  isDragActive ? 'text-blue-500' : 'text-gray-400'
+                )} />
+              </motion.div>
+
+              <p className="text-sm text-gray-600 mb-1">
+                <span className="font-semibold text-blue-600">Click to upload</span> or drag and drop
+              </p>
+              <p className="text-xs text-gray-500">
+                PDF, PNG, JPG up to {formatFileSize(maxSize)}
+              </p>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="filled"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {value.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatFileSize(value.size)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <motion.button
+                  onClick={handleRemove}
+                  className="p-1 hover:bg-red-100 rounded-full transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X className="w-5 h-5 text-red-600" />
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Helper Text or Error */}
+      {(helperText || error) && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2 flex items-center gap-1"
+        >
+          {error ? (
+            <>
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <p className="text-sm text-red-600">{error}</p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">{helperText}</p>
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
+};
