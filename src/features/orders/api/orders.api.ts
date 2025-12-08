@@ -1,7 +1,7 @@
 // src/features/orders/api/orders.api.ts - REAL API INTEGRATION! 🔌
 import type { OrdersResponse, Order, PurchaseVerification, CreateOrderData } from '../types/order.types';
 
-const API_BASE_URL = 'http://localhost:4001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Helper to get auth token
 const getAuthToken = () => {

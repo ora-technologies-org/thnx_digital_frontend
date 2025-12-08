@@ -1,415 +1,3 @@
-// // src/pages/admin/PendingMerchantsPage.tsx - PENDING MERCHANTS! ⏳
-// import React, { useState } from 'react';
-// import { motion } from 'framer-motion';
-// import { 
-//   CheckCircle, XCircle, Clock, User, Mail, Phone, 
-//   Building, MapPin, FileText, CreditCard, Eye
-// } from 'lucide-react';
-// import { AdminLayout } from '../../shared/components/layout/AdminLayout';
-// import { Button } from '../../shared/components/ui/Button';
-// import { Card, CardContent } from '../../shared/components/ui/Card';
-// import { Spinner } from '../../shared/components/ui/Spinner';
-// import { Badge } from '../../shared/components/ui/Badge';
-// import { usePendingMerchants, useApproveMerchant, useRejectMerchant } from '../../features/admin/hooks/useAdmin';
-// import type { MerchantUser } from '../../features/admin/api/admin.api';
-
-// export const PendingMerchantsPage: React.FC = () => {
-//   const { data: merchants, isLoading } = usePendingMerchants();
-//   const approveMutation = useApproveMerchant();
-//   const rejectMutation = useRejectMerchant();
-
-//   const [selectedMerchant, setSelectedMerchant] = useState<MerchantUser | null>(null);
-//   const [showApproveModal, setShowApproveModal] = useState(false);
-//   const [showRejectModal, setShowRejectModal] = useState(false);
-//   const [notes, setNotes] = useState('');
-//   const [rejectionReason, setRejectionReason] = useState('');
-
-//   const handleApprove = async () => {
-//     if (!selectedMerchant) return;
-    
-//     try {
-//       await approveMutation.mutateAsync({
-//         merchantId: selectedMerchant.userId,
-//         notes: notes || 'All documents verified. Approved.',
-//       });
-//       setShowApproveModal(false);
-//       setSelectedMerchant(null);
-//       setNotes('');
-//       alert('Merchant approved successfully!');
-//     } catch (error) {
-//       alert('Failed to approve merchant');
-//     }
-//   };
-
-//   const handleReject = async () => {
-//     if (!selectedMerchant || !rejectionReason.trim()) {
-//       alert('Please provide a rejection reason');
-//       return;
-//     }
-    
-//     try {
-//       await rejectMutation.mutateAsync({
-//         merchantId: selectedMerchant.userId,
-//         reason: rejectionReason,
-//         notes: notes || 'Rejected due to incomplete/invalid documents.',
-//       });
-//       setShowRejectModal(false);
-//       setSelectedMerchant(null);
-//       setRejectionReason('');
-//       setNotes('');
-//       alert('Merchant rejected successfully!');
-//     } catch (error) {
-//       alert('Failed to reject merchant');
-//     }
-//   };
-
-//   if (isLoading) {
-//     return (
-//       <AdminLayout>
-//         <div className="flex justify-center items-center h-64">
-//           <Spinner size="lg" />
-//         </div>
-//       </AdminLayout>
-//     );
-//   }
-
-//   return (
-//     <AdminLayout>
-//       <div>
-//         {/* Header */}
-//         <div className="mb-8">
-//           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-//             <Clock className="w-8 h-8 text-orange-600" />
-//             Pending Merchant Verifications
-//           </h1>
-//           <p className="text-gray-600 mt-2">
-//             Review and verify merchant applications
-//           </p>
-//           <div className="mt-4">
-//             <Badge variant="warning" className="text-lg px-4 py-2">
-//               {merchants?.length || 0} Pending
-//             </Badge>
-//           </div>
-//         </div>
-
-//         {/* Merchants List */}
-//         {merchants && merchants.length > 0 ? (
-//           <div className="grid gap-6">
-//             {merchants.map((merchant) => (
-//               <motion.div
-//                 key={merchant.id}
-//                 initial={{ opacity: 0, y: 20 }}
-//                 animate={{ opacity: 1, y: 0 }}
-//               >
-//                 <Card>
-//                   <CardContent className="p-6">
-//                     <div className="flex items-start justify-between mb-6">
-//                       <div>
-//                         <h3 className="text-2xl font-bold text-gray-900 mb-2">
-//                           {merchant.businessName}
-//                         </h3>
-//                         <Badge variant="warning">PENDING VERIFICATION</Badge>
-//                       </div>
-//                       <div className="text-right text-sm text-gray-500">
-//                         <p>Applied on</p>
-//                         <p className="font-medium text-gray-900">
-//                           {new Date(merchant.createdAt).toLocaleDateString()}
-//                         </p>
-//                       </div>
-//                     </div>
-
-//                     <div className="grid grid-cols-2 gap-6 mb-6">
-//                       {/* Owner Info */}
-//                       <div>
-//                         <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-//                           <User className="w-5 h-5 text-blue-600" />
-//                           Owner Information
-//                         </h4>
-//                         <div className="space-y-2 text-sm">
-//                           <p>
-//                             <span className="text-gray-600">Name:</span>{' '}
-//                             <span className="font-medium">{merchant.user.name}</span>
-//                           </p>
-//                           <p>
-//                             <span className="text-gray-600">Email:</span>{' '}
-//                             <span className="font-medium">{merchant.user.email}</span>
-//                           </p>
-//                           <p>
-//                             <span className="text-gray-600">Phone:</span>{' '}
-//                             <span className="font-medium">{merchant.user.phone}</span>
-//                           </p>
-//                         </div>
-//                       </div>
-
-//                       {/* Business Info */}
-//                       <div>
-//                         <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-//                           <Building className="w-5 h-5 text-purple-600" />
-//                           Business Information
-//                         </h4>
-//                         <div className="space-y-2 text-sm">
-//                           <p>
-//                             <span className="text-gray-600">Type:</span>{' '}
-//                             <span className="font-medium">{merchant.businessType}</span>
-//                           </p>
-//                           <p>
-//                             <span className="text-gray-600">Category:</span>{' '}
-//                             <span className="font-medium">{merchant.businessCategory}</span>
-//                           </p>
-//                           <p>
-//                             <span className="text-gray-600">Phone:</span>{' '}
-//                             <span className="font-medium">{merchant.businessPhone}</span>
-//                           </p>
-//                           <p>
-//                             <span className="text-gray-600">Email:</span>{' '}
-//                             <span className="font-medium">{merchant.businessEmail}</span>
-//                           </p>
-//                         </div>
-//                       </div>
-//                     </div>
-
-//                     {/* Location */}
-//                     <div className="mb-6 pb-6 border-b border-gray-200">
-//                       <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-//                         <MapPin className="w-5 h-5 text-green-600" />
-//                         Location
-//                       </h4>
-//                       <p className="text-sm text-gray-700">
-//                         {merchant.address}, {merchant.city}, {merchant.state} {merchant.zipCode}, {merchant.country}
-//                       </p>
-//                     </div>
-
-//                     {/* Registration Info */}
-//                     <div className="mb-6 pb-6 border-b border-gray-200">
-//                       <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-//                         <FileText className="w-5 h-5 text-orange-600" />
-//                         Registration Details
-//                       </h4>
-//                       <div className="grid grid-cols-2 gap-4 text-sm">
-//                         <div>
-//                           <p className="text-gray-600">Registration Number</p>
-//                           <p className="font-medium">{merchant.businessRegistrationNumber}</p>
-//                         </div>
-//                         <div>
-//                           <p className="text-gray-600">Tax ID</p>
-//                           <p className="font-medium">{merchant.taxId}</p>
-//                         </div>
-//                       </div>
-//                     </div>
-
-//                     {/* Bank Info */}
-//                     <div className="mb-6 pb-6 border-b border-gray-200">
-//                       <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-//                         <CreditCard className="w-5 h-5 text-red-600" />
-//                         Bank Details
-//                       </h4>
-//                       <div className="grid grid-cols-2 gap-4 text-sm">
-//                         <div>
-//                           <p className="text-gray-600">Bank Name</p>
-//                           <p className="font-medium">{merchant.bankName}</p>
-//                         </div>
-//                         <div>
-//                           <p className="text-gray-600">Account Holder</p>
-//                           <p className="font-medium">{merchant.accountHolderName}</p>
-//                         </div>
-//                         <div>
-//                           <p className="text-gray-600">Account Number</p>
-//                           <p className="font-medium">{merchant.accountNumber}</p>
-//                         </div>
-//                         <div>
-//                           <p className="text-gray-600">IFSC Code</p>
-//                           <p className="font-medium">{merchant.ifscCode}</p>
-//                         </div>
-//                       </div>
-//                     </div>
-
-//                     {/* Documents */}
-//                     <div className="mb-6">
-//                       <h4 className="font-semibold text-gray-900 mb-3">Documents</h4>
-//                       <div className="grid grid-cols-3 gap-4">
-//                         <a
-//                           href={`http://localhost:4001/${merchant.registrationDocument}`}
-//                           target="_blank"
-//                           rel="noopener noreferrer"
-//                           className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50"
-//                         >
-//                           <Eye className="w-4 h-4 text-blue-600" />
-//                           <span className="text-sm">Registration Doc</span>
-//                         </a>
-//                         <a
-//                           href={`http://localhost:4001/${merchant.taxDocument}`}
-//                           target="_blank"
-//                           rel="noopener noreferrer"
-//                           className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50"
-//                         >
-//                           <Eye className="w-4 h-4 text-blue-600" />
-//                           <span className="text-sm">Tax Document</span>
-//                         </a>
-//                         <a
-//                           href={`http://localhost:4001/${merchant.identityDocument}`}
-//                           target="_blank"
-//                           rel="noopener noreferrer"
-//                           className="flex items-center gap-2 p-3 border border-gray-300 rounded-lg hover:bg-gray-50"
-//                         >
-//                           <Eye className="w-4 h-4 text-blue-600" />
-//                           <span className="text-sm">Identity Document</span>
-//                         </a>
-//                       </div>
-//                     </div>
-
-//                     {/* Actions */}
-//                     <div className="flex gap-3">
-//                       <Button
-//                         onClick={() => {
-//                           setSelectedMerchant(merchant);
-//                           setShowApproveModal(true);
-//                         }}
-//                         className="flex-1 bg-green-600 hover:bg-green-700"
-//                         disabled={approveMutation.isLoading || rejectMutation.isLoading}
-//                       >
-//                         <CheckCircle className="w-5 h-5 mr-2" />
-//                         Approve
-//                       </Button>
-//                       <Button
-//                         onClick={() => {
-//                           setSelectedMerchant(merchant);
-//                           setShowRejectModal(true);
-//                         }}
-//                         className="flex-1 bg-red-600 hover:bg-red-700"
-//                         disabled={approveMutation.isLoading || rejectMutation.isLoading}
-//                       >
-//                         <XCircle className="w-5 h-5 mr-2" />
-//                         Reject
-//                       </Button>
-//                     </div>
-//                   </CardContent>
-//                 </Card>
-//               </motion.div>
-//             ))}
-//           </div>
-//         ) : (
-//           <Card>
-//             <CardContent className="p-12 text-center">
-//               <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-//               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-//                 No Pending Verifications
-//               </h3>
-//               <p className="text-gray-600">
-//                 All merchant applications have been processed
-//               </p>
-//             </CardContent>
-//           </Card>
-//         )}
-
-//         {/* Approve Modal */}
-//         {showApproveModal && selectedMerchant && (
-//           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-//             <div className="bg-white rounded-xl max-w-md w-full p-6">
-//               <h3 className="text-xl font-bold text-gray-900 mb-4">
-//                 Approve Merchant
-//               </h3>
-//               <p className="text-gray-600 mb-4">
-//                 Are you sure you want to approve <strong>{selectedMerchant.businessName}</strong>?
-//               </p>
-//               <div className="mb-4">
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">
-//                   Verification Notes (Optional)
-//                 </label>
-//                 <textarea
-//                   value={notes}
-//                   onChange={(e) => setNotes(e.target.value)}
-//                   placeholder="All documents verified. Approved."
-//                   rows={3}
-//                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-//                 />
-//               </div>
-//               <div className="flex gap-3">
-//                 <Button
-//                   variant="outline"
-//                   onClick={() => {
-//                     setShowApproveModal(false);
-//                     setSelectedMerchant(null);
-//                     setNotes('');
-//                   }}
-//                   className="flex-1"
-//                 >
-//                   Cancel
-//                 </Button>
-//                 <Button
-//                   onClick={handleApprove}
-//                   className="flex-1 bg-green-600 hover:bg-green-700"
-//                   isLoading={approveMutation.isLoading}
-//                 >
-//                   Confirm Approve
-//                 </Button>
-//               </div>
-//             </div>
-//           </div>
-//         )}
-
-//         {/* Reject Modal */}
-//         {showRejectModal && selectedMerchant && (
-//           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-//             <div className="bg-white rounded-xl max-w-md w-full p-6">
-//               <h3 className="text-xl font-bold text-gray-900 mb-4">
-//                 Reject Merchant
-//               </h3>
-//               <p className="text-gray-600 mb-4">
-//                 Reject <strong>{selectedMerchant.businessName}</strong>?
-//               </p>
-//               <div className="mb-4">
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">
-//                   Rejection Reason *
-//                 </label>
-//                 <textarea
-//                   value={rejectionReason}
-//                   onChange={(e) => setRejectionReason(e.target.value)}
-//                   placeholder="Identity document is not clear. Please resubmit."
-//                   rows={3}
-//                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-//                   required
-//                 />
-//               </div>
-//               <div className="mb-4">
-//                 <label className="block text-sm font-medium text-gray-700 mb-2">
-//                   Verification Notes (Optional)
-//                 </label>
-//                 <textarea
-//                   value={notes}
-//                   onChange={(e) => setNotes(e.target.value)}
-//                   placeholder="Rejected due to unclear documentation."
-//                   rows={2}
-//                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-//                 />
-//               </div>
-//               <div className="flex gap-3">
-//                 <Button
-//                   variant="outline"
-//                   onClick={() => {
-//                     setShowRejectModal(false);
-//                     setSelectedMerchant(null);
-//                     setRejectionReason('');
-//                     setNotes('');
-//                   }}
-//                   className="flex-1"
-//                 >
-//                   Cancel
-//                 </Button>
-//                 <Button
-//                   onClick={handleReject}
-//                   className="flex-1 bg-red-600 hover:bg-red-700"
-//                   isLoading={rejectMutation.isLoading}
-//                 >
-//                   Confirm Reject
-//                 </Button>
-//               </div>
-//             </div>
-//           </div>
-//         )}
-//       </div>
-//     </AdminLayout>
-//   );
-// };
 
 
 
@@ -417,9 +5,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  CheckCircle, XCircle, Clock, User, Mail, Phone, 
+  CheckCircle, XCircle, Clock, User, Mail,  
   Building, MapPin, FileText, CreditCard, Eye, ChevronDown,
-  ChevronUp, AlertCircle, Download, ExternalLink, Sparkles
+  ChevronUp, AlertCircle, ExternalLink, Sparkles
 } from 'lucide-react';
 import { AdminLayout } from '../../shared/components/layout/AdminLayout';
 import { Button } from '../../shared/components/ui/Button';
@@ -441,6 +29,9 @@ const MerchantCard = ({
   onReject: (merchant: MerchantUser) => void;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const API_URL = import.meta.env.VITE_API_URL || '/api';
+const BACKEND_URL = API_URL.replace('/api', '');
 
   return (
     <motion.div
@@ -713,7 +304,7 @@ const MerchantCard = ({
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-7">
                       <a
-                        href={`http://localhost:4001/${merchant.registrationDocument}`}
+      href={`${BACKEND_URL}/${merchant.registrationDocument}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all"
@@ -728,7 +319,7 @@ const MerchantCard = ({
                       </a>
 
                       <a
-                        href={`http://localhost:4001/${merchant.taxDocument}`}
+      href={`${BACKEND_URL}/${merchant.taxDocument}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all"
@@ -743,7 +334,7 @@ const MerchantCard = ({
                       </a>
 
                       <a
-                        href={`http://localhost:4001/${merchant.identityDocument}`}
+      href={`${BACKEND_URL}/${merchant.identityDocument}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all"
@@ -1005,7 +596,7 @@ export const PendingMerchantsPage: React.FC = () => {
                   <Button
                     onClick={handleApprove}
                     className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                    isLoading={approveMutation.isLoading}
+                    isLoading={approveMutation.isPending}
                   >
                     <CheckCircle className="w-5 h-5 mr-2" />
                     Approve
@@ -1083,7 +674,7 @@ export const PendingMerchantsPage: React.FC = () => {
                   <Button
                     onClick={handleReject}
                     className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
-                    isLoading={rejectMutation.isLoading}
+                    isLoading={rejectMutation.isPending}
                   >
                     <XCircle className="w-5 h-5 mr-2" />
                     Reject

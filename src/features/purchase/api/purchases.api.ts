@@ -3,10 +3,9 @@
 // src/features/purchases/api/purchases.api.ts - PURCHASE API!
 // ============================================
 // import { API_CONFIG, getAuthHeaders } from '../../../config/api.config';
-import api from '@/shared/utils/api';
 import type { PurchaseRequest, PurchaseResponse } from '../types/purchase.types';
 
-const API = 'http://localhost:4001/api';
+const API = import.meta.env.VITE_API_URL || '/api';
 
 export const purchasesApi = {
   // Purchase a gift card
