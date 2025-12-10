@@ -1,14 +1,12 @@
 // src/shared/components/animated/MagneticButton.tsx
 import React, { useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { cn } from '../../utils/helpers';
 
-interface MagneticButtonProps {
+interface MagneticButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   children: React.ReactNode;
-  className?: string;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'sm' | 'md' | 'lg';
-  onClick?: () => void;
 }
 
 export const MagneticButton: React.FC<MagneticButtonProps> = ({
@@ -16,19 +14,22 @@ export const MagneticButton: React.FC<MagneticButtonProps> = ({
   className,
   variant = 'primary',
   size = 'md',
+  type = 'button',
+  disabled,
   onClick,
+  ...props
 }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!buttonRef.current) return;
+    if (!buttonRef.current || disabled) return;
     
     const rect = buttonRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left - rect.width / 2;
     const y = e.clientY - rect.top - rect.height / 2;
     
-    setMousePosition({ x: x * 0.3, y: y * 0.3 }); // Magnetic strength
+    setMousePosition({ x: x * 0.3, y: y * 0.3 });
   };
 
   const handleMouseLeave = () => {
@@ -50,11 +51,14 @@ export const MagneticButton: React.FC<MagneticButtonProps> = ({
   return (
     <motion.button
       ref={buttonRef}
+      type={type}
+      disabled={disabled}
       className={cn(
         'relative font-semibold rounded-full transition-all duration-300',
         'transform-gpu will-change-transform',
         variants[variant],
         sizes[size],
+        disabled && 'opacity-50 cursor-not-allowed',
         className
       )}
       onMouseMove={handleMouseMove}
@@ -64,13 +68,14 @@ export const MagneticButton: React.FC<MagneticButtonProps> = ({
         x: mousePosition.x,
         y: mousePosition.y,
       }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={disabled ? {} : { scale: 1.05 }}
+      whileTap={disabled ? {} : { scale: 0.95 }}
       transition={{
         type: 'spring',
         stiffness: 200,
         damping: 15,
       }}
+      {...props}
     >
       {/* Glow effect */}
       <motion.div
@@ -80,7 +85,7 @@ export const MagneticButton: React.FC<MagneticButtonProps> = ({
             ? 'linear-gradient(to right, #3b82f6, #9333ea)' 
             : '#1f2937',
         }}
-        whileHover={{ opacity: 0.6 }}
+        whileHover={disabled ? {} : { opacity: 0.6 }}
         transition={{ duration: 0.3 }}
       />
       
