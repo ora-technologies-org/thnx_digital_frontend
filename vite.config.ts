@@ -12,11 +12,5 @@ export default defineConfig({
   server: {
     port: 8080,
     open: true,
-    proxy: {
-      '/api': {
-        target: 'http://thnxdigital.com',
-        changeOrigin: true,
-      }
-    }
-  },
+  }
 });
