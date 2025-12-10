@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Gift, ShoppingBag, BarChart3, 
   DollarSign, Settings, LogOut, Menu, X,
-  ChevronRight, User, Bell, QrCode
+  ChevronRight,  Bell, QrCode
 } from 'lucide-react';
 
 interface MenuItem {

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Building, MapPin, Phone, Mail, Globe, 
+  Building, MapPin, Phone,
   FileText, CreditCard, CheckCircle, ArrowLeft, ArrowRight 
 } from 'lucide-react';
 import { Card } from '../../shared/components/ui/Card';
@@ -14,9 +14,10 @@ import { Input } from '../../shared/components/ui/Input';
 import { MagneticButton } from '../../shared/components/animated/MagneticButton';
 import { ProgressWizard, WizardStep } from '../../shared/components/wizard/ProgressWizard';
 import { DocumentUpload } from '../../shared/components/upload/DocumentUpload';
-import { fadeInUp, staggerContainer } from '../../shared/utils/animations';
+import {  staggerContainer } from '../../shared/utils/animations';
 import api from '../../shared/utils/api';
 import toast from 'react-hot-toast';
+import { DashboardLayout } from '@/shared/components/layout/DashboardLayout';
 
 const profileSchema = z.object({
   // Business Address
@@ -86,7 +87,7 @@ export const CompleteProfilePage: React.FC = () => {
       
       // If profile is already pending or approved, redirect
       if (status === 'pending') {
-        toast.info('Your profile is already under review');
+        toast.success('Your profile is already under review');
         navigate('/merchant/pending-verification');
         return;
       }
@@ -154,7 +155,7 @@ export const CompleteProfilePage: React.FC = () => {
 
       toast.success('Profile submitted for verification!');
       navigate('/merchant/pending-verification');
-    } catch (error: any) {
+    } catch (error : any) {
       console.error('Profile completion error:', error);
       toast.error(error.response?.data?.message || 'Failed to submit profile');
     } finally {
@@ -176,6 +177,7 @@ export const CompleteProfilePage: React.FC = () => {
   }
 
   return (
+    <DashboardLayout>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Progress Wizard */}
@@ -509,5 +511,6 @@ export const CompleteProfilePage: React.FC = () => {
         </motion.div>
       </div>
     </div>
+    </DashboardLayout>
   );
 };

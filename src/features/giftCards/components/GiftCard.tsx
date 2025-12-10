@@ -1,98 +1,11 @@
-// import React from 'react';
-// import { Edit, Trash2, Calendar, DollarSign } from 'lucide-react';
-// import { Card, CardContent } from '../../../shared/components/ui/Card';
-// import { Button } from '../../../shared/components/ui/Button';
-// import { Badge } from '../../../shared/components/ui/Badge';
-// import type { GiftCard } from '../types/giftCard.types';
-// import { formatCurrency, formatDate } from '../../../shared/utils/helpers';
-
-// interface GiftCardCardProps {
-//   giftCard: GiftCard;
-//   onEdit?: (giftCard: GiftCard) => void;
-//   onDelete?: (id: string) => void;
-//   showActions?: boolean;
-// }
-
-// export const GiftCardCard: React.FC<GiftCardCardProps> = ({
-//   giftCard,
-//   onEdit,
-//   onDelete,
-//   showActions = true,
-// }) => {
-//   const isExpired = new Date(giftCard.expiryDate) < new Date();
-//   const isExpiringSoon =
-//     new Date(giftCard.expiryDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-//   return (
-//     <Card className="hover:shadow-lg transition-shadow">
-//       <CardContent className="p-6">
-//         <div className="flex justify-between items-start mb-4">
-//           <div className="flex-1">
-//             <h3 className="text-lg font-semibold text-gray-900 mb-1">
-//               {giftCard.title}
-//             </h3>
-//             {giftCard.description && (
-//               <p className="text-sm text-gray-600 line-clamp-2">
-//                 {giftCard.description}
-//               </p>
-//             )}
-//           </div>
-//           <div className="flex flex-col items-end space-y-2">
-//             <Badge variant={giftCard.isActive ? 'success' : 'danger'}>
-//               {giftCard.isActive ? 'Active' : 'Inactive'}
-//             </Badge>
-//             {isExpired && <Badge variant="danger">Expired</Badge>}
-//             {!isExpired && isExpiringSoon && <Badge variant="warning">Expiring Soon</Badge>}
-//           </div>
-//         </div>
-
-//         <div className="space-y-2 mb-4">
-//           <div className="flex items-center text-gray-700">
-//             <DollarSign className="h-4 w-4 mr-2" />
-//             <span className="font-semibold text-lg">
-//               {formatCurrency(giftCard.price)}
-//             </span>
-//           </div>
-//           <div className="flex items-center text-gray-600 text-sm">
-//             <Calendar className="h-4 w-4 mr-2" />
-//             <span>Expires: {formatDate(giftCard.expiryDate)}</span>
-//           </div>
-//         </div>
-
-//         {showActions && (
-//           <div className="flex space-x-2 pt-4 border-t border-gray-200">
-//             <Button
-//               variant="outline"
-//               size="sm"
-//               onClick={() => onEdit?.(giftCard)}
-//               className="flex-1"
-//             >
-//               <Edit className="h-4 w-4 mr-2" />
-//               Edit
-//             </Button>
-//             <Button
-//               variant="danger"
-//               size="sm"
-//               onClick={() => onDelete?.(giftCard.id)}
-//               className="flex-1"
-//             >
-//               <Trash2 className="h-4 w-4 mr-2" />
-//               Delete
-//             </Button>
-//           </div>
-//         )}
-//       </CardContent>
-//     </Card>
-//   );
-// };
-
+/* eslint-disable react-hooks/purity */
 
 // src/features/giftCards/components/GiftCardCard.tsx - ENHANCED! 🎨
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Edit, Trash2, Calendar, DollarSign, Copy, 
-  Eye, MoreVertical, Power, PowerOff 
+   MoreVertical, Power, PowerOff 
 } from 'lucide-react';
 import { Card, CardContent } from '../../../shared/components/ui/Card';
 import { Button } from '../../../shared/components/ui/Button';
