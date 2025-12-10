@@ -1,21 +1,3 @@
-// export const ROUTES = {
-//   HOME: '/',
-//   LOGIN: '/login',
-//   REGISTER: '/register',
-  
-//   // Customer
-//   BROWSE: '/browse',
-//   PURCHASE: '/purchase/:id',
-  
-//   // Merchant
-//   MERCHANT_DASHBOARD: '/merchant/dashboard',
-//   MERCHANT_GIFT_CARDS: '/merchant/gift-cards',
-//   MERCHANT_REDEMPTIONS: '/merchant/redemptions',
-//   MERCHANT_SETTINGS: '/merchant/settings',
-//   COMPLETE_PROFILE: '/merchant/complete-profile',
-
-// } as const;
-
 
 // src/routes/routePaths.ts
 export const ROUTES = {

@@ -667,7 +667,7 @@ export const HomePage: React.FC = () => {
 
           <div className="pt-8 border-t border-gray-800 text-center">
             <p className="text-gray-500 text-sm">
-              © 2025 Thnx Digital. All rights reserved. Made with ❤️ in Nepal By Kritim
+              © 2025 Thnx Digital. All rights reserved. Made with ❤️ in Nepal By OraTechnologies
             </p>
           </div>
         </div>

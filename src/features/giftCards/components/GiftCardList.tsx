@@ -1,146 +1,4 @@
-// import React, { useState } from 'react';
-// import { Plus } from 'lucide-react';
-// import { GiftCardCard } from './GiftCard';
-// import { GiftCardForm } from './GiftCardForm';
-// import { Button } from '../../../shared/components/ui/Button';
-// import { Modal } from '../../../shared/components/ui/Modal';
-// import { Spinner } from '../../../shared/components/ui/Spinner';
-// import { useModal } from '../../../shared/hooks/useModal';
-// import { useGiftCards } from '../hooks/useGiftCards';
-// import { useCreateGiftCard } from '../hooks/useCreateGiftCard';
-// import { useUpdateGiftCard } from '../hooks/useUpdateGiftCard';
-// import { useDeleteGiftCard } from '../hooks/useDeleteGiftCard';
-// import type { GiftCard, CreateGiftCardData, UpdateGiftCardData } from '../types/giftCard.types';
-
-// export const GiftCardList: React.FC = () => {
-//   const { data, isLoading } = useGiftCards();
-//   const createMutation = useCreateGiftCard();
-//   const updateMutation = useUpdateGiftCard();
-//   const deleteMutation = useDeleteGiftCard();
-
-//   const createModal = useModal();
-//   const editModal = useModal();
-//   const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
-
-//   const handleCreate = (formData: CreateGiftCardData) => {
-//     createMutation.mutate(formData, {
-//       onSuccess: () => {
-//         createModal.close();
-//       },
-//     });
-//   };
-
-//   const handleEdit = (giftCard: GiftCard) => {
-//     setSelectedCard(giftCard);
-//     editModal.open();
-//   };
-
-//   const handleUpdate = (formData: UpdateGiftCardData) => {
-//     if (selectedCard) {
-//       updateMutation.mutate(
-//         { id: selectedCard.id, data: formData },
-//         {
-//           onSuccess: () => {
-//             editModal.close();
-//             setSelectedCard(null);
-//           },
-//         }
-//       );
-//     }
-//   };
-
-//   const handleDelete = (id: string) => {
-//     if (window.confirm('Are you sure you want to delete this gift card?')) {
-//       deleteMutation.mutate(id);
-//     }
-//   };
-
-//   if (isLoading) {
-//     return (
-//       <div className="flex justify-center items-center h-64">
-//         <Spinner size="lg" />
-//       </div>
-//     );
-//   }
-
-//   const giftCards = data?.data.giftCards || [];
-//   const canCreateMore = (data?.data.remaining || 0) > 0;
-
-//   return (
-//     <div>
-//       {/* Header */}
-//       <div className="flex justify-between items-center mb-6">
-//         <div>
-//           <h2 className="text-2xl font-bold text-gray-900">My Gift Cards</h2>
-//           <p className="text-gray-600 mt-1">
-//             {data?.data.total || 0} of {data?.data.limit || 10} gift cards created
-//           </p>
-//         </div>
-//         <Button
-//           onClick={createModal.open}
-//           disabled={!canCreateMore}
-//           title={!canCreateMore ? 'You have reached the maximum limit' : ''}
-//         >
-//           <Plus className="h-4 w-4 mr-2" />
-//           Create Gift Card
-//         </Button>
-//       </div>
-
-//       {/* Gift Cards Grid */}
-//       {giftCards.length === 0 ? (
-//         <div className="text-center py-12">
-//           <p className="text-gray-500 text-lg mb-4">No gift cards yet</p>
-//           <Button onClick={createModal.open}>Create Your First Gift Card</Button>
-//         </div>
-//       ) : (
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//           {giftCards.map((giftCard) => (
-//             <GiftCardCard
-//               key={giftCard.id}
-//               giftCard={giftCard}
-//               onEdit={handleEdit}
-//               onDelete={handleDelete}
-//             />
-//           ))}
-//         </div>
-//       )}
-
-//       {/* Create Modal */}
-//       <Modal
-//         isOpen={createModal.isOpen}
-//         onClose={createModal.close}
-//         title="Create Gift Card"
-//         size="lg"
-//       >
-//         <GiftCardForm
-//           onSubmit={handleCreate}
-//           isLoading={createMutation.isLoading}
-//           submitLabel="Create Gift Card"
-//         />
-//       </Modal>
-
-//       {/* Edit Modal */}
-//       <Modal
-//         isOpen={editModal.isOpen}
-//         onClose={() => {
-//           editModal.close();
-//           setSelectedCard(null);
-//         }}
-//         title="Edit Gift Card"
-//         size="lg"
-//       >
-//         {selectedCard && (
-//           <GiftCardForm
-//             initialData={selectedCard}
-//             onSubmit={handleUpdate}
-//             isLoading={updateMutation.isLoading}
-//             submitLabel="Update Gift Card"
-//           />
-//         )}
-//       </Modal>
-//     </div>
-//   );
-// };
+/* eslint-disable react-hooks/purity */
 
 
 // src/features/giftCards/components/EnhancedGiftCardList.tsx - FULLY INTERACTIVE! ⚡
@@ -149,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, Search, Filter, Grid, List, Download, 
   TrendingUp, DollarSign, Gift, AlertCircle,
-  SortAsc, SortDesc, RefreshCw
+   RefreshCw
 } from 'lucide-react';
 
 import { GiftCardCard } from './GiftCard';
@@ -612,7 +470,7 @@ export const EnhancedGiftCardList: React.FC = () => {
       >
         <GiftCardForm
           onSubmit={handleCreate}
-          isLoading={createMutation.isLoading}
+          isLoading={createMutation.isPending}
           submitLabel="Create Gift Card"
         />
       </Modal>
@@ -631,7 +489,7 @@ export const EnhancedGiftCardList: React.FC = () => {
           <GiftCardForm
             initialData={selectedCard}
             onSubmit={handleUpdate}
-            isLoading={updateMutation.isLoading}
+            isLoading={updateMutation.isPending}
             submitLabel="Update Gift Card"
           />
         )}

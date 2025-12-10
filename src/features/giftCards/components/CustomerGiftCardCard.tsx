@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/purity */
 // src/features/giftCards/components/CustomerGiftCardCard.tsx - CUSTOMER VIEW CARD! 🎁
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Calendar, DollarSign } from 'lucide-react';
+import { ShoppingCart, Calendar } from 'lucide-react';
 import { Card, CardContent } from '../../../shared/components/ui/Card';
 import { Button } from '../../../shared/components/ui/Button';
 import type { GiftCard } from '../types/giftCard.types';
