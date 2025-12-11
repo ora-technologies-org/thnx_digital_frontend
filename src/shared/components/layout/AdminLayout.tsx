@@ -1,66 +1,81 @@
-// src/shared/components/layout/AdminLayout.tsx - STUNNING ADMIN SIDEBAR WITH CREATE MERCHANT! 🎯✨
+// src/shared/components/layout/AdminLayout.tsx - STUNNING ADMIN SIDEBAR WITH DYNAMIC BADGE! 🎯✨
+
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, Users, CheckCircle, LogOut, 
-  Settings, Bell, User, ChevronLeft, ChevronRight,
-  Activity, Gift, DollarSign, BarChart3, Menu, X, UserPlus
+import {
+  LayoutDashboard,
+  Users,
+  CheckCircle,
+  LogOut,
+  Settings,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  Activity,
+  Gift,
+  DollarSign,
+  BarChart3,
+  Menu,
+  X,
+  UserPlus,
 } from 'lucide-react';
+import { usePendingMerchants } from '../../../features/admin/hooks/useAdmin';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const navigation = [
-  { 
-    name: 'Dashboard', 
-    href: '/admin/dashboard', 
+// Navigation items - badge will be added dynamically
+const getNavigation = (pendingCount: number) => [
+  {
+    name: 'Dashboard',
+    href: '/admin/dashboard',
     icon: LayoutDashboard,
-    gradient: 'from-blue-500 to-blue-600'
+    gradient: 'from-blue-500 to-blue-600',
   },
-  { 
-    name: 'Pending Merchants', 
-    href: '/admin/pending', 
+  {
+    name: 'Pending Merchants',
+    href: '/admin/pending',
     icon: Users,
     gradient: 'from-orange-500 to-orange-600',
-    badge: 3
+    badge: pendingCount > 0 ? pendingCount : undefined, // Dynamic badge
   },
-  { 
-    name: 'All Merchants', 
-    href: '/admin/merchants', 
+  {
+    name: 'All Merchants',
+    href: '/admin/merchants',
     icon: CheckCircle,
-    gradient: 'from-green-500 to-green-600'
+    gradient: 'from-green-500 to-green-600',
   },
-  { 
-    name: 'Create Merchant', 
-    href: '/admin/create-merchant', 
+  {
+    name: 'Create Merchant',
+    href: '/admin/create-merchant',
     icon: UserPlus,
-    gradient: 'from-indigo-500 to-purple-600'
+    gradient: 'from-indigo-500 to-purple-600',
   },
-  { 
-    name: 'Gift Cards', 
-    href: '/admin/giftcards', 
+  {
+    name: 'Gift Cards',
+    href: '/admin/giftcards',
     icon: Gift,
-    gradient: 'from-purple-500 to-purple-600'
+    gradient: 'from-purple-500 to-purple-600',
   },
-  { 
-    name: 'Revenue', 
-    href: '/admin/revenue', 
+  {
+    name: 'Revenue',
+    href: '/admin/revenue',
     icon: DollarSign,
-    gradient: 'from-emerald-500 to-emerald-600'
+    gradient: 'from-emerald-500 to-emerald-600',
   },
-  { 
-    name: 'Analytics', 
-    href: '/admin/analytics', 
+  {
+    name: 'Analytics',
+    href: '/admin/analytics',
     icon: BarChart3,
-    gradient: 'from-pink-500 to-pink-600'
+    gradient: 'from-pink-500 to-pink-600',
   },
-  { 
-    name: 'Activity Log', 
-    href: '/admin/activity', 
+  {
+    name: 'Activity Log',
+    href: '/admin/activity',
     icon: Activity,
-    gradient: 'from-cyan-500 to-cyan-600'
+    gradient: 'from-cyan-500 to-cyan-600',
   },
 ];
 
@@ -70,10 +85,18 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Fetch pending merchants count
+  const { data: pendingMerchants } = usePendingMerchants();
+  const pendingCount = pendingMerchants?.length || 0;
+
+  // Get navigation with dynamic badge
+  const navigation = getNavigation(pendingCount);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     navigate('/login');
   };
 
@@ -145,7 +168,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  <div className="relative">
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {/* Badge on collapsed icon */}
+                    {item.badge && isCollapsed && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+                      >
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </motion.span>
+                    )}
+                  </div>
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.span
@@ -159,13 +194,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                       </motion.span>
                     )}
                   </AnimatePresence>
+                  {/* Badge on expanded */}
                   {item.badge && !isCollapsed && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full"
+                      className="ml-auto min-w-[24px] h-6 px-2 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
                     >
-                      {item.badge}
+                      {item.badge > 99 ? '99+' : item.badge}
                     </motion.span>
                   )}
                 </Link>
@@ -178,7 +214,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <div className="p-4 border-t border-gray-800 space-y-2">
           <Link
             to="/admin/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              location.pathname === '/admin/settings'
+                ? 'bg-gray-800 text-white'
+                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+            }`}
           >
             <Settings className="w-5 h-5 flex-shrink-0" />
             <AnimatePresence>
@@ -235,9 +275,15 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-3 bg-gray-900 text-white rounded-xl shadow-lg"
+          className="p-3 bg-gray-900 text-white rounded-xl shadow-lg relative"
         >
           {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {/* Show badge on mobile menu button when closed */}
+          {!isMobileMenuOpen && pendingCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {pendingCount > 99 ? '99+' : pendingCount}
+            </span>
+          )}
         </motion.button>
       </div>
 
@@ -285,9 +331,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                       <item.icon className="w-5 h-5" />
                       <span className="font-medium">{item.name}</span>
                       {item.badge && (
-                        <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
-                          {item.badge}
-                        </span>
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="ml-auto min-w-[24px] h-6 px-2 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
+                        >
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </motion.span>
                       )}
                     </Link>
                   );
@@ -320,32 +370,45 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         {/* Top Bar */}
-        <div className="bg-white border-b border-gray-200 px-8 py-4 shadow-sm">
+        <div className="bg-white border-b border-gray-200 px-8 py-4 shadow-sm sticky top-0 z-30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              {/* Spacer for mobile menu button */}
+              <div className="lg:hidden w-12" />
               <div className="hidden lg:block w-64">
                 <input
                   type="search"
                   placeholder="Search..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {/* Notifications with dynamic badge */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <Bell className="w-6 h-6" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                {pendingCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+                  >
+                    {pendingCount > 9 ? '9+' : pendingCount}
+                  </motion.span>
+                )}
               </motion.button>
+
+              {/* User Profile */}
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                   A
                 </div>
                 <div className="hidden sm:block text-left">
@@ -358,10 +421,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </div>
 
         {/* Page Content */}
-        <div className="p-8">
-          {children}
-        </div>
+        <div className="p-6 lg:p-8">{children}</div>
       </div>
     </div>
   );
 };
+
+export default AdminLayout;

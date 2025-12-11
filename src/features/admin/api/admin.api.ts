@@ -1,39 +1,40 @@
 // src/features/admin/api/admin.api.ts - ADMIN API! 🔌
+
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export interface MerchantUser {
   id: string;
   userId: string;
   businessName: string;
-  businessRegistrationNumber: string;
-  taxId: string;
-  businessType: string;
-  businessCategory: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  businessPhone: string;
-  businessEmail: string;
-  website: string;
-  registrationDocument: string;
-  taxDocument: string;
-  identityDocument: string;
+  businessRegistrationNumber: string | null;
+  taxId: string | null;
+  businessType: string | null;
+  businessCategory: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  country: string | null;
+  businessPhone: string | null;
+  businessEmail: string | null;
+  website: string | null;
+  registrationDocument: string | null;
+  taxDocument: string | null;
+  identityDocument: string | null;
   additionalDocuments: string[];
-  bankName: string;
-  accountNumber: string;
-  accountHolderName: string;
-  ifscCode: string;
-  swiftCode: string;
-  profileStatus: string;
+  bankName: string | null;
+  accountNumber: string | null;
+  accountHolderName: string | null;
+  ifscCode: string | null;
+  swiftCode: string | null;
+  profileStatus: 'INCOMPLETE' | 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
   isVerified: boolean;
   verifiedAt: string | null;
   verifiedById: string | null;
   verificationNotes: string | null;
   rejectionReason: string | null;
   rejectedAt: string | null;
-  description: string;
+  description: string | null;
   logo: string | null;
   createdAt: string;
   updatedAt: string;
@@ -41,12 +42,45 @@ export interface MerchantUser {
     id: string;
     email: string;
     name: string;
-    phone: string;
+    phone: string | null;
     createdAt: string;
+    isActive: boolean;
   };
 }
 
-const getAuthHeaders = () => {
+export interface CreateMerchantRequest {
+  email: string;
+  password: string;
+  name: string;
+  phone?: string;
+  businessName: string;
+  businessRegistrationNumber?: string;
+  taxId?: string;
+  businessType?: string;
+  businessCategory?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  businessPhone?: string;
+  businessEmail?: string;
+  website?: string;
+  description?: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export interface MerchantsListResponse {
+  merchants: MerchantUser[];
+  count: number;
+}
+
+const getAuthHeaders = (): HeadersInit => {
   const token = localStorage.getItem('accessToken');
   return {
     'Authorization': `Bearer ${token}`,
@@ -54,75 +88,137 @@ const getAuthHeaders = () => {
   };
 };
 
+// Helper function for API calls
+const apiCall = async <T>(
+  url: string,
+  options?: RequestInit
+): Promise<T> => {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...getAuthHeaders(),
+      ...options?.headers,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.message || 'API request failed');
+  }
+
+  return result;
+};
+
 export const adminApi = {
-  // Get pending merchants
-  getPendingMerchants: async (): Promise<MerchantUser[]> => {
-    const response = await fetch(`${API_URL}/auth/admin/merchants/pending`, {
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch pending merchants');
-    }
-
-    const result = await response.json();
-    return result.data.merchants;
-  },
-
-  // Get all merchants
+  // ==================== GET ALL MERCHANTS ====================
+  // GET /api/merchants
   getAllMerchants: async (): Promise<MerchantUser[]> => {
-    const response = await fetch(`${API_URL}/auth/admin/merchants`, {
-      headers: getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch merchants');
-    }
-
-    const result = await response.json();
+    const result = await apiCall<ApiResponse<MerchantsListResponse>>(
+      `${API_URL}/merchants`
+    );
     return result.data.merchants;
   },
 
-  // Approve merchant
-  approveMerchant: async (merchantId: string, notes: string) => {
-    const response = await fetch(
-      `${API_URL}/auth/admin/merchants/${merchantId}/verify`,
+  // ==================== GET PENDING MERCHANTS ====================
+  // GET /api/merchants/pending
+  getPendingMerchants: async (): Promise<MerchantUser[]> => {
+    const result = await apiCall<ApiResponse<MerchantsListResponse>>(
+      `${API_URL}/merchants/pending`
+    );
+    return result.data.merchants;
+  },
+
+  // ==================== CREATE MERCHANT ====================
+  // POST /api/merchants
+  createMerchant: async (data: CreateMerchantRequest): Promise<ApiResponse<{ user: MerchantUser }>> => {
+    const result = await apiCall<ApiResponse<{ user: MerchantUser }>>(
+      `${API_URL}/merchants`,
       {
         method: 'POST',
-        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      }
+    );
+    return result;
+  },
+
+  // ==================== APPROVE MERCHANT ====================
+  // POST /api/merchants/:merchantId/verify
+  approveMerchant: async (
+    merchantId: string,
+    notes?: string
+  ): Promise<ApiResponse<{ profile: MerchantUser }>> => {
+    const result = await apiCall<ApiResponse<{ profile: MerchantUser }>>(
+      `${API_URL}/merchants/${merchantId}/verify`,
+      {
+        method: 'POST',
         body: JSON.stringify({
           action: 'approve',
-          verificationNotes: notes,
+          verificationNotes: notes || '',
         }),
       }
     );
-
-    if (!response.ok) {
-      throw new Error('Failed to approve merchant');
-    }
-
-    return response.json();
+    return result;
   },
 
-  // Reject merchant
-  rejectMerchant: async (merchantId: string, reason: string, notes: string) => {
-    const response = await fetch(
-      `${API_URL}/auth/admin/merchants/${merchantId}/verify`,
+  // ==================== REJECT MERCHANT ====================
+  // POST /api/merchants/:merchantId/verify
+  rejectMerchant: async (
+    merchantId: string,
+    reason: string,
+    notes?: string
+  ): Promise<ApiResponse<{ profile: MerchantUser }>> => {
+    if (!reason) {
+      throw new Error('Rejection reason is required');
+    }
+
+    const result = await apiCall<ApiResponse<{ profile: MerchantUser }>>(
+      `${API_URL}/merchants/${merchantId}/verify`,
       {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           action: 'reject',
           rejectionReason: reason,
-          verificationNotes: notes,
+          verificationNotes: notes || '',
         }),
       }
     );
+    return result;
+  },
 
-    if (!response.ok) {
-      throw new Error('Failed to reject merchant');
-    }
+  // ==================== DELETE MERCHANT (SOFT) ====================
+  // DELETE /api/merchants/:merchantId
+  deleteMerchant: async (
+    merchantId: string,
+    hardDelete: boolean = false
+  ): Promise<ApiResponse<{ merchantId: string; email: string }>> => {
+    const result = await apiCall<ApiResponse<{ merchantId: string; email: string }>>(
+      `${API_URL}/merchants/${merchantId}`,
+      {
+        method: 'DELETE',
+        body: JSON.stringify({
+          hardDelete,
+        }),
+      }
+    );
+    return result;
+  },
 
-    return response.json();
+  // ==================== DEACTIVATE MERCHANT ====================
+  // DELETE /api/merchants/:merchantId (soft delete)
+  deactivateMerchant: async (
+    merchantId: string
+  ): Promise<ApiResponse<{ merchantId: string; email: string }>> => {
+    return adminApi.deleteMerchant(merchantId, false);
+  },
+
+  // ==================== PERMANENTLY DELETE MERCHANT ====================
+  // DELETE /api/merchants/:merchantId (hard delete)
+  permanentlyDeleteMerchant: async (
+    merchantId: string
+  ): Promise<ApiResponse<{ merchantId: string; email: string }>> => {
+    return adminApi.deleteMerchant(merchantId, true);
   },
 };
+
+export default adminApi;

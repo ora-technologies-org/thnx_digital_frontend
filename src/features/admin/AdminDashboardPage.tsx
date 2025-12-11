@@ -2,17 +2,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Users, CheckCircle, Clock, XCircle, TrendingUp, TrendingDown,
-  Building, DollarSign, Gift, ShoppingBag, Activity, Calendar,
-  ArrowUpRight, ArrowDownRight, Eye, UserCheck, UserX, Sparkles
+  Users, CheckCircle, Clock, XCircle, TrendingUp,
+   DollarSign, Gift, ShoppingBag, Activity,
+  ArrowUpRight, ArrowDownRight, UserCheck
 } from 'lucide-react';
 import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+ BarChart, Bar, PieChart, Pie, Cell,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
-  Legend, ResponsiveContainer 
+   ResponsiveContainer 
 } from 'recharts';
 import { AdminLayout } from '../../shared/components/layout/AdminLayout';
-import { Card, CardContent } from '../../shared/components/ui/Card';
+import { Card } from '../../shared/components/ui/Card';
 import { Spinner } from '../../shared/components/ui/Spinner';
 import { usePendingMerchants, useAllMerchants } from '../../features/admin/hooks/useAdmin';
 import { Link } from 'react-router-dom';
@@ -61,7 +61,17 @@ const recentActivity = [
   { id: 5, merchant: 'Book Store', action: 'Payout processed', time: '8 hours ago', type: 'payout' },
 ];
 
-const StatCard = ({ icon: Icon, title, value, change, changeType, delay, gradient }: any) => (
+interface StatCardProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  value: string | number;
+  change?: number;
+  changeType?: 'up' | 'down';
+  delay: number;
+  gradient: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon: Icon, title, value, change, changeType, delay, gradient }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -417,7 +427,7 @@ export const AdminDashboardPage: React.FC = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent}) => `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`}
                       outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
