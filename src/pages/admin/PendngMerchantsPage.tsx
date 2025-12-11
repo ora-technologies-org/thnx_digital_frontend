@@ -1,415 +1,58 @@
+// src/pages/admin/PendingMerchantsPage.tsx
 
-
-
-// src/pages/admin/PendingMerchantsPage.tsx - STUNNING PENDING MERCHANTS! ⏳✨
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  CheckCircle, XCircle, Clock, User, Mail,  
-  Building, MapPin, FileText, CreditCard, Eye, ChevronDown,
-  ChevronUp, AlertCircle, ExternalLink, Sparkles
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { AdminLayout } from '../../shared/components/layout/AdminLayout';
 import { Button } from '../../shared/components/ui/Button';
 import { Card, CardContent } from '../../shared/components/ui/Card';
 import { Spinner } from '../../shared/components/ui/Spinner';
-import { Badge } from '../../shared/components/ui/Badge';
-import { usePendingMerchants, useApproveMerchant, useRejectMerchant } from '../../features/admin/hooks/useAdmin';
+import {
+  usePendingMerchants,
+  useApproveMerchant,
+  useRejectMerchant,
+} from '../../features/admin/hooks/useAdmin';
 import type { MerchantUser } from '../../features/admin/api/admin.api';
+import { PendingMerchantCard } from '../merchant/PendingMerchantCard';
 
-const MerchantCard = ({ 
-  merchant, 
-  index,
-  onApprove,
-  onReject 
-}: { 
-  merchant: MerchantUser; 
-  index: number;
-  onApprove: (merchant: MerchantUser) => void;
-  onReject: (merchant: MerchantUser) => void;
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || '/api';
-const BACKEND_URL = API_URL.replace('/api', '');
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        delay: index * 0.1, 
-        duration: 0.5,
-        ease: [0.22, 1, 0.36, 1]
-      }}
-      layout
-    >
-      <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
-        <CardContent className="p-0">
-          {/* Header Section */}
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 + 0.2 }}
-                >
-                  <h3 className="text-2xl font-bold mb-2">{merchant.businessName}</h3>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="warning" className="bg-white/20 border-white/30">
-                      PENDING REVIEW
-                    </Badge>
-                    <span className="text-sm text-orange-100">
-                      Applied {new Date(merchant.createdAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                </motion.div>
-              </div>
-              <motion.div
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 + 0.3, type: 'spring' }}
-                className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
-              >
-                <Building className="w-8 h-8 text-white" />
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Quick Info Section */}
-          <div className="p-6 bg-gradient-to-b from-gray-50 to-white">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 + 0.4 }}
-                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm"
-              >
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <User className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Owner</p>
-                  <p className="font-semibold text-gray-900 truncate">{merchant.user.name}</p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 + 0.5 }}
-                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm"
-              >
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Building className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Category</p>
-                  <p className="font-semibold text-gray-900 truncate">{merchant.businessCategory}</p>
-                </div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 + 0.6 }}
-                className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm"
-              >
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Location</p>
-                  <p className="font-semibold text-gray-900 truncate">{merchant.city}, {merchant.state}</p>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Expand/Collapse Button */}
-            <motion.button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium text-gray-700"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {isExpanded ? (
-                <>
-                  <span>Hide Details</span>
-                  <ChevronUp className="w-5 h-5" />
-                </>
-              ) : (
-                <>
-                  <span>View Full Details</span>
-                  <ChevronDown className="w-5 h-5" />
-                </>
-              )}
-            </motion.button>
-          </div>
-
-          {/* Expanded Details */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden"
-              >
-                <div className="p-6 border-t border-gray-200 space-y-6">
-                  {/* Contact Information */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Mail className="w-5 h-5 text-blue-600" />
-                      Contact Information
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-7">
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium text-gray-900">{merchant.user.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Phone</p>
-                        <p className="font-medium text-gray-900">{merchant.user.phone}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Business Email</p>
-                        <p className="font-medium text-gray-900">{merchant.businessEmail}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Business Phone</p>
-                        <p className="font-medium text-gray-900">{merchant.businessPhone}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  {/* Business Details */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Building className="w-5 h-5 text-purple-600" />
-                      Business Details
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-7">
-                      <div>
-                        <p className="text-sm text-gray-500">Business Type</p>
-                        <p className="font-medium text-gray-900">{merchant.businessType}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Category</p>
-                        <p className="font-medium text-gray-900">{merchant.businessCategory}</p>
-                      </div>
-                      <div className="md:col-span-2">
-                        <p className="text-sm text-gray-500">Address</p>
-                        <p className="font-medium text-gray-900">
-                          {merchant.address}, {merchant.city}, {merchant.state} {merchant.zipCode}, {merchant.country}
-                        </p>
-                      </div>
-                      {merchant.website && (
-                        <div className="md:col-span-2">
-                          <p className="text-sm text-gray-500">Website</p>
-                          <a 
-                            href={merchant.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-blue-600 hover:underline flex items-center gap-1"
-                          >
-                            {merchant.website}
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-
-                  {/* Registration Info */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-orange-600" />
-                      Registration Information
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-7">
-                      <div>
-                        <p className="text-sm text-gray-500">Registration Number</p>
-                        <p className="font-medium text-gray-900">{merchant.businessRegistrationNumber}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Tax ID</p>
-                        <p className="font-medium text-gray-900">{merchant.taxId}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  {/* Bank Details */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-red-600" />
-                      Banking Information
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-7">
-                      <div>
-                        <p className="text-sm text-gray-500">Bank Name</p>
-                        <p className="font-medium text-gray-900">{merchant.bankName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Account Holder</p>
-                        <p className="font-medium text-gray-900">{merchant.accountHolderName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Account Number</p>
-                        <p className="font-medium text-gray-900">{merchant.accountNumber}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">IFSC Code</p>
-                        <p className="font-medium text-gray-900">{merchant.ifscCode}</p>
-                      </div>
-                      {merchant.swiftCode && (
-                        <div>
-                          <p className="text-sm text-gray-500">SWIFT Code</p>
-                          <p className="font-medium text-gray-900">{merchant.swiftCode}</p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-
-                  {/* Documents */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-indigo-600" />
-                      Uploaded Documents
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-7">
-                      <a
-      href={`${BACKEND_URL}/${merchant.registrationDocument}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all"
-                      >
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Eye className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm">Registration</p>
-                          <p className="text-xs text-gray-500">Click to view</p>
-                        </div>
-                      </a>
-
-                      <a
-      href={`${BACKEND_URL}/${merchant.taxDocument}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all"
-                      >
-                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <FileText className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm">Tax Document</p>
-                          <p className="text-xs text-gray-500">Click to view</p>
-                        </div>
-                      </a>
-
-                      <a
-      href={`${BACKEND_URL}/${merchant.identityDocument}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all"
-                      >
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <User className="w-6 h-6 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm">ID Document</p>
-                          <p className="text-xs text-gray-500">Click to view</p>
-                        </div>
-                      </a>
-                    </div>
-                  </motion.div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Action Buttons */}
-          <div className="p-6 bg-gray-50 border-t border-gray-200">
-            <div className="flex gap-3">
-              <motion.div 
-                className="flex-1"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={() => onApprove(merchant)}
-                  className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg shadow-green-500/30"
-                >
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Approve Merchant
-                </Button>
-              </motion.div>
-              <motion.div 
-                className="flex-1"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  onClick={() => onReject(merchant)}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-lg shadow-red-500/30"
-                >
-                  <XCircle className="w-5 h-5 mr-2" />
-                  Reject Application
-                </Button>
-              </motion.div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-};
-
+// ============================================================
+// MAIN PAGE COMPONENT - Where the functions are DEFINED
+// ============================================================
 export const PendingMerchantsPage: React.FC = () => {
+  // Fetch pending merchants
   const { data: merchants, isLoading } = usePendingMerchants();
+  
+  // Mutation hooks for approve/reject
   const approveMutation = useApproveMerchant();
   const rejectMutation = useRejectMerchant();
 
+  // State for modals
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantUser | null>(null);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [notes, setNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
+  // ============================================================
+  // APPROVE HANDLER - Called when user confirms approval
+  // ============================================================
   const handleApprove = async () => {
     if (!selectedMerchant) return;
-    
+
     try {
       await approveMutation.mutateAsync({
         merchantId: selectedMerchant.userId,
         notes: notes || 'All documents verified. Approved.',
       });
+      
+      // Reset state after success
       setShowApproveModal(false);
       setSelectedMerchant(null);
       setNotes('');
@@ -418,18 +61,23 @@ export const PendingMerchantsPage: React.FC = () => {
     }
   };
 
+  // ============================================================
+  // REJECT HANDLER - Called when user confirms rejection
+  // ============================================================
   const handleReject = async () => {
     if (!selectedMerchant || !rejectionReason.trim()) {
       alert('Please provide a rejection reason');
       return;
     }
-    
+
     try {
       await rejectMutation.mutateAsync({
         merchantId: selectedMerchant.userId,
         reason: rejectionReason,
         notes: notes || 'Rejected due to incomplete/invalid documents.',
       });
+      
+      // Reset state after success
       setShowRejectModal(false);
       setSelectedMerchant(null);
       setRejectionReason('');
@@ -439,6 +87,7 @@ export const PendingMerchantsPage: React.FC = () => {
     }
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <AdminLayout>
@@ -452,41 +101,37 @@ export const PendingMerchantsPage: React.FC = () => {
 
   return (
     <AdminLayout>
-      <div>
-        {/* Animated Header */}
-        <motion.div 
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <motion.div
           className="mb-8"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 mb-6">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg"
+              className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30"
             >
               <Clock className="w-8 h-8 text-white" />
             </motion.div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">
-                Pending Verifications
-              </h1>
-              <p className="text-gray-600 mt-1 text-lg">
-                Review and approve merchant applications
-              </p>
+              <h1 className="text-3xl font-bold text-gray-900">Pending Verifications</h1>
+              <p className="text-gray-600 mt-1">Review and approve merchant applications</p>
             </div>
           </div>
-          
+
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-orange-100 to-orange-50 rounded-2xl border-2 border-orange-200"
+            className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-amber-100 to-orange-100 rounded-2xl border border-amber-200"
           >
-            <Sparkles className="w-6 h-6 text-orange-600" />
-            <span className="text-2xl font-bold text-orange-900">{merchants?.length || 0}</span>
+            <Sparkles className="w-5 h-5 text-amber-600" />
+            <span className="text-2xl font-bold text-amber-900">{merchants?.length || 0}</span>
             <span className="text-gray-600 font-medium">Applications Waiting</span>
           </motion.div>
         </motion.div>
@@ -495,17 +140,21 @@ export const PendingMerchantsPage: React.FC = () => {
         {merchants && merchants.length > 0 ? (
           <div className="space-y-6">
             {merchants.map((merchant, index) => (
-              <MerchantCard
+              <PendingMerchantCard
                 key={merchant.id}
                 merchant={merchant}
                 index={index}
+                // ============================================================
+                // PASSING FUNCTIONS AS PROPS
+                // These open the modals and set the selected merchant
+                // ============================================================
                 onApprove={(m) => {
-                  setSelectedMerchant(m);
-                  setShowApproveModal(true);
+                  setSelectedMerchant(m);      // Set which merchant to approve
+                  setShowApproveModal(true);   // Open approve modal
                 }}
                 onReject={(m) => {
-                  setSelectedMerchant(m);
-                  setShowRejectModal(true);
+                  setSelectedMerchant(m);      // Set which merchant to reject
+                  setShowRejectModal(true);    // Open reject modal
                 }}
               />
             ))}
@@ -516,34 +165,32 @@ export const PendingMerchantsPage: React.FC = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <Card>
+            <Card className="border-0 shadow-lg">
               <CardContent className="p-16 text-center">
                 <motion.div
-                  animate={{ 
+                  animate={{
                     scale: [1, 1.1, 1],
-                    rotate: [0, 5, -5, 0]
+                    rotate: [0, 5, -5, 0],
                   }}
-                  transition={{ 
+                  transition={{
                     duration: 2,
                     repeat: Infinity,
-                    repeatDelay: 1
+                    repeatDelay: 1,
                   }}
-                  className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center"
+                  className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-emerald-100 to-teal-200 rounded-full flex items-center justify-center"
                 >
-                  <CheckCircle className="w-12 h-12 text-green-600" />
+                  <CheckCircle className="w-12 h-12 text-emerald-600" />
                 </motion.div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  All Caught Up! 🎉
-                </h3>
-                <p className="text-gray-600 text-lg">
-                  No pending merchant applications at the moment
-                </p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">All Caught Up! 🎉</h3>
+                <p className="text-gray-600 text-lg">No pending merchant applications at the moment</p>
               </CardContent>
             </Card>
           </motion.div>
         )}
 
-        {/* Approve Modal */}
+        {/* ============================================================ */}
+        {/* APPROVE MODAL */}
+        {/* ============================================================ */}
         <AnimatePresence>
           {showApproveModal && selectedMerchant && (
             <motion.div
@@ -560,12 +207,10 @@ export const PendingMerchantsPage: React.FC = () => {
                 onClick={(e) => e.stopPropagation()}
                 className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl"
               >
-                <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="w-8 h-8 text-emerald-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-                  Approve Merchant
-                </h3>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">Approve Merchant</h3>
                 <p className="text-gray-600 mb-6 text-center">
                   Confirm approval for <strong>{selectedMerchant.businessName}</strong>
                 </p>
@@ -578,7 +223,7 @@ export const PendingMerchantsPage: React.FC = () => {
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="All documents verified. Approved for platform access."
                     rows={4}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring focus:ring-green-200 transition-all"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring focus:ring-emerald-200 transition-all resize-none"
                   />
                 </div>
                 <div className="flex gap-3">
@@ -589,17 +234,30 @@ export const PendingMerchantsPage: React.FC = () => {
                       setSelectedMerchant(null);
                       setNotes('');
                     }}
-                    className="flex-1 border-2"
+                    className="flex-1 border-2 py-2.5"
                   >
                     Cancel
                   </Button>
                   <Button
-                    onClick={handleApprove}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                    isLoading={approveMutation.isPending}
+                    onClick={handleApprove}  // <-- Calls the actual approve API
+                    disabled={approveMutation.isPending}
+                    className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-2.5"
                   >
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    Approve
+                    {approveMutation.isPending ? (
+                      <span className="flex items-center gap-2">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Approving...
+                      </span>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Approve
+                      </>
+                    )}
                   </Button>
                 </div>
               </motion.div>
@@ -607,7 +265,9 @@ export const PendingMerchantsPage: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Reject Modal */}
+        {/* ============================================================ */}
+        {/* REJECT MODAL */}
+        {/* ============================================================ */}
         <AnimatePresence>
           {showRejectModal && selectedMerchant && (
             <motion.div
@@ -635,14 +295,14 @@ export const PendingMerchantsPage: React.FC = () => {
                 </p>
                 <div className="mb-4">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Rejection Reason *
+                    Rejection Reason <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                     placeholder="e.g., Identity document is unclear. Please resubmit with a clearer copy."
                     rows={3}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring focus:ring-red-200 transition-all"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring focus:ring-red-200 transition-all resize-none"
                     required
                   />
                 </div>
@@ -655,7 +315,7 @@ export const PendingMerchantsPage: React.FC = () => {
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Internal notes for reference"
                     rows={2}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring focus:ring-red-200 transition-all"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring focus:ring-red-200 transition-all resize-none"
                   />
                 </div>
                 <div className="flex gap-3">
@@ -667,17 +327,30 @@ export const PendingMerchantsPage: React.FC = () => {
                       setRejectionReason('');
                       setNotes('');
                     }}
-                    className="flex-1 border-2"
+                    className="flex-1 border-2 py-2.5"
                   >
                     Cancel
                   </Button>
                   <Button
-                    onClick={handleReject}
-                    className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
-                    isLoading={rejectMutation.isPending}
+                    onClick={handleReject}  // <-- Calls the actual reject API
+                    disabled={rejectMutation.isPending || !rejectionReason.trim()}
+                    className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 py-2.5 disabled:opacity-50"
                   >
-                    <XCircle className="w-5 h-5 mr-2" />
-                    Reject
+                    {rejectMutation.isPending ? (
+                      <span className="flex items-center gap-2">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Rejecting...
+                      </span>
+                    ) : (
+                      <>
+                        <XCircle className="w-5 h-5 mr-2" />
+                        Reject
+                      </>
+                    )}
                   </Button>
                 </div>
               </motion.div>
@@ -688,3 +361,4 @@ export const PendingMerchantsPage: React.FC = () => {
     </AdminLayout>
   );
 };
+
