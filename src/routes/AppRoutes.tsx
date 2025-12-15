@@ -28,6 +28,9 @@ import RevenuePage from "@/pages/admin/RevenuePage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import ActivityLogPage from "@/pages/admin/ActitivityPage";
 import AdminSettingPage from "@/pages/admin/SettingPage";
+import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
+import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -41,6 +44,18 @@ const AppRoutes: React.FC = () => {
 
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
+      <Route
+        path="/forgot-password"
+        element={<ForgotPasswordPage />}
+      />
+       <Route
+        path="/reset-password"
+        element={<ResetPasswordPage />}
+      />
+       <Route
+        path="/verify-otp"
+        element={<VerifyOtpPage />}
+      />
       {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
       <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
       <Route path="/merchant/orders" element={<OrdersPage />} />
