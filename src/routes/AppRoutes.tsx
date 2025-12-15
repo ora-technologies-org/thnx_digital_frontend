@@ -32,6 +32,7 @@ import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
 import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
 
+
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -44,18 +45,9 @@ const AppRoutes: React.FC = () => {
 
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
-      <Route
-        path="/forgot-password"
-        element={<ForgotPasswordPage />}
-      />
-       <Route
-        path="/reset-password"
-        element={<ResetPasswordPage />}
-      />
-       <Route
-        path="/verify-otp"
-        element={<VerifyOtpPage />}
-      />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-otp" element={<VerifyOtpPage />} />
       {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
       <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
       <Route path="/merchant/orders" element={<OrdersPage />} />
