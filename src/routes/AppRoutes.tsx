@@ -1,28 +1,33 @@
-// src/routes/AppRoutes.tsx 
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from '../features/auth/components/ProtectedRoute';
-import { ROUTES } from './routePaths';
+// src/routes/AppRoutes.tsx
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "../features/auth/components/ProtectedRoute";
+import { ROUTES } from "./routePaths";
 
 // Pages
-import { HomePage } from '../pages/HomePage';
-import { LoginPage } from '../pages/auth/LoginPage';
-import { RegisterPage } from '../pages/auth/RegisterPage';
-import { BrowsePage } from '../pages/customer/BrowsePage';
-import { PurchasePage } from '../pages/customer/PurchasePage';
-import { DashboardPage } from '../pages/merchant/DashboardPage';
-import { GiftCardsPage } from '../pages/merchant/GiftCardsPage';
-import { RedemptionsPage } from '../pages/merchant/RedemptionsPage';
-import { OrdersPage } from '../pages/merchant/OrdersPage';
-import { ScanPage } from '../pages/merchant/ScanPage';
-import { AnalyticsPage } from '../pages/merchant/AnalyticsPage';
-import { PayoutsPage } from '../pages/merchant/PayoutsPage';
-import { SettingsPage } from '../pages/merchant/SettingsPage';
-import { CompleteProfilePage } from '../pages/auth/CompleteProfilePage';
-import { AdminDashboardPage } from '../features/admin/AdminDashboardPage';
-import { PendingMerchantsPage } from '@/pages/admin/PendngMerchantsPage';
-import { AllMerchantsPage } from '@/pages/admin/AllMerchantsPage';
-import { CreateMerchantPage } from '@/pages/admin/CreateMerchantPage';
+import { HomePage } from "../pages/HomePage";
+import { LoginPage } from "../pages/auth/LoginPage";
+import { RegisterPage } from "../pages/auth/RegisterPage";
+import { BrowsePage } from "../pages/customer/BrowsePage";
+import { PurchasePage } from "../pages/customer/PurchasePage";
+import { DashboardPage } from "../pages/merchant/DashboardPage";
+import { GiftCardsPage } from "../pages/merchant/GiftCardsPage";
+import { RedemptionsPage } from "../pages/merchant/RedemptionsPage";
+import { OrdersPage } from "../pages/merchant/OrdersPage";
+import { ScanPage } from "../pages/merchant/ScanPage";
+import { AnalyticsPage } from "../pages/merchant/AnalyticsPage";
+import { PayoutsPage } from "../pages/merchant/PayoutsPage";
+import { SettingsPage } from "../pages/merchant/SettingsPage";
+import { CompleteProfilePage } from "../pages/auth/CompleteProfilePage";
+import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
+import { PendingMerchantsPage } from "@/pages/admin/PendngMerchantsPage";
+import { AllMerchantsPage } from "@/pages/admin/AllMerchantsPage";
+import { CreateMerchantPage } from "@/pages/admin/CreateMerchantPage";
+import GiftPages from "@/pages/admin/GiftPages";
+import RevenuePage from "@/pages/admin/RevenuePage";
+import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
+import ActivityLogPage from "@/pages/admin/ActitivityPage";
+import AdminSettingPage from "@/pages/admin/SettingPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -36,6 +41,7 @@ const AppRoutes: React.FC = () => {
 
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
+      {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
       <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
       <Route path="/merchant/orders" element={<OrdersPage />} />
       <Route path="/merchant/scan" element={<ScanPage />} />
@@ -43,7 +49,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/merchant/payouts" element={<PayoutsPage />} />
       <Route path="/merchant/redemptions" element={<RedemptionsPage />} />
       <Route path="/merchant/settings" element={<SettingsPage />} />
-      <Route path="/merchant/complete-profile" element={<CompleteProfilePage />} />
+      <Route
+        path="/merchant/complete-profile"
+        element={<CompleteProfilePage />}
+      />
 
       {/* Admin Routes */}
       <Route
@@ -55,10 +64,9 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      <Route path = "/admin/create-merchant" element = {<CreateMerchantPage />}/>
+      <Route path="/admin/create-merchant" element={<CreateMerchantPage />} />
 
-
-{/* <Route
+      {/* <Route
         path="/admin"
         element={
           <ProtectedRoute requiredRole="ADMIN">
@@ -74,7 +82,48 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/giftcards"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <GiftPages />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/revenue"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <RevenuePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminAnalyticsPage />
+          </ProtectedRoute>
+        }
+      />
 
+      <Route
+        path="/admin/activity"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <ActivityLogPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminSettingPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/admin/merchants"
@@ -85,7 +134,10 @@ const AppRoutes: React.FC = () => {
         }
       />
       {/* Default Redirects */}
-      <Route path="/merchant" element={<Navigate to="/merchant/dashboard" replace />} />
+      <Route
+        path="/merchant"
+        element={<Navigate to="/merchant/dashboard" replace />}
+      />
       <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
     </Routes>
   );
