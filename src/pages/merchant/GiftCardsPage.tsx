@@ -1,9 +1,9 @@
-// src/pages/merchant/GiftCardsPage.tsx - WITH SIDEBAR! 🎨
-import React from 'react';
-import { motion } from 'framer-motion';
-import { DashboardLayout } from '../../shared/components/layout/DashboardLayout';
-import { fadeInUp } from '../../shared/utils/animations';
-import EnhancedGiftCardList from '../../features/giftCards/components/GiftCardList';
+// // src/pages/merchant/GiftCardsPage.tsx - WITH SIDEBAR! 🎨
+import React from "react";
+import { motion } from "framer-motion";
+import { DashboardLayout } from "../../shared/components/layout/DashboardLayout";
+import { fadeInUp } from "../../shared/utils/animations";
+import EnhancedGiftCardList from "../../features/giftCards/components/GiftCardList";
 
 export const GiftCardsPage: React.FC = () => {
   return (
@@ -15,27 +15,18 @@ export const GiftCardsPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Gift Cards
-          </h1>
-          <p className="text-gray-600">
-            Create and manage your gift cards
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gift Cards</h1>
+          <p className="text-gray-600">Create and manage your gift cards</p>
         </motion.div>
 
         {/* Gift Card List Component */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeInUp}
-        >
+        <motion.div initial="hidden" animate="visible" variants={fadeInUp}>
           <EnhancedGiftCardList />
         </motion.div>
       </div>
     </DashboardLayout>
   );
 };
-
 
 // // src/pages/merchant/GiftCardsPage.tsx
 // // ============================================
@@ -53,3 +44,4 @@ export const GiftCardsPage: React.FC = () => {
 //     </div>
 //   );
 // };
+// src/pages/merchant/GiftCardsPage.tsx
