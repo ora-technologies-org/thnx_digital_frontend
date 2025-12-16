@@ -1,6 +1,6 @@
 // src/features/admin/api/admin.api.ts - ADMIN API! 🔌
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 export interface MerchantUser {
   id: string;
@@ -27,7 +27,11 @@ export interface MerchantUser {
   accountHolderName: string | null;
   ifscCode: string | null;
   swiftCode: string | null;
-  profileStatus: 'INCOMPLETE' | 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
+  profileStatus:
+    | "INCOMPLETE"
+    | "PENDING_VERIFICATION"
+    | "VERIFIED"
+    | "REJECTED";
   isVerified: boolean;
   verifiedAt: string | null;
   verifiedById: string | null;
@@ -81,18 +85,15 @@ export interface MerchantsListResponse {
 }
 
 const getAuthHeaders = (): HeadersInit => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem("accessToken");
   return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
   };
 };
 
 // Helper function for API calls
-const apiCall = async <T>(
-  url: string,
-  options?: RequestInit
-): Promise<T> => {
+const apiCall = async <T>(url: string, options?: RequestInit): Promise<T> => {
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -104,7 +105,7 @@ const apiCall = async <T>(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.message || 'API request failed');
+    throw new Error(result.message || "API request failed");
   }
 
   return result;
@@ -115,7 +116,7 @@ export const adminApi = {
   // GET /api/merchants
   getAllMerchants: async (): Promise<MerchantUser[]> => {
     const result = await apiCall<ApiResponse<MerchantsListResponse>>(
-      `${API_URL}/merchants`
+      `${API_URL}merchants`,
     );
     return result.data.merchants;
   },
@@ -124,20 +125,22 @@ export const adminApi = {
   // GET /api/merchants/pending
   getPendingMerchants: async (): Promise<MerchantUser[]> => {
     const result = await apiCall<ApiResponse<MerchantsListResponse>>(
-      `${API_URL}/merchants/pending`
+      `${API_URL}merchants/pending`,
     );
     return result.data.merchants;
   },
 
   // ==================== CREATE MERCHANT ====================
   // POST /api/merchants
-  createMerchant: async (data: CreateMerchantRequest): Promise<ApiResponse<{ user: MerchantUser }>> => {
+  createMerchant: async (
+    data: CreateMerchantRequest,
+  ): Promise<ApiResponse<{ user: MerchantUser }>> => {
     const result = await apiCall<ApiResponse<{ user: MerchantUser }>>(
-      `${API_URL}/merchants`,
+      `${API_URL}merchants`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify(data),
-      }
+      },
     );
     return result;
   },
@@ -146,17 +149,17 @@ export const adminApi = {
   // POST /api/merchants/:merchantId/verify
   approveMerchant: async (
     merchantId: string,
-    notes?: string
+    notes?: string,
   ): Promise<ApiResponse<{ profile: MerchantUser }>> => {
     const result = await apiCall<ApiResponse<{ profile: MerchantUser }>>(
-      `${API_URL}/merchants/${merchantId}/verify`,
+      `${API_URL}merchants/${merchantId}/verify`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
-          action: 'approve',
-          verificationNotes: notes || '',
+          action: "approve",
+          verificationNotes: notes || "",
         }),
-      }
+      },
     );
     return result;
   },
@@ -166,22 +169,22 @@ export const adminApi = {
   rejectMerchant: async (
     merchantId: string,
     reason: string,
-    notes?: string
+    notes?: string,
   ): Promise<ApiResponse<{ profile: MerchantUser }>> => {
     if (!reason) {
-      throw new Error('Rejection reason is required');
+      throw new Error("Rejection reason is required");
     }
 
     const result = await apiCall<ApiResponse<{ profile: MerchantUser }>>(
-      `${API_URL}/merchants/${merchantId}/verify`,
+      `${API_URL}merchants/${merchantId}/verify`,
       {
-        method: 'POST',
+        method: "POST",
         body: JSON.stringify({
-          action: 'reject',
+          action: "reject",
           rejectionReason: reason,
-          verificationNotes: notes || '',
+          verificationNotes: notes || "",
         }),
-      }
+      },
     );
     return result;
   },
@@ -190,24 +193,23 @@ export const adminApi = {
   // DELETE /api/merchants/:merchantId
   deleteMerchant: async (
     merchantId: string,
-    hardDelete: boolean = false
+    hardDelete: boolean = false,
   ): Promise<ApiResponse<{ merchantId: string; email: string }>> => {
-    const result = await apiCall<ApiResponse<{ merchantId: string; email: string }>>(
-      `${API_URL}/merchants/${merchantId}`,
-      {
-        method: 'DELETE',
-        body: JSON.stringify({
-          hardDelete,
-        }),
-      }
-    );
+    const result = await apiCall<
+      ApiResponse<{ merchantId: string; email: string }>
+    >(`${API_URL}merchants/${merchantId}`, {
+      method: "DELETE",
+      body: JSON.stringify({
+        hardDelete,
+      }),
+    });
     return result;
   },
 
   // ==================== DEACTIVATE MERCHANT ====================
   // DELETE /api/merchants/:merchantId (soft delete)
   deactivateMerchant: async (
-    merchantId: string
+    merchantId: string,
   ): Promise<ApiResponse<{ merchantId: string; email: string }>> => {
     return adminApi.deleteMerchant(merchantId, false);
   },
@@ -215,7 +217,7 @@ export const adminApi = {
   // ==================== PERMANENTLY DELETE MERCHANT ====================
   // DELETE /api/merchants/:merchantId (hard delete)
   permanentlyDeleteMerchant: async (
-    merchantId: string
+    merchantId: string,
   ): Promise<ApiResponse<{ merchantId: string; email: string }>> => {
     return adminApi.deleteMerchant(merchantId, true);
   },
