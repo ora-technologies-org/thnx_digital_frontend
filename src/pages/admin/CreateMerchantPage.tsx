@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   User,
@@ -16,8 +16,18 @@ import {
   Sparkles,
   CreditCard,
 } from "lucide-react";
-import AdminLayout from "@/shared/components/layout/AdminLayout";
+import { useDispatch, useSelector } from "react-redux";
 
+import { useNavigate } from "react-router-dom";
+import { RootState, AppDispatch } from "@/app/store";
+import {
+  setField,
+  clearErrors,
+  resetForm,
+} from "@/features/admin/slices/MerchantCreateSlice";
+import { useCreateMerchant } from "@/features/admin/hooks/useMerchantMutations";
+
+// Merchant form data interface
 interface CreateMerchantForm {
   email: string;
   password: string;
@@ -44,6 +54,7 @@ interface CreateMerchantForm {
   swiftCode: string;
 }
 
+// Business type options
 const businessTypes = [
   "Sole Proprietorship",
   "Partnership",
@@ -53,6 +64,7 @@ const businessTypes = [
   "Non-Profit Organization",
 ];
 
+// Business category options
 const businessCategories = [
   "Retail",
   "Food & Dining",
@@ -66,137 +78,205 @@ const businessCategories = [
   "Other",
 ];
 
-const Card = ({ children, className = "" }: any) => (
+// Reusable Card component for layout
+const Card = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
   <div className={`bg-white rounded-2xl shadow-lg ${className}`}>
     {children}
   </div>
 );
 
-const InputField = ({
+// Reusable InputField component
+interface InputFieldProps {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  name: keyof CreateMerchantForm;
+  type?: string;
+  required?: boolean;
+  placeholder?: string;
+  error?: string;
+}
+
+const InputField: React.FC<InputFieldProps> = ({
   icon: Icon,
   label,
   name,
   type = "text",
-  value,
-  onChange,
   required = true,
   placeholder,
-}: any) => (
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-2">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <div className="relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-        <Icon className="w-5 h-5" />
-      </div>
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        placeholder={placeholder}
-        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
-      />
-    </div>
-  </div>
-);
+  error,
+}) => {
+  const dispatch = useDispatch();
+  const value = useSelector(
+    (state: RootState) => state.merchant.formData[name],
+  );
 
-const SelectField = ({
-  icon: Icon,
-  label,
-  name,
-  value,
-  onChange,
-  options,
-  required = true,
-}: any) => (
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-2">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <div className="relative">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-        <Icon className="w-5 h-5" />
-      </div>
-      <select
-        name={name}
-        value={value}
-        onChange={onChange}
-        required={required}
-        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none bg-white"
-      >
-        <option value="">Select {label}</option>
-        {options.map((option: string) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </div>
-  </div>
-);
-
-export const CreateMerchantPage: React.FC = () => {
-  const [isPending, setIsPending] = useState(false);
-  const [formData, setFormData] = useState<CreateMerchantForm>({
-    email: "",
-    password: "",
-    name: "",
-    phone: "",
-    businessName: "",
-    businessRegistrationNumber: "",
-    taxId: "",
-    businessType: "",
-    businessCategory: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "",
-    businessPhone: "",
-    businessEmail: "",
-    website: "",
-    description: "",
-    bankName: "",
-    accountNumber: "",
-    accountHolderName: "",
-    ifscCode: "",
-    swiftCode: "",
-  });
-
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
-  ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsPending(true);
-
-    setTimeout(() => {
-      console.log("Creating merchant:", formData);
-      setIsPending(false);
-      alert("Merchant created successfully!");
-    }, 2000);
-  };
-
-  const handleBack = () => {
-    console.log("Navigate back to merchants");
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch(setField({ field: name, value: e.target.value }));
   };
 
   return (
-    <AdminLayout>
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+          <Icon className="w-5 h-5" />
+        </div>
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={handleChange}
+          required={required}
+          placeholder={placeholder}
+          className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none ${
+            error
+              ? "border-red-500 focus:border-red-500 focus:ring-red-100"
+              : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
+          }`}
+        />
+      </div>
+      {error && (
+        <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+          <AlertCircle className="w-4 h-4" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// Reusable SelectField component for dropdowns
+interface SelectFieldProps {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  name: keyof CreateMerchantForm;
+  required?: boolean;
+  options: string[];
+  error?: string;
+}
+
+const SelectField: React.FC<SelectFieldProps> = ({
+  icon: Icon,
+  label,
+  name,
+  required = true,
+  options,
+  error,
+}) => {
+  const dispatch = useDispatch();
+  const value = useSelector(
+    (state: RootState) => state.merchant.formData[name],
+  );
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    dispatch(setField({ field: name, value: e.target.value }));
+  };
+  const token = localStorage.getItem("accessToken");
+  console.log("accessToken:", token);
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <Icon className="w-5 h-5" />
+        </div>
+        <select
+          name={name}
+          value={value}
+          onChange={handleChange}
+          required={required}
+          className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none appearance-none bg-white ${
+            error
+              ? "border-red-500 focus:border-red-500 focus:ring-red-100"
+              : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
+          }`}
+        >
+          <option value="">Select {label}</option>
+          {options.map((option: string) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && (
+        <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+          <AlertCircle className="w-4 h-4" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// Main CreateMerchantPage component
+export const CreateMerchantPage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const formData = useSelector((state: RootState) => state.merchant.formData);
+  const errors = useSelector((state: RootState) => state.merchant.errors);
+  const { mutate: createMerchant, isPending } = useCreateMerchant();
+
+  // Clean up form on component unmount
+  useEffect(() => {
+    return () => {
+      dispatch(resetForm());
+    };
+  }, [dispatch]);
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    dispatch(clearErrors());
+
+    // Client-side validation
+    const validationErrors: Record<string, string> = {};
+
+    if (!formData.email.includes("@")) {
+      validationErrors.email = "Invalid email address";
+    }
+
+    if (formData.password.length < 8) {
+      validationErrors.password = "Password must be at least 8 characters";
+    }
+
+    if (!formData.businessName.trim()) {
+      validationErrors.businessName = "Business name is required";
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      alert("Please fix the validation errors");
+      return;
+    }
+
+    // Call mutation to create merchant
+    createMerchant(formData, {
+      onSuccess: () => {
+        dispatch(resetForm());
+        navigate("/admin/merchants");
+      },
+    });
+  };
+
+  // Navigate back to merchants list
+  const handleBack = () => {
+    navigate("/admin/merchants");
+  };
+
+  return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="p-8 max-w-5xl mx-auto">
-        {/* Header */}
+        {/* Header section with back button and title */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -225,7 +305,7 @@ export const CreateMerchantPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Form */}
+        {/* Main form section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -233,7 +313,7 @@ export const CreateMerchantPage: React.FC = () => {
         >
           <form onSubmit={handleSubmit}>
             <Card className="p-8">
-              {/* Personal Information */}
+              {/* Personal Information section */}
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
                   <User className="w-5 h-5 text-blue-600" />
@@ -248,43 +328,39 @@ export const CreateMerchantPage: React.FC = () => {
                     icon={User}
                     label="Full Name"
                     name="name"
-                    value={formData.name}
-                    onChange={handleChange}
                     placeholder="John Doe"
+                    error={errors.name}
                   />
                   <InputField
                     icon={Mail}
                     label="Email Address"
                     name="email"
                     type="email"
-                    value={formData.email}
-                    onChange={handleChange}
                     placeholder="john@example.com"
+                    error={errors.email}
                   />
                   <InputField
                     icon={Lock}
                     label="Password"
                     name="password"
                     type="password"
-                    value={formData.password}
-                    onChange={handleChange}
                     placeholder="••••••••"
+                    error={errors.password}
                   />
                   <InputField
                     icon={Phone}
                     label="Phone Number"
                     name="phone"
                     type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
                     placeholder="+1234567890"
+                    error={errors.phone}
                   />
                 </div>
               </div>
 
               <div className="border-t border-gray-200 my-8" />
 
-              {/* Business Information */}
+              {/* Business Information section */}
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
                   <Building className="w-5 h-5 text-purple-600" />
@@ -299,69 +375,61 @@ export const CreateMerchantPage: React.FC = () => {
                     icon={Building}
                     label="Business Name"
                     name="businessName"
-                    value={formData.businessName}
-                    onChange={handleChange}
                     placeholder="ABC Company"
+                    error={errors.businessName}
                   />
                   <InputField
                     icon={FileText}
                     label="Business Registration Number"
                     name="businessRegistrationNumber"
-                    value={formData.businessRegistrationNumber}
-                    onChange={handleChange}
                     placeholder="REG123456"
+                    error={errors.businessRegistrationNumber}
                   />
                   <InputField
                     icon={FileText}
                     label="Tax ID"
                     name="taxId"
-                    value={formData.taxId}
-                    onChange={handleChange}
                     placeholder="TAX123456"
+                    error={errors.taxId}
                   />
                   <SelectField
                     icon={Tag}
                     label="Business Type"
                     name="businessType"
-                    value={formData.businessType}
-                    onChange={handleChange}
                     options={businessTypes}
+                    error={errors.businessType}
                   />
                   <SelectField
                     icon={Tag}
                     label="Business Category"
                     name="businessCategory"
-                    value={formData.businessCategory}
-                    onChange={handleChange}
                     options={businessCategories}
+                    error={errors.businessCategory}
                   />
                   <InputField
                     icon={Phone}
                     label="Business Phone"
                     name="businessPhone"
                     type="tel"
-                    value={formData.businessPhone}
-                    onChange={handleChange}
                     placeholder="+1234567890"
+                    error={errors.businessPhone}
                   />
                   <InputField
                     icon={Mail}
                     label="Business Email"
                     name="businessEmail"
                     type="email"
-                    value={formData.businessEmail}
-                    onChange={handleChange}
                     placeholder="info@business.com"
+                    error={errors.businessEmail}
                   />
                   <InputField
                     icon={Globe}
                     label="Website"
                     name="website"
                     type="url"
-                    value={formData.website}
-                    onChange={handleChange}
                     placeholder="https://www.business.com"
                     required={false}
+                    error={errors.website}
                   />
                 </div>
 
@@ -372,18 +440,35 @@ export const CreateMerchantPage: React.FC = () => {
                   <textarea
                     name="description"
                     value={formData.description}
-                    onChange={handleChange}
+                    onChange={(e) =>
+                      dispatch(
+                        setField({
+                          field: "description",
+                          value: e.target.value,
+                        }),
+                      )
+                    }
                     required
                     placeholder="Describe your business..."
                     rows={4}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none resize-none"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none resize-none ${
+                      errors.description
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-100"
+                        : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
+                    }`}
                   />
+                  {errors.description && (
+                    <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.description}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="border-t border-gray-200 my-8" />
 
-              {/* Banking Information */}
+              {/* Banking Information section */}
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
                   <CreditCard className="w-5 h-5 text-indigo-600" />
@@ -398,49 +483,44 @@ export const CreateMerchantPage: React.FC = () => {
                     icon={Building}
                     label="Bank Name"
                     name="bankName"
-                    value={formData.bankName}
-                    onChange={handleChange}
                     placeholder="Bank of America"
+                    error={errors.bankName}
                   />
                   <InputField
                     icon={User}
                     label="Account Holder Name"
                     name="accountHolderName"
-                    value={formData.accountHolderName}
-                    onChange={handleChange}
                     placeholder="John Doe"
+                    error={errors.accountHolderName}
                   />
                   <InputField
                     icon={CreditCard}
                     label="Account Number"
                     name="accountNumber"
-                    value={formData.accountNumber}
-                    onChange={handleChange}
                     placeholder="1234567890"
+                    error={errors.accountNumber}
                   />
                   <InputField
                     icon={FileText}
                     label="IFSC Code"
                     name="ifscCode"
-                    value={formData.ifscCode}
-                    onChange={handleChange}
                     placeholder="SBIN0001234"
+                    error={errors.ifscCode}
                   />
                   <InputField
                     icon={Globe}
                     label="SWIFT Code"
                     name="swiftCode"
-                    value={formData.swiftCode}
-                    onChange={handleChange}
                     placeholder="SBININBB123"
                     required={false}
+                    error={errors.swiftCode}
                   />
                 </div>
               </div>
 
               <div className="border-t border-gray-200 my-8" />
 
-              {/* Location Information */}
+              {/* Location Information section */}
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-green-600" />
@@ -455,48 +535,43 @@ export const CreateMerchantPage: React.FC = () => {
                     icon={MapPin}
                     label="Street Address"
                     name="address"
-                    value={formData.address}
-                    onChange={handleChange}
                     placeholder="123 Main Street"
+                    error={errors.address}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField
                       icon={MapPin}
                       label="City"
                       name="city"
-                      value={formData.city}
-                      onChange={handleChange}
                       placeholder="New York"
+                      error={errors.city}
                     />
                     <InputField
                       icon={MapPin}
                       label="State/Province"
                       name="state"
-                      value={formData.state}
-                      onChange={handleChange}
                       placeholder="NY"
+                      error={errors.state}
                     />
                     <InputField
                       icon={MapPin}
                       label="ZIP/Postal Code"
                       name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleChange}
                       placeholder="10001"
+                      error={errors.zipCode}
                     />
                     <InputField
                       icon={Globe}
                       label="Country"
                       name="country"
-                      value={formData.country}
-                      onChange={handleChange}
                       placeholder="USA"
+                      error={errors.country}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Submit Buttons */}
+              {/* Submit buttons section */}
               <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
                 <motion.button
                   type="button"
@@ -536,7 +611,7 @@ export const CreateMerchantPage: React.FC = () => {
           </form>
         </motion.div>
 
-        {/* Info Card */}
+        {/* Information card at bottom */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -569,6 +644,5 @@ export const CreateMerchantPage: React.FC = () => {
         </motion.div>
       </div>
     </div>
-    </AdminLayout>
   );
 };
