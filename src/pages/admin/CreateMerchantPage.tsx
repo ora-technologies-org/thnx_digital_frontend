@@ -16,6 +16,7 @@ import {
   Sparkles,
   CreditCard,
   Edit2,
+  Gift,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -56,6 +57,7 @@ interface CreateMerchantForm {
   accountHolderName: string;
   ifscCode: string;
   swiftCode: string;
+  giftCardLimit?: number;
   registrationDocument?: File | string;
   taxDocument?: File | string;
   identityDocument?: File | string;
@@ -109,6 +111,8 @@ interface InputFieldProps {
   placeholder?: string;
   error?: string;
   disabled?: boolean;
+  min?: number;
+  step?: string;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -120,6 +124,8 @@ const InputField: React.FC<InputFieldProps> = ({
   placeholder,
   error,
   disabled = false,
+  min,
+  step,
 }) => {
   const dispatch = useDispatch();
   const value = useSelector(
@@ -127,7 +133,8 @@ const InputField: React.FC<InputFieldProps> = ({
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    dispatch(setField({ field: name, value: e.target.value }));
+    const val = type === "number" ? Number(e.target.value) : e.target.value;
+    dispatch(setField({ field: name, value: val }));
   };
 
   return (
@@ -142,11 +149,13 @@ const InputField: React.FC<InputFieldProps> = ({
         <input
           type={type}
           name={name}
-          value={value as string}
+          value={value as string | number}
           onChange={handleChange}
           required={required}
           placeholder={placeholder}
           disabled={disabled}
+          min={min}
+          step={step}
           className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none ${
             disabled ? "bg-gray-100 cursor-not-allowed" : ""
           } ${
@@ -343,7 +352,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
 export const CreateMerchantPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>(); // Changed from merchantId to id
+  const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
 
   const formData = useSelector((state: RootState) => state.merchant.formData);
@@ -392,6 +401,13 @@ export const CreateMerchantPage: React.FC = () => {
       validationErrors.businessName = "Business name is required";
     }
 
+    // Validate giftCardLimit in edit mode
+    if (isEditMode && formData.giftCardLimit !== undefined) {
+      if (formData.giftCardLimit < 0) {
+        validationErrors.giftCardLimit = "Gift card limit cannot be negative";
+      }
+    }
+
     if (Object.keys(validationErrors).length > 0) {
       alert("Please fix the validation errors");
       return;
@@ -400,7 +416,7 @@ export const CreateMerchantPage: React.FC = () => {
     // Call appropriate mutation based on mode
     if (isEditMode) {
       updateMerchant(
-        { merchantId: id!, formData }, // Use id instead of merchantId
+        { merchantId: id!, formData },
         {
           onSuccess: () => {
             dispatch(resetForm());
@@ -525,6 +541,41 @@ export const CreateMerchantPage: React.FC = () => {
                 </div>
 
                 <div className="border-t border-gray-200 my-8" />
+
+                {/* Gift Card Limit Section (Edit Mode Only) */}
+                {isEditMode && (
+                  <>
+                    <div className="mb-8">
+                      <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                        <Gift className="w-5 h-5 text-pink-600" />
+                        Gift Card Settings
+                      </h2>
+                      <p className="text-sm text-gray-600 mb-6">
+                        Configure gift card limitations for this merchant
+                      </p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField
+                          icon={Gift}
+                          label="Gift Card Limit"
+                          name="giftCardLimit"
+                          type="number"
+                          placeholder="Enter limit (e.g., 1000)"
+                          error={errors.giftCardLimit}
+                          required={false}
+                          min={0}
+                          step="0.01"
+                        />
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Set the maximum number of gift cards this merchant can
+                        issue. Leave empty for no limit.
+                      </p>
+                    </div>
+
+                    <div className="border-t border-gray-200 my-8" />
+                  </>
+                )}
 
                 {/* Documents Section */}
                 <div className="mb-8">
@@ -865,6 +916,10 @@ export const CreateMerchantPage: React.FC = () => {
                         </li>
                         <li>
                           • Only business and banking details can be updated
+                        </li>
+                        <li>
+                          • Gift card limit can be set to control the number of
+                          gift cards
                         </li>
                         <li>• All changes will be saved immediately</li>
                         <li>

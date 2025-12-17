@@ -1,5 +1,5 @@
 // hooks/useMerchantMutations.ts
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { CreateMerchantForm } from "../slices/MerchantCreateSlice";
 import {
@@ -26,6 +26,13 @@ export const useCreateMerchant = () => {
   });
 };
 
+export const useMerchants = () => {
+  return useQuery({
+    queryKey: ["merchants"],
+    queryFn: merchantService.getMerchants,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
 export const useUpdateMerchant = () => {
   const queryClient = useQueryClient();
 

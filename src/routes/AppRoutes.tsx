@@ -23,7 +23,7 @@ import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 import { PendingMerchantsPage } from "@/pages/admin/PendngMerchantsPage";
 import { AllMerchantsPage } from "@/pages/admin/AllMerchantsPage";
 import { CreateMerchantPage } from "@/pages/admin/CreateMerchantPage";
-import GiftPages from "@/pages/admin/GiftPages";
+
 import RevenuePage from "@/pages/admin/RevenuePage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import ActivityLogPage from "@/pages/admin/ActitivityPage";
@@ -31,6 +31,7 @@ import AdminSettingPage from "@/pages/admin/SettingPage";
 import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
 import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
+import MerchantsAndCardsApp from "@/pages/admin/GiftPages";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -99,7 +100,7 @@ const AppRoutes: React.FC = () => {
         path="/admin/giftcards"
         element={
           <ProtectedRoute requiredRole="ADMIN">
-            <GiftPages />
+            <MerchantsAndCardsApp />
           </ProtectedRoute>
         }
       />

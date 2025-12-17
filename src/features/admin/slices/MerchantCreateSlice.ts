@@ -25,6 +25,7 @@ export interface CreateMerchantForm {
   accountHolderName: string;
   ifscCode: string;
   swiftCode: string;
+  giftCardLimit?: number; // Added field for edit mode only
   registrationDocument?: File | string;
   taxDocument?: File | string;
   identityDocument?: File | string;
@@ -60,6 +61,7 @@ const initialFormData: CreateMerchantForm = {
   accountHolderName: "",
   ifscCode: "",
   swiftCode: "",
+  giftCardLimit: undefined,
   registrationDocument: undefined,
   taxDocument: undefined,
   identityDocument: undefined,

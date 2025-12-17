@@ -2,7 +2,9 @@ import axios from "axios";
 import { CreateMerchantForm } from "../slices/MerchantCreateSlice";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-
+const getAuthToken = () => {
+  return localStorage.getItem("accessToken");
+};
 export interface CreateMerchantResponse {
   success: boolean;
   data: {
@@ -32,6 +34,61 @@ export interface ApiError {
 }
 
 export const merchantService = {
+  getMerchants: async (): Promise<Merchant[]> => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}merchants/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) throw new Error("Failed to fetch merchants");
+    const data = await response.json();
+    return data.data.merchants;
+  },
+
+  // Get merchant gift cards
+  MerchantGiftCard: async (userId: string): Promise<GiftCard[]> => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}merchants/cards/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) throw new Error("Failed to fetch gift cards");
+    const data = await response.json();
+    return data.data;
+  },
+
+  // Get merchant by ID
+  getMerchantById: async (merchantId: string): Promise<Merchant> => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}merchants/${merchantId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) throw new Error("Failed to fetch merchant");
+    const data = await response.json();
+    return data.data.merchant;
+  },
+
+  // Get gift card details
+  getGiftCardDetails: async (cardId: string): Promise<GiftCard> => {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}cards/${cardId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) throw new Error("Failed to fetch gift card details");
+    const data = await response.json();
+    return data.data;
+  },
+
   async createMerchant(
     formData: CreateMerchantForm,
   ): Promise<CreateMerchantResponse> {
