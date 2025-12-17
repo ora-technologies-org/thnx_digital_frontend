@@ -27,11 +27,14 @@ import { CreateMerchantPage } from "@/pages/admin/CreateMerchantPage";
 import RevenuePage from "@/pages/admin/RevenuePage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import ActivityLogPage from "@/pages/admin/ActitivityPage";
-import AdminSettingPage from "@/pages/admin/SettingPage";
+
 import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
 import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
 import MerchantsAndCardsApp from "@/pages/admin/GiftPages";
+import { AdminSettingPage } from "@/pages/admin/SettingPage";
+import { SupportTicketPage } from "@/pages/merchant/SupportTicket";
+import { AdminSupportTicketPage } from "@/pages/admin/SupportTicket";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -45,6 +48,7 @@ const AppRoutes: React.FC = () => {
 
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
+      <Route path="/merchant/support" element={<SupportTicketPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-otp" element={<VerifyOtpPage />} />
@@ -139,6 +143,14 @@ const AppRoutes: React.FC = () => {
         }
       />
 
+      <Route
+        path="/admin/support-tickets"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminSupportTicketPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/merchants"
         element={
