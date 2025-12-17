@@ -1,7 +1,7 @@
 // src/components/admin/MerchantCard.tsx - PROFESSIONAL MERCHANT CARD! 💼✨
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
   Mail,
@@ -20,12 +20,12 @@ import {
   AlertTriangle,
   Building2,
   Sparkles,
-} from 'lucide-react';
-import { Card, CardContent } from '../../shared/components/ui/Card';
-import { Badge } from '../../shared/components/ui/Badge';
-import { Button } from '../../shared/components/ui/Button';
-import type { MerchantUser } from '../../features/admin/api/admin.api';
-import { useDeleteMerchant } from '../../features/admin/hooks/useAdmin';
+} from "lucide-react";
+import { Card, CardContent } from "../../shared/components/ui/Card";
+import { Badge } from "../../shared/components/ui/Badge";
+import { Button } from "../../shared/components/ui/Button";
+import type { MerchantUser } from "../../features/admin/api/admin.api";
+import { useDeleteMerchant } from "../../features/admin/hooks/useAdmin";
 
 interface MerchantCardProps {
   merchant: MerchantUser;
@@ -49,49 +49,49 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
   // Status configuration with gradients
   const getStatusConfig = () => {
     switch (merchant.profileStatus) {
-      case 'VERIFIED':
+      case "VERIFIED":
         return {
-          label: 'Verified',
+          label: "Verified",
           icon: CheckCircle,
-          bgBadge: 'bg-emerald-100',
-          textBadge: 'text-emerald-700',
-          borderBadge: 'border-emerald-200',
-          gradient: 'from-emerald-500 to-teal-500',
-          avatarBg: 'from-emerald-500 to-teal-600',
-          glow: 'shadow-emerald-500/20',
+          bgBadge: "bg-emerald-100",
+          textBadge: "text-emerald-700",
+          borderBadge: "border-emerald-200",
+          gradient: "from-emerald-500 to-teal-500",
+          avatarBg: "from-emerald-500 to-teal-600",
+          glow: "shadow-emerald-500/20",
         };
-      case 'REJECTED':
+      case "REJECTED":
         return {
-          label: 'Rejected',
+          label: "Rejected",
           icon: XCircle,
-          bgBadge: 'bg-red-100',
-          textBadge: 'text-red-700',
-          borderBadge: 'border-red-200',
-          gradient: 'from-red-500 to-rose-500',
-          avatarBg: 'from-red-500 to-rose-600',
-          glow: 'shadow-red-500/20',
+          bgBadge: "bg-red-100",
+          textBadge: "text-red-700",
+          borderBadge: "border-red-200",
+          gradient: "from-red-500 to-rose-500",
+          avatarBg: "from-red-500 to-rose-600",
+          glow: "shadow-red-500/20",
         };
-      case 'PENDING_VERIFICATION':
+      case "PENDING_VERIFICATION":
         return {
-          label: 'Pending',
+          label: "Pending",
           icon: Clock,
-          bgBadge: 'bg-amber-100',
-          textBadge: 'text-amber-700',
-          borderBadge: 'border-amber-200',
-          gradient: 'from-amber-500 to-orange-500',
-          avatarBg: 'from-amber-500 to-orange-600',
-          glow: 'shadow-amber-500/20',
+          bgBadge: "bg-amber-100",
+          textBadge: "text-amber-700",
+          borderBadge: "border-amber-200",
+          gradient: "from-amber-500 to-orange-500",
+          avatarBg: "from-amber-500 to-orange-600",
+          glow: "shadow-amber-500/20",
         };
       default:
         return {
-          label: 'Incomplete',
+          label: "Incomplete",
           icon: AlertTriangle,
-          bgBadge: 'bg-slate-100',
-          textBadge: 'text-slate-600',
-          borderBadge: 'border-slate-200',
-          gradient: 'from-slate-400 to-slate-500',
-          avatarBg: 'from-slate-400 to-slate-600',
-          glow: 'shadow-slate-500/20',
+          bgBadge: "bg-slate-100",
+          textBadge: "text-slate-600",
+          borderBadge: "border-slate-200",
+          gradient: "from-slate-400 to-slate-500",
+          avatarBg: "from-slate-400 to-slate-600",
+          glow: "shadow-slate-500/20",
         };
     }
   };
@@ -107,15 +107,15 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
       });
       setShowDeleteModal(false);
     } catch (error) {
-      console.error('Failed to delete merchant:', error);
+      console.error("Failed to delete merchant:", error);
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -131,7 +131,9 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
         }}
         className="h-full group"
       >
-        <Card className={`h-full bg-white border-0 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl ${statusConfig.glow} transition-all duration-300`}>
+        <Card
+          className={`h-full bg-white border-0 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl ${statusConfig.glow} transition-all duration-300`}
+        >
           {/* Gradient Status Bar */}
           <div className={`h-1.5 bg-gradient-to-r ${statusConfig.gradient}`} />
 
@@ -144,7 +146,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   {/* Avatar with Gradient */}
                   <motion.div
                     whileHover={{ scale: 1.05, rotate: 2 }}
-                    transition={{ type: 'spring', stiffness: 400 }}
+                    transition={{ type: "spring", stiffness: 400 }}
                     className="relative flex-shrink-0"
                   >
                     <div
@@ -223,20 +225,38 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                               <Eye className="w-4 h-4 text-blue-600" />
                             </div>
-                            <span className="font-medium text-sm">View Details</span>
+                            <span className="font-medium text-sm">
+                              View Details
+                            </span>
                           </button>
-                          <button
-                            onClick={() => {
-                              onEdit?.(merchant);
-                              setShowActions(false);
-                            }}
-                            className="w-full px-4 py-2.5 text-left hover:bg-purple-50 flex items-center gap-3 text-gray-700 hover:text-purple-600 transition-colors"
-                          >
-                            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                              <Edit className="w-4 h-4 text-purple-600" />
+
+                          {/* Conditional Edit Button */}
+                          {merchant.profileStatus === "VERIFIED" ? (
+                            <button
+                              onClick={() => {
+                                if (onEdit) {
+                                  onEdit(merchant);
+                                }
+                                setShowActions(false);
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-purple-50 flex items-center gap-3 text-gray-700 hover:text-purple-600 transition-colors"
+                            >
+                              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <Edit className="w-4 h-4 text-purple-600" />
+                              </div>
+                              <span className="font-medium text-sm">Edit</span>
+                            </button>
+                          ) : (
+                            <div className="w-full px-4 py-2.5 text-left flex items-center gap-3 text-gray-400 cursor-not-allowed">
+                              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <Edit className="w-4 h-4 text-gray-400" />
+                              </div>
+                              <span className="font-medium text-sm">
+                                Edit (Not Verified)
+                              </span>
                             </div>
-                            <span className="font-medium text-sm">Edit</span>
-                          </button>
+                          )}
+
                           <div className="h-px bg-gray-100 my-2 mx-4" />
                           <button
                             onClick={() => {
@@ -291,7 +311,9 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Phone className="w-4 h-4 text-green-600" />
                   </div>
-                  <span className="text-sm text-gray-600">{merchant.businessPhone}</span>
+                  <span className="text-sm text-gray-600">
+                    {merchant.businessPhone}
+                  </span>
                 </div>
               )}
               {(merchant.city || merchant.state) && (
@@ -302,7 +324,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   <span className="text-sm text-gray-600 truncate">
                     {[merchant.city, merchant.state, merchant.country]
                       .filter(Boolean)
-                      .join(', ')}
+                      .join(", ")}
                   </span>
                 </div>
               )}
@@ -369,7 +391,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl"
             >
@@ -378,14 +400,16 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: 'spring', delay: 0.1 }}
+                  transition={{ type: "spring", delay: 0.1 }}
                   className="w-16 h-16 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-red-500/30"
                 >
                   <Trash2 className="w-8 h-8 text-white" />
                 </motion.div>
-                <h3 className="text-xl font-bold text-gray-900 mt-5">Delete Merchant</h3>
+                <h3 className="text-xl font-bold text-gray-900 mt-5">
+                  Delete Merchant
+                </h3>
                 <p className="text-gray-500 mt-2">
-                  Are you sure you want to delete{' '}
+                  Are you sure you want to delete{" "}
                   <span className="font-semibold text-gray-700">
                     {merchant.businessName}
                   </span>
@@ -401,8 +425,8 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   whileTap={{ scale: 0.99 }}
                   className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     !hardDelete
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                      ? "border-amber-500 bg-amber-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
                   }`}
                 >
                   <input
@@ -416,7 +440,9 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                       <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
                         <ShieldX className="w-4 h-4 text-amber-600" />
                       </div>
-                      <span className="font-semibold text-gray-900">Deactivate</span>
+                      <span className="font-semibold text-gray-900">
+                        Deactivate
+                      </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-2 ml-10">
                       Soft delete — merchant can be reactivated later
@@ -430,8 +456,8 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   whileTap={{ scale: 0.99 }}
                   className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
                     hardDelete
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                      ? "border-red-500 bg-red-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
                   }`}
                 >
                   <input
@@ -445,7 +471,9 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                       <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                         <AlertTriangle className="w-4 h-4 text-red-600" />
                       </div>
-                      <span className="font-semibold text-gray-900">Permanent Delete</span>
+                      <span className="font-semibold text-gray-900">
+                        Permanent Delete
+                      </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-2 ml-10">
                       This action cannot be undone. All data will be lost.
@@ -458,7 +486,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   {hardDelete && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
+                      animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
@@ -467,10 +495,13 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                           <AlertTriangle className="w-4 h-4 text-red-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-red-800">Warning</p>
+                          <p className="text-sm font-semibold text-red-800">
+                            Warning
+                          </p>
                           <p className="text-xs text-red-700 mt-1">
-                            This will permanently delete the merchant account, profile, and
-                            all associated data. This action cannot be reversed.
+                            This will permanently delete the merchant account,
+                            profile, and all associated data. This action cannot
+                            be reversed.
                           </p>
                         </div>
                       </div>
@@ -493,15 +524,19 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   disabled={deleteMutation.isPending}
                   className={`flex-1 text-white py-2.5 rounded-xl font-semibold shadow-lg ${
                     hardDelete
-                      ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 shadow-red-500/30'
-                      : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/30'
+                      ? "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 shadow-red-500/30"
+                      : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/30"
                   }`}
                 >
                   {deleteMutation.isPending ? (
                     <span className="flex items-center justify-center gap-2">
                       <motion.div
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
                         className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                       />
                       Deleting...
@@ -509,7 +544,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4 mr-2" />
-                      {hardDelete ? 'Delete Permanently' : 'Deactivate'}
+                      {hardDelete ? "Delete Permanently" : "Deactivate"}
                     </>
                   )}
                 </Button>

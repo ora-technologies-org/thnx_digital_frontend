@@ -15,17 +15,21 @@ import {
   ArrowLeft,
   Sparkles,
   CreditCard,
+  Edit2,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { RootState, AppDispatch } from "@/app/store";
 import {
   setField,
   clearErrors,
   resetForm,
 } from "@/features/admin/slices/MerchantCreateSlice";
-import { useCreateMerchant } from "@/features/admin/hooks/useMerchantMutations";
+import {
+  useCreateMerchant,
+  useUpdateMerchant,
+} from "@/features/admin/hooks/useMerchantMutations";
+import AdminLayout from "@/shared/components/layout/AdminLayout";
 
 // Merchant form data interface
 interface CreateMerchantForm {
@@ -52,6 +56,10 @@ interface CreateMerchantForm {
   accountHolderName: string;
   ifscCode: string;
   swiftCode: string;
+  registrationDocument?: File | string;
+  taxDocument?: File | string;
+  identityDocument?: File | string;
+  additionalDocuments?: File[] | string[];
 }
 
 // Business type options
@@ -100,6 +108,7 @@ interface InputFieldProps {
   required?: boolean;
   placeholder?: string;
   error?: string;
+  disabled?: boolean;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -110,6 +119,7 @@ const InputField: React.FC<InputFieldProps> = ({
   required = true,
   placeholder,
   error,
+  disabled = false,
 }) => {
   const dispatch = useDispatch();
   const value = useSelector(
@@ -132,11 +142,14 @@ const InputField: React.FC<InputFieldProps> = ({
         <input
           type={type}
           name={name}
-          value={value}
+          value={value as string}
           onChange={handleChange}
           required={required}
           placeholder={placeholder}
+          disabled={disabled}
           className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none ${
+            disabled ? "bg-gray-100 cursor-not-allowed" : ""
+          } ${
             error
               ? "border-red-500 focus:border-red-500 focus:ring-red-100"
               : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
@@ -149,6 +162,114 @@ const InputField: React.FC<InputFieldProps> = ({
           {error}
         </p>
       )}
+    </div>
+  );
+};
+
+// File Upload Field Component
+interface FileFieldProps {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+  name: keyof CreateMerchantForm;
+  required?: boolean;
+  error?: string;
+  accept?: string;
+  existingFileUrl?: string;
+}
+
+const FileField: React.FC<FileFieldProps> = ({
+  icon: Icon,
+  label,
+  name,
+  required = false,
+  error,
+  accept = ".pdf,.jpg,.jpeg,.png",
+  existingFileUrl,
+}) => {
+  const dispatch = useDispatch();
+  const value = useSelector(
+    (state: RootState) => state.merchant.formData[name],
+  );
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+
+    if (file) {
+      dispatch(
+        setField({
+          field: name,
+          value: file,
+        }),
+      );
+    }
+  };
+
+  const getFileName = () => {
+    if (value instanceof File) {
+      return value.name;
+    } else if (typeof value === "string" && value) {
+      return "Existing file";
+    } else if (existingFileUrl) {
+      return "Current file uploaded";
+    }
+    return "No file chosen";
+  };
+
+  const hasFile = value instanceof File || existingFileUrl;
+
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <div className="flex items-center gap-3">
+          <label className="flex-1 cursor-pointer">
+            <div
+              className={`flex items-center gap-3 px-4 py-3 border-2 rounded-xl transition-all ${
+                error
+                  ? "border-red-500 hover:border-red-600"
+                  : "border-gray-200 hover:border-blue-500"
+              }`}
+            >
+              <Icon className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-600 flex-1 truncate">
+                {getFileName()}
+              </span>
+              <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">
+                Browse
+              </span>
+            </div>
+            <input
+              type="file"
+              onChange={handleFileChange}
+              accept={accept}
+              required={required && !hasFile}
+              className="hidden"
+            />
+          </label>
+          {existingFileUrl && (
+            <a
+              href={existingFileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+              title="View current file"
+            >
+              <FileText className="w-5 h-5" />
+            </a>
+          )}
+        </div>
+      </div>
+      {error && (
+        <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+          <AlertCircle className="w-4 h-4" />
+          {error}
+        </p>
+      )}
+      <p className="mt-1 text-xs text-gray-500">
+        Accepted formats: PDF, JPG, PNG (Max 5MB)
+      </p>
     </div>
   );
 };
@@ -179,8 +300,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     dispatch(setField({ field: name, value: e.target.value }));
   };
-  const token = localStorage.getItem("accessToken");
-  console.log("accessToken:", token);
+
   return (
     <div>
       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -223,9 +343,26 @@ const SelectField: React.FC<SelectFieldProps> = ({
 export const CreateMerchantPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>(); // Changed from merchantId to id
+  const isEditMode = !!id;
+
   const formData = useSelector((state: RootState) => state.merchant.formData);
   const errors = useSelector((state: RootState) => state.merchant.errors);
-  const { mutate: createMerchant, isPending } = useCreateMerchant();
+
+  const { mutate: createMerchant, isPending: isCreating } = useCreateMerchant();
+  const { mutate: updateMerchant, isPending: isUpdating } = useUpdateMerchant();
+
+  const isPending = isCreating || isUpdating;
+
+  // Log to verify edit mode detection
+  useEffect(() => {
+    if (isEditMode) {
+      console.log("Edit Mode Activated for Merchant ID:", id);
+      console.log("Form Data:", formData);
+    } else {
+      console.log("Create Mode - New Merchant");
+    }
+  }, [isEditMode, id, formData]);
 
   // Clean up form on component unmount
   useEffect(() => {
@@ -246,7 +383,8 @@ export const CreateMerchantPage: React.FC = () => {
       validationErrors.email = "Invalid email address";
     }
 
-    if (formData.password.length < 8) {
+    // Password is only required for create, not edit
+    if (!isEditMode && formData.password.length < 8) {
       validationErrors.password = "Password must be at least 8 characters";
     }
 
@@ -259,13 +397,25 @@ export const CreateMerchantPage: React.FC = () => {
       return;
     }
 
-    // Call mutation to create merchant
-    createMerchant(formData, {
-      onSuccess: () => {
-        dispatch(resetForm());
-        navigate("/admin/merchants");
-      },
-    });
+    // Call appropriate mutation based on mode
+    if (isEditMode) {
+      updateMerchant(
+        { merchantId: id!, formData }, // Use id instead of merchantId
+        {
+          onSuccess: () => {
+            dispatch(resetForm());
+            navigate("/admin/merchants");
+          },
+        },
+      );
+    } else {
+      createMerchant(formData, {
+        onSuccess: () => {
+          dispatch(resetForm());
+          navigate("/admin/merchants");
+        },
+      });
+    }
   };
 
   // Navigate back to merchants list
@@ -274,375 +424,480 @@ export const CreateMerchantPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="p-8 max-w-5xl mx-auto">
-        {/* Header section with back button and title */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+    <AdminLayout>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="p-8 max-w-5xl mx-auto">
+          {/* Header section with back button and title */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
           >
-            <ArrowLeft className="w-5 h-5" />
-            Back to Merchants
-          </button>
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back to Merchants
+            </button>
 
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-12 h-12 bg-gradient-to-br ${isEditMode ? "from-green-500 to-emerald-600" : "from-blue-500 to-purple-600"} rounded-2xl flex items-center justify-center`}
+              >
+                {isEditMode ? (
+                  <Edit2 className="w-6 h-6 text-white" />
+                ) : (
+                  <Sparkles className="w-6 h-6 text-white" />
+                )}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {isEditMode ? "Edit Merchant" : "Create New Merchant"}
+                </h1>
+                <p className="text-gray-600">
+                  {isEditMode
+                    ? "Update merchant information"
+                    : "Add a new merchant to your platform"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Create New Merchant
-              </h1>
-              <p className="text-gray-600">
-                Add a new merchant to your platform
-              </p>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Main form section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <form onSubmit={handleSubmit}>
-            <Card className="p-8">
-              {/* Personal Information section */}
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-600" />
-                  Personal Information
-                </h2>
-                <p className="text-sm text-gray-600 mb-6">
-                  Basic details about the merchant
-                </p>
+          {/* Main form section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <form onSubmit={handleSubmit}>
+              <Card className="p-8">
+                {/* Personal Information section */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-600" />
+                    Personal Information
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Basic details about the merchant
+                  </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <InputField
-                    icon={User}
-                    label="Full Name"
-                    name="name"
-                    placeholder="John Doe"
-                    error={errors.name}
-                  />
-                  <InputField
-                    icon={Mail}
-                    label="Email Address"
-                    name="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    error={errors.email}
-                  />
-                  <InputField
-                    icon={Lock}
-                    label="Password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    error={errors.password}
-                  />
-                  <InputField
-                    icon={Phone}
-                    label="Phone Number"
-                    name="phone"
-                    type="tel"
-                    placeholder="+1234567890"
-                    error={errors.phone}
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 my-8" />
-
-              {/* Business Information section */}
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <Building className="w-5 h-5 text-purple-600" />
-                  Business Information
-                </h2>
-                <p className="text-sm text-gray-600 mb-6">
-                  Details about the merchant's business
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <InputField
-                    icon={Building}
-                    label="Business Name"
-                    name="businessName"
-                    placeholder="ABC Company"
-                    error={errors.businessName}
-                  />
-                  <InputField
-                    icon={FileText}
-                    label="Business Registration Number"
-                    name="businessRegistrationNumber"
-                    placeholder="REG123456"
-                    error={errors.businessRegistrationNumber}
-                  />
-                  <InputField
-                    icon={FileText}
-                    label="Tax ID"
-                    name="taxId"
-                    placeholder="TAX123456"
-                    error={errors.taxId}
-                  />
-                  <SelectField
-                    icon={Tag}
-                    label="Business Type"
-                    name="businessType"
-                    options={businessTypes}
-                    error={errors.businessType}
-                  />
-                  <SelectField
-                    icon={Tag}
-                    label="Business Category"
-                    name="businessCategory"
-                    options={businessCategories}
-                    error={errors.businessCategory}
-                  />
-                  <InputField
-                    icon={Phone}
-                    label="Business Phone"
-                    name="businessPhone"
-                    type="tel"
-                    placeholder="+1234567890"
-                    error={errors.businessPhone}
-                  />
-                  <InputField
-                    icon={Mail}
-                    label="Business Email"
-                    name="businessEmail"
-                    type="email"
-                    placeholder="info@business.com"
-                    error={errors.businessEmail}
-                  />
-                  <InputField
-                    icon={Globe}
-                    label="Website"
-                    name="website"
-                    type="url"
-                    placeholder="https://www.business.com"
-                    required={false}
-                    error={errors.website}
-                  />
-                </div>
-
-                <div className="mt-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Business Description <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      dispatch(
-                        setField({
-                          field: "description",
-                          value: e.target.value,
-                        }),
-                      )
-                    }
-                    required
-                    placeholder="Describe your business..."
-                    rows={4}
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none resize-none ${
-                      errors.description
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                        : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
-                    }`}
-                  />
-                  {errors.description && (
-                    <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                      <AlertCircle className="w-4 h-4" />
-                      {errors.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 my-8" />
-
-              {/* Banking Information section */}
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-indigo-600" />
-                  Banking Information
-                </h2>
-                <p className="text-sm text-gray-600 mb-6">
-                  Bank account details for payments
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <InputField
-                    icon={Building}
-                    label="Bank Name"
-                    name="bankName"
-                    placeholder="Bank of America"
-                    error={errors.bankName}
-                  />
-                  <InputField
-                    icon={User}
-                    label="Account Holder Name"
-                    name="accountHolderName"
-                    placeholder="John Doe"
-                    error={errors.accountHolderName}
-                  />
-                  <InputField
-                    icon={CreditCard}
-                    label="Account Number"
-                    name="accountNumber"
-                    placeholder="1234567890"
-                    error={errors.accountNumber}
-                  />
-                  <InputField
-                    icon={FileText}
-                    label="IFSC Code"
-                    name="ifscCode"
-                    placeholder="SBIN0001234"
-                    error={errors.ifscCode}
-                  />
-                  <InputField
-                    icon={Globe}
-                    label="SWIFT Code"
-                    name="swiftCode"
-                    placeholder="SBININBB123"
-                    required={false}
-                    error={errors.swiftCode}
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 my-8" />
-
-              {/* Location Information section */}
-              <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-green-600" />
-                  Location Information
-                </h2>
-                <p className="text-sm text-gray-600 mb-6">
-                  Business location details
-                </p>
-
-                <div className="grid grid-cols-1 gap-6">
-                  <InputField
-                    icon={MapPin}
-                    label="Street Address"
-                    name="address"
-                    placeholder="123 Main Street"
-                    error={errors.address}
-                  />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField
-                      icon={MapPin}
-                      label="City"
-                      name="city"
-                      placeholder="New York"
-                      error={errors.city}
+                      icon={User}
+                      label="Full Name"
+                      name="name"
+                      placeholder="John Doe"
+                      error={errors.name}
+                      disabled={isEditMode}
                     />
                     <InputField
-                      icon={MapPin}
-                      label="State/Province"
-                      name="state"
-                      placeholder="NY"
-                      error={errors.state}
+                      icon={Mail}
+                      label="Email Address"
+                      name="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      error={errors.email}
+                      disabled={isEditMode}
                     />
                     <InputField
-                      icon={MapPin}
-                      label="ZIP/Postal Code"
-                      name="zipCode"
-                      placeholder="10001"
-                      error={errors.zipCode}
+                      icon={Lock}
+                      label="Password"
+                      name="password"
+                      type="password"
+                      placeholder={
+                        isEditMode ? "Cannot be changed" : "••••••••"
+                      }
+                      error={errors.password}
+                      required={!isEditMode}
+                      disabled={isEditMode}
                     />
                     <InputField
-                      icon={Globe}
-                      label="Country"
-                      name="country"
-                      placeholder="USA"
-                      error={errors.country}
+                      icon={Phone}
+                      label="Phone Number"
+                      name="phone"
+                      type="tel"
+                      placeholder="+1234567890"
+                      error={errors.phone}
+                      disabled={isEditMode}
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Submit buttons section */}
-              <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
-                <motion.button
-                  type="button"
-                  onClick={handleBack}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </motion.button>
+                <div className="border-t border-gray-200 my-8" />
 
-                <motion.button
-                  type="submit"
-                  disabled={isPending}
-                  whileHover={{ scale: isPending ? 1 : 1.02 }}
-                  whileTap={{ scale: isPending ? 1 : 0.98 }}
-                  className={`flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                    isPending
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:shadow-lg"
-                  }`}
+                {/* Documents Section */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-cyan-600" />
+                    Business Documents
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Upload required business verification documents
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FileField
+                      icon={FileText}
+                      label="Registration Document"
+                      name="registrationDocument"
+                      required={!isEditMode}
+                      error={errors.registrationDocument}
+                      existingFileUrl={
+                        isEditMode
+                          ? (formData.registrationDocument as string)
+                          : undefined
+                      }
+                    />
+                    <FileField
+                      icon={FileText}
+                      label="Tax Document"
+                      name="taxDocument"
+                      required={!isEditMode}
+                      error={errors.taxDocument}
+                      existingFileUrl={
+                        isEditMode
+                          ? (formData.taxDocument as string)
+                          : undefined
+                      }
+                    />
+                    <FileField
+                      icon={FileText}
+                      label="Identity Document"
+                      name="identityDocument"
+                      required={!isEditMode}
+                      error={errors.identityDocument}
+                      existingFileUrl={
+                        isEditMode
+                          ? (formData.identityDocument as string)
+                          : undefined
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 my-8" />
+
+                {/* Business Information section */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <Building className="w-5 h-5 text-purple-600" />
+                    Business Information
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Details about the merchant's business
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InputField
+                      icon={Building}
+                      label="Business Name"
+                      name="businessName"
+                      placeholder="ABC Company"
+                      error={errors.businessName}
+                    />
+                    <InputField
+                      icon={FileText}
+                      label="Business Registration Number"
+                      name="businessRegistrationNumber"
+                      placeholder="REG123456"
+                      error={errors.businessRegistrationNumber}
+                    />
+                    <InputField
+                      icon={FileText}
+                      label="Tax ID"
+                      name="taxId"
+                      placeholder="TAX123456"
+                      error={errors.taxId}
+                    />
+                    <SelectField
+                      icon={Tag}
+                      label="Business Type"
+                      name="businessType"
+                      options={businessTypes}
+                      error={errors.businessType}
+                    />
+                    <SelectField
+                      icon={Tag}
+                      label="Business Category"
+                      name="businessCategory"
+                      options={businessCategories}
+                      error={errors.businessCategory}
+                    />
+                    <InputField
+                      icon={Phone}
+                      label="Business Phone"
+                      name="businessPhone"
+                      type="tel"
+                      placeholder="+1234567890"
+                      error={errors.businessPhone}
+                    />
+                    <InputField
+                      icon={Mail}
+                      label="Business Email"
+                      name="businessEmail"
+                      type="email"
+                      placeholder="info@business.com"
+                      error={errors.businessEmail}
+                    />
+                    <InputField
+                      icon={Globe}
+                      label="Website"
+                      name="website"
+                      type="url"
+                      placeholder="https://www.business.com"
+                      required={false}
+                      error={errors.website}
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Business Description{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={(e) =>
+                        dispatch(
+                          setField({
+                            field: "description",
+                            value: e.target.value,
+                          }),
+                        )
+                      }
+                      required
+                      placeholder="Describe your business..."
+                      rows={4}
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none resize-none ${
+                        errors.description
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-100"
+                          : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
+                      }`}
+                    />
+                    {errors.description && (
+                      <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 my-8" />
+
+                {/* Banking Information section */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-indigo-600" />
+                    Banking Information
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Bank account details for payments
+                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InputField
+                      icon={Building}
+                      label="Bank Name"
+                      name="bankName"
+                      placeholder="Bank of America"
+                      error={errors.bankName}
+                    />
+                    <InputField
+                      icon={User}
+                      label="Account Holder Name"
+                      name="accountHolderName"
+                      placeholder="John Doe"
+                      error={errors.accountHolderName}
+                    />
+                    <InputField
+                      icon={CreditCard}
+                      label="Account Number"
+                      name="accountNumber"
+                      placeholder="1234567890"
+                      error={errors.accountNumber}
+                    />
+                    <InputField
+                      icon={FileText}
+                      label="IFSC Code"
+                      name="ifscCode"
+                      placeholder="SBIN0001234"
+                      error={errors.ifscCode}
+                    />
+                    <InputField
+                      icon={Globe}
+                      label="SWIFT Code"
+                      name="swiftCode"
+                      placeholder="SBININBB123"
+                      required={false}
+                      error={errors.swiftCode}
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 my-8" />
+
+                {/* Location Information section */}
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-green-600" />
+                    Location Information
+                  </h2>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Business location details
+                  </p>
+
+                  <div className="grid grid-cols-1 gap-6">
+                    <InputField
+                      icon={MapPin}
+                      label="Street Address"
+                      name="address"
+                      placeholder="123 Main Street"
+                      error={errors.address}
+                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InputField
+                        icon={MapPin}
+                        label="City"
+                        name="city"
+                        placeholder="New York"
+                        error={errors.city}
+                      />
+                      <InputField
+                        icon={MapPin}
+                        label="State/Province"
+                        name="state"
+                        placeholder="NY"
+                        error={errors.state}
+                      />
+                      <InputField
+                        icon={MapPin}
+                        label="ZIP/Postal Code"
+                        name="zipCode"
+                        placeholder="10001"
+                        error={errors.zipCode}
+                      />
+                      <InputField
+                        icon={Globe}
+                        label="Country"
+                        name="country"
+                        placeholder="USA"
+                        error={errors.country}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit buttons section */}
+                <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
+                  <motion.button
+                    type="button"
+                    onClick={handleBack}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </motion.button>
+
+                  <motion.button
+                    type="submit"
+                    disabled={isPending}
+                    whileHover={{ scale: isPending ? 1 : 1.02 }}
+                    whileTap={{ scale: isPending ? 1 : 0.98 }}
+                    className={`flex-1 px-6 py-3 ${isEditMode ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gradient-to-r from-blue-500 to-purple-600"} text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                      isPending
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:shadow-lg"
+                    }`}
+                  >
+                    {isPending ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {isEditMode
+                          ? "Updating Merchant..."
+                          : "Creating Merchant..."}
+                      </>
+                    ) : (
+                      <>
+                        {isEditMode ? (
+                          <Edit2 className="w-5 h-5" />
+                        ) : (
+                          <CheckCircle className="w-5 h-5" />
+                        )}
+                        {isEditMode ? "Update Merchant" : "Create Merchant"}
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </Card>
+            </form>
+          </motion.div>
+
+          {/* Information card at bottom */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-6"
+          >
+            <Card
+              className={`p-6 bg-gradient-to-br ${isEditMode ? "from-green-50 to-emerald-50 border-2 border-green-200" : "from-blue-50 to-purple-50 border-2 border-blue-200"}`}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={`w-10 h-10 ${isEditMode ? "bg-green-500" : "bg-blue-500"} rounded-full flex items-center justify-center flex-shrink-0`}
                 >
-                  {isPending ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Creating Merchant...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-5 h-5" />
-                      Create Merchant
-                    </>
-                  )}
-                </motion.button>
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 mb-2">
+                    Important Notes
+                  </h3>
+                  <ul className="text-sm text-gray-700 space-y-1">
+                    {isEditMode ? (
+                      <>
+                        <li>
+                          • Personal information (name, email, phone, password)
+                          cannot be changed
+                        </li>
+                        <li>
+                          • Only business and banking details can be updated
+                        </li>
+                        <li>• All changes will be saved immediately</li>
+                        <li>
+                          • The merchant will receive a notification about the
+                          update
+                        </li>
+                      </>
+                    ) : (
+                      <>
+                        <li>
+                          • The merchant will be created and automatically
+                          verified
+                        </li>
+                        <li>
+                          • An email notification will be sent to the merchant
+                        </li>
+                        <li>
+                          • The merchant can log in immediately after creation
+                        </li>
+                        <li>• All fields marked with * are required</li>
+                        <li>
+                          • Banking information will be used for payment
+                          settlements
+                        </li>
+                      </>
+                    )}
+                  </ul>
+                </div>
               </div>
             </Card>
-          </form>
-        </motion.div>
-
-        {/* Information card at bottom */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mt-6"
-        >
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 mb-2">
-                  Important Notes
-                </h3>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>
-                    • The merchant will be created and automatically verified
-                  </li>
-                  <li>• An email notification will be sent to the merchant</li>
-                  <li>• The merchant can log in immediately after creation</li>
-                  <li>• All fields marked with * are required</li>
-                  <li>
-                    • Banking information will be used for payment settlements
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };

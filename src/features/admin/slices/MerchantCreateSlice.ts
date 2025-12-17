@@ -1,4 +1,4 @@
-// store/merchantSlice.ts
+// src/features/admin/slices/MerchantCreateSlice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface CreateMerchantForm {
@@ -25,41 +25,49 @@ export interface CreateMerchantForm {
   accountHolderName: string;
   ifscCode: string;
   swiftCode: string;
+  registrationDocument?: File | string;
+  taxDocument?: File | string;
+  identityDocument?: File | string;
+  additionalDocuments?: File[] | string[];
 }
 
 interface MerchantState {
   formData: CreateMerchantForm;
-  isSubmitting: boolean;
-  errors: Record<string, string>;
+  errors: Partial<Record<keyof CreateMerchantForm, string>>;
 }
 
+const initialFormData: CreateMerchantForm = {
+  email: "",
+  password: "",
+  name: "",
+  phone: "",
+  businessName: "",
+  businessRegistrationNumber: "",
+  taxId: "",
+  businessType: "",
+  businessCategory: "",
+  address: "",
+  city: "",
+  state: "",
+  zipCode: "",
+  country: "",
+  businessPhone: "",
+  businessEmail: "",
+  website: "",
+  description: "",
+  bankName: "",
+  accountNumber: "",
+  accountHolderName: "",
+  ifscCode: "",
+  swiftCode: "",
+  registrationDocument: undefined,
+  taxDocument: undefined,
+  identityDocument: undefined,
+  additionalDocuments: undefined,
+};
+
 const initialState: MerchantState = {
-  formData: {
-    email: "",
-    password: "",
-    name: "",
-    phone: "",
-    businessName: "",
-    businessRegistrationNumber: "",
-    taxId: "",
-    businessType: "",
-    businessCategory: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "",
-    businessPhone: "",
-    businessEmail: "",
-    website: "",
-    description: "",
-    bankName: "",
-    accountNumber: "",
-    accountHolderName: "",
-    ifscCode: "",
-    swiftCode: "",
-  },
-  isSubmitting: false,
+  formData: initialFormData,
   errors: {},
 };
 
@@ -67,41 +75,44 @@ const merchantSlice = createSlice({
   name: "merchant",
   initialState,
   reducers: {
+    setField: <K extends keyof CreateMerchantForm>(
+      state: typeof initialState,
+      action: PayloadAction<{ field: K; value: CreateMerchantForm[K] }>,
+    ) => {
+      state.formData[action.payload.field] = action.payload.value;
+
+      if (state.errors[action.payload.field]) {
+        delete state.errors[action.payload.field];
+      }
+    },
     updateFormData: (
       state,
       action: PayloadAction<Partial<CreateMerchantForm>>,
     ) => {
-      state.formData = { ...state.formData, ...action.payload };
+      state.formData = {
+        ...state.formData,
+        ...action.payload,
+      };
     },
-    setField: (
+    setError: (
       state,
-      action: PayloadAction<{ field: keyof CreateMerchantForm; value: string }>,
+      action: PayloadAction<{
+        field: keyof CreateMerchantForm;
+        message: string;
+      }>,
     ) => {
-      state.formData[action.payload.field] = action.payload.value;
-    },
-    setErrors: (state, action: PayloadAction<Record<string, string>>) => {
-      state.errors = action.payload;
+      state.errors[action.payload.field] = action.payload.message;
     },
     clearErrors: (state) => {
       state.errors = {};
     },
-    setSubmitting: (state, action: PayloadAction<boolean>) => {
-      state.isSubmitting = action.payload;
-    },
     resetForm: (state) => {
-      state.formData = initialState.formData;
+      state.formData = initialFormData;
       state.errors = {};
-      state.isSubmitting = false;
     },
   },
 });
 
-export const {
-  updateFormData,
-  setField,
-  setErrors,
-  clearErrors,
-  setSubmitting,
-  resetForm,
-} = merchantSlice.actions;
+export const { setField, updateFormData, setError, clearErrors, resetForm } =
+  merchantSlice.actions;
 export default merchantSlice.reducer;

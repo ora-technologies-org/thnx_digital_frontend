@@ -32,7 +32,6 @@ import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
 import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
 
-
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -72,7 +71,14 @@ const AppRoutes: React.FC = () => {
       />
 
       <Route path="/admin/create-merchant" element={<CreateMerchantPage />} />
-
+      <Route
+        path="/admin/merchants/edit/:id"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <CreateMerchantPage />
+          </ProtectedRoute>
+        }
+      />
       {/* <Route
         path="/admin"
         element={
