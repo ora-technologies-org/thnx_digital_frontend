@@ -1,37 +1,57 @@
 // src/pages/auth/CompleteProfilePage.tsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate} from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Building, MapPin, Phone,
-  FileText, CreditCard, CheckCircle, ArrowLeft, ArrowRight, AlertTriangle 
-} from 'lucide-react';
-import { Card } from '../../shared/components/ui/Card';
-import { Input } from '../../shared/components/ui/Input';
-import { Modal } from '../../shared/components/ui/Modal';
-import { MagneticButton } from '../../shared/components/animated/MagneticButton';
-import { ProgressWizard, WizardStep } from '../../shared/components/wizard/ProgressWizard';
-import { DocumentUpload } from '../../shared/components/upload/DocumentUpload';
-import { staggerContainer } from '../../shared/utils/animations';
-import api from '../../shared/utils/api';
-import toast from 'react-hot-toast';
-import { DashboardLayout } from '@/shared/components/layout/DashboardLayout';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { motion, AnimatePresence } from "framer-motion";
+import { useDispatch } from "react-redux";
+import {
+  Building,
+  MapPin,
+  Phone,
+  FileText,
+  CreditCard,
+  CheckCircle,
+  ArrowLeft,
+  ArrowRight,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
+import { Card } from "../../shared/components/ui/Card";
+import { Input } from "../../shared/components/ui/Input";
+import { Modal } from "../../shared/components/ui/Modal";
+import { MagneticButton } from "../../shared/components/animated/MagneticButton";
+import {
+  ProgressWizard,
+  WizardStep,
+} from "../../shared/components/wizard/ProgressWizard";
+import { DocumentUpload } from "../../shared/components/upload/DocumentUpload";
+import { staggerContainer } from "../../shared/utils/animations";
+import toast from "react-hot-toast";
+import { DashboardLayout } from "@/shared/components/layout/DashboardLayout";
 
+// Redux actions
+import { setProfile } from "@/features/auth/slices/profileSlice";
+
+// Custom hooks
+import { useProfileData } from "@/features/merchant/hooks/useProfileData";
+import { useSubmitProfile } from "@/features/merchant/hooks/useProfileComplete";
+
+// Zod Schema
 const profileSchema = z.object({
-  address: z.string().min(5, 'Address is required'),
-  city: z.string().min(2, 'City is required'),
+  businessName: z.string().min(2, "Business name is required"),
+  address: z.string().min(5, "Address is required"),
+  city: z.string().min(2, "City is required"),
   state: z.string().optional(),
   zipCode: z.string().optional(),
-  country: z.string().min(2, 'Country is required'),
-  businessPhone: z.string().min(10, 'Business phone is required'),
-  businessEmail: z.string().email('Invalid business email'),
-  website: z.string().url('Invalid website URL').optional().or(z.literal('')),
-  bankName: z.string().min(2, 'Bank name is required'),
-  accountNumber: z.string().min(5, 'Account number is required'),
-  accountHolderName: z.string().min(2, 'Account holder name is required'),
+  country: z.string().min(2, "Country is required"),
+  businessPhone: z.string().min(10, "Business phone is required"),
+  businessEmail: z.string().email("Invalid business email"),
+  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+  bankName: z.string().min(2, "Bank name is required"),
+  accountNumber: z.string().min(5, "Account number is required"),
+  accountHolderName: z.string().min(2, "Account holder name is required"),
   ifscCode: z.string().optional(),
   swiftCode: z.string().optional(),
   businessRegistrationNumber: z.string().optional(),
@@ -44,18 +64,33 @@ const profileSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 const wizardSteps: WizardStep[] = [
-  { id: 1, title: 'Business Details', description: 'Address & Contact' },
-  { id: 2, title: 'Bank Information', description: 'Payment Details' },
-  { id: 3, title: 'Documents', description: 'Verification Files' },
+  { id: 1, title: "Business Details", description: "Address & Contact" },
+  { id: 2, title: "Bank Information", description: "Payment Details" },
+  { id: 3, title: "Documents", description: "Verification Files" },
 ];
 
 export const CompleteProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(
+    null,
+  );
+  const [validationAttempted, setValidationAttempted] = useState(false);
+
+  // Custom hooks
+  const {
+    data: profileData,
+    isLoading: isLoadingProfile,
+    isFetching,
+    refetch: refetchProfile,
+  } = useProfileData();
+
+  const submitProfileMutation = useSubmitProfile();
+
+  // Determine if we're in edit mode (profile exists with ID)
+  const isEditMode = !!profileData?.id;
 
   // Document states
   const [identityDoc, setIdentityDoc] = useState<File | null>(null);
@@ -67,73 +102,137 @@ export const CompleteProfilePage: React.FC = () => {
     handleSubmit,
     formState: { errors, isDirty },
     trigger,
+    reset,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
+    defaultValues: {
+      country: "India",
+    },
   });
 
-  // Check for unsaved changes - track if form has any data
-  const hasUnsavedChanges = isDirty || identityDoc !== null || registrationDoc !== null || taxDoc !== null;
+  const hasUnsavedChanges =
+    isDirty ||
+    identityDoc !== null ||
+    registrationDoc !== null ||
+    taxDoc !== null;
 
-  // Check if profile is already submitted
+  // Handle profile status and navigation
   useEffect(() => {
-    checkProfileStatus();
-  }, []);
+    if (isLoadingProfile) return;
 
-  // Warn on browser close/refresh
+    const status = profileData?.profileStatus;
+
+    // If pending review, redirect
+    if (status === "pending") {
+      toast.success("Your profile is already under review");
+      navigate("/merchant/dashboard");
+      return;
+    }
+
+    // If approved, redirect to dashboard
+    if (status === "approved") {
+      toast.success("Your profile is already verified!");
+      navigate("/merchant/dashboard");
+      return;
+    }
+
+    // If we have profile data but status is rejected/incomplete, show edit mode
+    if (profileData?.id) {
+      console.log("📝 Profile exists, enabling edit mode");
+    }
+  }, [profileData, isLoadingProfile, navigate]);
+
+  // Prefill form with fetched data
+  useEffect(() => {
+    if (!profileData || isLoadingProfile) return;
+
+    console.log("🔄 Prefilling form with profile data:", profileData);
+
+    const formValues = {
+      businessName: profileData.businessName || "",
+      address: profileData.address || "",
+      city: profileData.city || "",
+      state: profileData.state || "",
+      zipCode: profileData.zipCode || "",
+      country: profileData.country || "India",
+      businessPhone: profileData.businessPhone || "",
+      businessEmail: profileData.businessEmail || "",
+      website: profileData.website || "",
+      bankName: profileData.bankName || "",
+      accountNumber: profileData.accountNumber || "",
+      accountHolderName: profileData.accountHolderName || "",
+      ifscCode: profileData.ifscCode || "",
+      swiftCode: profileData.swiftCode || "",
+      businessRegistrationNumber: profileData.businessRegistrationNumber || "",
+      taxId: profileData.taxId || "",
+      businessType: profileData.businessType || "",
+      businessCategory: profileData.businessCategory || "",
+      description: profileData.description || "",
+    };
+
+    reset(formValues, {
+      keepDirty: false,
+      keepErrors: false,
+      keepDefaultValues: false,
+    });
+
+    dispatch(
+      setProfile({
+        ...formValues,
+        id: profileData.id,
+        status: profileData.profileStatus || "incomplete",
+        profileStatus: profileData.profileStatus,
+        lastUpdated: profileData.updatedAt || new Date().toISOString(),
+        submittedAt: profileData.submittedAt,
+        rejectionReason: profileData.rejectionReason,
+      }),
+    );
+
+    console.log("✅ Form prefilled successfully");
+  }, [profileData, isLoadingProfile, reset, dispatch]);
+
+  // Prevent accidental navigation with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges && !isSubmitting) {
+      if (hasUnsavedChanges && !submitProfileMutation.isPending) {
         e.preventDefault();
-        e.returnValue = '';
+        e.returnValue = "";
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges, isSubmitting]);
-
-
-  const checkProfileStatus = async () => {
-    try {
-      const response = await api.get('/auth/merchant/profile-status');
-      const { status } = response.data;
-      
-      if (status === 'pending') {
-        toast.success('Your profile is already under review');
-        navigate('/merchant/pending-verification');
-        return;
-      }
-      
-      if (status === 'approved') {
-        toast.success('Your profile is already verified!');
-        navigate('/merchant/dashboard');
-        return;
-      }
-      
-      setIsCheckingStatus(false);
-    } catch (error) {
-      console.error('Error checking status:', error);
-      setIsCheckingStatus(false);
-    }
-  };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges, submitProfileMutation.isPending]);
 
   const handleNext = async () => {
     let fieldsToValidate: (keyof ProfileFormData)[] = [];
 
     if (currentStep === 1) {
-      fieldsToValidate = ['address', 'city', 'country', 'businessPhone', 'businessEmail'];
+      fieldsToValidate = [
+        "businessName",
+        "address",
+        "city",
+        "country",
+        "businessPhone",
+        "businessEmail",
+      ];
     } else if (currentStep === 2) {
-      fieldsToValidate = ['bankName', 'accountNumber', 'accountHolderName'];
+      fieldsToValidate = ["bankName", "accountNumber", "accountHolderName"];
     }
 
     const isValid = await trigger(fieldsToValidate);
+
     if (isValid) {
       setCurrentStep(currentStep + 1);
+      // Reset validation attempt when moving to next step
+      setValidationAttempted(false);
     }
   };
 
   const handleBack = () => {
     setCurrentStep(currentStep - 1);
+    // Reset validation attempt when going back
+    setValidationAttempted(false);
   };
 
   const handleConfirmLeave = () => {
@@ -150,47 +249,154 @@ export const CompleteProfilePage: React.FC = () => {
   };
 
   const onSubmit = async (data: ProfileFormData) => {
-    if (!identityDoc) {
-      toast.error('Identity document is required');
+    console.log("📝 Form submission started", {
+      isEditMode,
+      hasProfileData: !!profileData,
+      profileId: profileData?.id,
+      hasIdentityDoc: !!identityDoc,
+    });
+
+    // Mark that validation was attempted
+    setValidationAttempted(true);
+
+    // Validation: Identity document is required for NEW profiles only
+    if (!isEditMode && !identityDoc) {
+      toast.error("Please upload an identity document to continue");
+      setCurrentStep(3);
       return;
     }
 
-    setIsSubmitting(true);
+    const formData = new FormData();
 
-    try {
-      const formData = new FormData();
+    // Append all form fields
+    // Object.entries(data).forEach(([key, value]) => {
+    //   if (value !== undefined && value !== null && value !== "") {
+    //     formData.append(key, value.toString());
+    //   }
+    // });
+    (
+      Object.entries(data) as [keyof ProfileFormData, string | undefined][]
+    ).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        formData.append(key, value.toString());
+      }
+    });
 
-      Object.entries(data).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
-      });
-
-      if (identityDoc) formData.append('identityDocument', identityDoc);
-      if (registrationDoc) formData.append('registrationDocument', registrationDoc);
-      if (taxDoc) formData.append('taxDocument', taxDoc);
-
-      await api.post('/auth/merchant/complete-profile', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      toast.success('Profile submitted for verification!');
-      navigate('/merchant/pending-verification');
-    } catch (error: any) {
-      console.error('Profile completion error:', error);
-      toast.error(error.response?.data?.message || 'Failed to submit profile');
-    } finally {
-      setIsSubmitting(false);
+    // Append documents
+    if (identityDoc) {
+      formData.append("identityDocument", identityDoc);
+      console.log("📄 Adding identity document:", identityDoc.name);
+    } else if (isEditMode) {
+      console.log("📄 Keeping existing identity document");
     }
+
+    if (registrationDoc) {
+      formData.append("registrationDocument", registrationDoc);
+      console.log("📄 Adding registration document:", registrationDoc.name);
+    }
+
+    if (taxDoc) {
+      formData.append("taxDocument", taxDoc);
+      console.log("📄 Adding tax document:", taxDoc.name);
+    }
+
+    console.log(
+      "📤 Submission mode:",
+      isEditMode ? "PUT (Edit)" : "POST (New)",
+    );
+
+    // Submit the form
+    submitProfileMutation.mutate(
+      {
+        formData,
+        isEdit: isEditMode,
+        profileId: isEditMode ? profileData?.id : undefined,
+      },
+      {
+        onSuccess: (response) => {
+          console.log("✅ Profile submission successful:", response);
+
+          // Update Redux store with the response data
+          dispatch(
+            setProfile({
+              ...data,
+              status: "pending",
+              lastUpdated: new Date().toISOString(),
+              submittedAt: new Date().toISOString(),
+
+              documents: response.documents || {},
+            }),
+          );
+
+          toast.success(
+            isEditMode
+              ? "Profile updated successfully!"
+              : "Profile submitted for verification!",
+          );
+
+          // Refetch profile data
+          refetchProfile();
+
+          // Navigate to dashboard after success
+          setTimeout(() => {
+            navigate("/merchant/dashboard");
+          }, 1000);
+        },
+        onError: (error: unknown) => {
+          console.error("❌ Profile submission failed:", error);
+
+          let errorMessage = "Failed to submit profile. Please try again.";
+
+          // Type-safe error handling
+          if (
+            error &&
+            typeof error === "object" &&
+            "response" in error &&
+            error.response &&
+            typeof error.response === "object" &&
+            "data" in error.response
+          ) {
+            const responseData = (error.response as { data?: unknown }).data;
+
+            if (responseData && typeof responseData === "object") {
+              const dataObj = responseData as Record<string, unknown>;
+
+              if (typeof dataObj.message === "string") {
+                errorMessage = dataObj.message;
+              } else if (typeof dataObj.error === "string") {
+                errorMessage = dataObj.error;
+              } else if (dataObj.errors && typeof dataObj.errors === "object") {
+                const firstError = Object.values(dataObj.errors)[0];
+                if (typeof firstError === "string") {
+                  errorMessage = firstError;
+                }
+              }
+            }
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+
+          toast.error(errorMessage, { duration: 5000 });
+        },
+      },
+    );
   };
 
-  if (isCheckingStatus) {
+  // Show loading state
+  if (isLoadingProfile || isFetching) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full"
-        />
-      </div>
+      <DashboardLayout>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center">
+          <div className="text-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full mx-auto"
+            />
+            <p className="mt-4 text-gray-600">Loading profile data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -198,6 +404,70 @@ export const CompleteProfilePage: React.FC = () => {
     <DashboardLayout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">
+          {/* Edit mode indicator */}
+          {isEditMode && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mb-6 rounded-xl p-4 ${
+                profileData?.profileStatus === "rejected"
+                  ? "bg-red-50 border border-red-200"
+                  : "bg-blue-50 border border-blue-200"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle
+                  className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                    profileData?.profileStatus === "rejected"
+                      ? "text-red-600"
+                      : "text-blue-600"
+                  }`}
+                />
+                <div>
+                  <p
+                    className={`text-sm font-medium mb-1 ${
+                      profileData?.profileStatus === "rejected"
+                        ? "text-red-900"
+                        : "text-blue-900"
+                    }`}
+                  >
+                    {profileData?.profileStatus === "rejected"
+                      ? "Profile Rejected - Edit Required"
+                      : "Editing Existing Profile"}
+                  </p>
+                  <p
+                    className={`text-sm ${
+                      profileData?.profileStatus === "rejected"
+                        ? "text-red-700"
+                        : "text-blue-700"
+                    }`}
+                  >
+                    {profileData?.profileStatus === "rejected"
+                      ? profileData.rejectionReason ||
+                        "Please review and correct your information"
+                      : "You are updating your existing profile. Upload new documents only if you want to replace existing ones."}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Page Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {isEditMode ? "Update Your Profile" : "Complete Your Profile"}
+            </h1>
+            <p className="text-gray-600">
+              {isEditMode
+                ? "Update your business information and resubmit for verification"
+                : "Provide your business details to start creating gift cards"}
+            </p>
+          </motion.div>
+
           {/* Progress Wizard */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -213,7 +483,7 @@ export const CompleteProfilePage: React.FC = () => {
             animate="visible"
             variants={staggerContainer}
           >
-            <Card className="backdrop-blur-sm bg-white/90 border-2 border-gray-200/50 shadow-2xl p-8">
+            <Card className="backdrop-blur-sm bg-white/90 border-2 border-gray-200/50 shadow-2xl p-6 md:p-8">
               <form onSubmit={handleSubmit(onSubmit)}>
                 <AnimatePresence mode="wait">
                   {/* STEP 1: Business Details */}
@@ -231,7 +501,25 @@ export const CompleteProfilePage: React.FC = () => {
                           <Building className="w-6 h-6 text-blue-600" />
                           Business Details
                         </h2>
-                        <p className="text-gray-600">Tell us about your business location and contact information</p>
+                        <p className="text-gray-600">
+                          Tell us about your business location and contact
+                          information
+                        </p>
+                      </div>
+
+                      {/* Business Name */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <Building className="w-5 h-5 text-blue-600" />
+                          Business Information
+                        </h3>
+
+                        <Input
+                          label="Business Name *"
+                          placeholder="Your Business Name"
+                          error={errors.businessName?.message}
+                          {...register("businessName")}
+                        />
                       </div>
 
                       {/* Address Section */}
@@ -242,24 +530,24 @@ export const CompleteProfilePage: React.FC = () => {
                         </h3>
 
                         <Input
-                          label="Street Address"
+                          label="Street Address *"
                           placeholder="123 Main Street"
                           error={errors.address?.message}
-                          {...register('address')}
+                          {...register("address")}
                         />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
-                            label="City"
+                            label="City *"
                             placeholder="Mumbai"
                             error={errors.city?.message}
-                            {...register('city')}
+                            {...register("city")}
                           />
                           <Input
                             label="State/Province"
                             placeholder="Maharashtra"
                             error={errors.state?.message}
-                            {...register('state')}
+                            {...register("state")}
                           />
                         </div>
 
@@ -268,13 +556,13 @@ export const CompleteProfilePage: React.FC = () => {
                             label="ZIP/Postal Code"
                             placeholder="400001"
                             error={errors.zipCode?.message}
-                            {...register('zipCode')}
+                            {...register("zipCode")}
                           />
                           <Input
-                            label="Country"
+                            label="Country *"
                             placeholder="India"
                             error={errors.country?.message}
-                            {...register('country')}
+                            {...register("country")}
                           />
                         </div>
                       </div>
@@ -288,17 +576,17 @@ export const CompleteProfilePage: React.FC = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
-                            label="Business Phone"
+                            label="Business Phone *"
                             placeholder="+919876543210"
                             error={errors.businessPhone?.message}
-                            {...register('businessPhone')}
+                            {...register("businessPhone")}
                           />
                           <Input
-                            label="Business Email"
+                            label="Business Email *"
                             type="email"
                             placeholder="business@example.com"
                             error={errors.businessEmail?.message}
-                            {...register('businessEmail')}
+                            {...register("businessEmail")}
                           />
                         </div>
 
@@ -306,24 +594,26 @@ export const CompleteProfilePage: React.FC = () => {
                           label="Website (Optional)"
                           placeholder="https://yourbusiness.com"
                           error={errors.website?.message}
-                          {...register('website')}
+                          {...register("website")}
                         />
                       </div>
 
                       {/* Optional Fields */}
                       <div className="space-y-4">
-                        <h3 className="font-semibold text-gray-900">Additional Information (Optional)</h3>
+                        <h3 className="font-semibold text-gray-900">
+                          Additional Information (Optional)
+                        </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
                             label="Business Registration Number"
                             placeholder="REG123456"
-                            {...register('businessRegistrationNumber')}
+                            {...register("businessRegistrationNumber")}
                           />
                           <Input
                             label="Tax ID"
                             placeholder="TAX123456"
-                            {...register('taxId')}
+                            {...register("taxId")}
                           />
                         </div>
 
@@ -331,12 +621,12 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="Business Type"
                             placeholder="E-commerce, Restaurant, etc."
-                            {...register('businessType')}
+                            {...register("businessType")}
                           />
                           <Input
                             label="Business Category"
                             placeholder="Retail, Services, etc."
-                            {...register('businessCategory')}
+                            {...register("businessCategory")}
                           />
                         </div>
 
@@ -345,10 +635,10 @@ export const CompleteProfilePage: React.FC = () => {
                             Description
                           </label>
                           <textarea
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             rows={3}
                             placeholder="Brief description of your business..."
-                            {...register('description')}
+                            {...register("description")}
                           />
                         </div>
                       </div>
@@ -370,48 +660,52 @@ export const CompleteProfilePage: React.FC = () => {
                           <CreditCard className="w-6 h-6 text-blue-600" />
                           Bank Information
                         </h2>
-                        <p className="text-gray-600">Enter your bank details for receiving payments</p>
+                        <p className="text-gray-600">
+                          Enter your bank details for receiving payments
+                        </p>
                       </div>
 
                       <div className="space-y-4">
                         <Input
-                          label="Bank Name"
-                          placeholder="HDFC Bank"
+                          label="Bank Name *"
+                          placeholder="HDFC Bank, ICICI Bank, etc."
                           error={errors.bankName?.message}
-                          {...register('bankName')}
+                          {...register("bankName")}
                         />
 
                         <Input
-                          label="Account Number"
+                          label="Account Number *"
                           placeholder="1234567890"
                           error={errors.accountNumber?.message}
-                          {...register('accountNumber')}
+                          {...register("accountNumber")}
                         />
 
                         <Input
-                          label="Account Holder Name"
+                          label="Account Holder Name *"
                           placeholder="As per bank records"
                           error={errors.accountHolderName?.message}
-                          {...register('accountHolderName')}
+                          {...register("accountHolderName")}
                         />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
                             label="IFSC Code (India)"
                             placeholder="HDFC0000123"
-                            {...register('ifscCode')}
+                            {...register("ifscCode")}
                           />
                           <Input
                             label="SWIFT Code (International)"
                             placeholder="HDFCINBB"
-                            {...register('swiftCode')}
+                            {...register("swiftCode")}
                           />
                         </div>
                       </div>
 
                       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                         <p className="text-sm text-yellow-800">
-                          <strong>Note:</strong> Your bank details will be kept secure and used only for processing payments when customers redeem gift cards at your store.
+                          <strong>Note:</strong> Your bank details will be kept
+                          secure and used only for processing payments when
+                          customers redeem gift cards at your store.
                         </p>
                       </div>
                     </motion.div>
@@ -432,30 +726,65 @@ export const CompleteProfilePage: React.FC = () => {
                           <FileText className="w-6 h-6 text-blue-600" />
                           Verification Documents
                         </h2>
-                        <p className="text-gray-600">Upload documents to verify your business</p>
+                        <p className="text-gray-600">
+                          {isEditMode
+                            ? "Upload new documents only if you want to replace existing ones"
+                            : "Upload documents to verify your business"}
+                        </p>
                       </div>
 
                       <div className="space-y-6">
                         <DocumentUpload
-                          label="Identity Document (Required)"
-                          required
+                          label={`Identity Document ${
+                            isEditMode
+                              ? "(Optional - update if needed)"
+                              : "(Required *)"
+                          }`}
+                          required={!isEditMode}
                           value={identityDoc}
                           onChange={setIdentityDoc}
-                          helperText="Upload Aadhaar, PAN, Passport, or Driver's License"
+                          accept={{
+                            "application/pdf": [".pdf"],
+                            "image/png": [".png"],
+                            "image/jpeg": [".jpg", ".jpeg"],
+                          }}
+                          maxSize={10 * 1024 * 1024}
+                          helperText={
+                            isEditMode
+                              ? "Leave empty to keep existing document, or upload new to replace"
+                              : "Upload Aadhaar, PAN, Passport, or Driver's License (PDF, JPG, PNG up to 10MB)"
+                          }
+                          error={
+                            validationAttempted && !isEditMode && !identityDoc
+                              ? "Identity document is required"
+                              : undefined
+                          }
                         />
 
                         <DocumentUpload
                           label="Business Registration Document (Optional)"
                           value={registrationDoc}
                           onChange={setRegistrationDoc}
-                          helperText="GST Certificate, Shop Act License, or Incorporation Certificate"
+                          accept={{
+                            "application/pdf": [".pdf"],
+                            "image/png": [".png"],
+                            "image/jpeg": [".jpg", ".jpeg"],
+                          }}
+                          maxSize={10 * 1024 * 1024}
+                          helperText="GST Certificate, Shop Act License, or Incorporation Certificate (PDF, JPG, PNG up to 10MB)"
                         />
 
                         <DocumentUpload
                           label="Tax Document (Optional)"
                           value={taxDoc}
                           onChange={setTaxDoc}
-                          helperText="GST Registration or Tax Registration Document"
+                          accept={{
+                            "application/pdf": [".pdf"],
+                            "image/png": [".png"],
+                            "image/jpeg": [".jpg", ".jpeg"],
+                          }}
+                          maxSize={10 * 1024 * 1024}
+                          helperText="GST Registration or Tax Registration Document (PDF, JPG, PNG up to 10MB)"
                         />
                       </div>
 
@@ -467,7 +796,9 @@ export const CompleteProfilePage: React.FC = () => {
                               What happens next?
                             </p>
                             <p className="text-sm text-blue-700">
-                              Our team will review your documents within 24-48 hours. You'll receive an email notification once your account is verified and you can start creating gift cards!
+                              {isEditMode
+                                ? "Your updated profile will be reviewed within 24-48 hours. You'll receive an email notification once verified."
+                                : "Our team will review your documents within 24-48 hours. You'll receive an email notification once your account is verified and you can start creating gift cards!"}
                             </p>
                           </div>
                         </div>
@@ -483,6 +814,7 @@ export const CompleteProfilePage: React.FC = () => {
                       type="button"
                       variant="outline"
                       onClick={handleBack}
+                      disabled={submitProfileMutation.isPending}
                     >
                       <ArrowLeft className="mr-2 h-5 w-5" />
                       Back
@@ -496,6 +828,7 @@ export const CompleteProfilePage: React.FC = () => {
                       type="button"
                       variant="primary"
                       onClick={handleNext}
+                      disabled={submitProfileMutation.isPending}
                     >
                       Continue
                       <ArrowRight className="ml-2 h-5 w-5" />
@@ -504,20 +837,19 @@ export const CompleteProfilePage: React.FC = () => {
                     <MagneticButton
                       type="submit"
                       variant="primary"
-                      disabled={isSubmitting}
+                      disabled={submitProfileMutation.isPending}
+                      className="min-w-[180px]"
                     >
-                      {isSubmitting ? (
+                      {submitProfileMutation.isPending ? (
                         <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
-                          />
-                          Submitting...
+                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                          {isEditMode ? "Updating..." : "Submitting..."}
                         </>
                       ) : (
                         <>
-                          Submit for Verification
+                          {isEditMode
+                            ? "Update Profile"
+                            : "Submit for Verification"}
                           <CheckCircle className="ml-2 h-5 w-5" />
                         </>
                       )}
@@ -526,6 +858,23 @@ export const CompleteProfilePage: React.FC = () => {
                 </div>
               </form>
             </Card>
+          </motion.div>
+          {/* Help Text */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-8 text-center text-sm text-gray-500"
+          >
+            <p>
+              Need help? Contact our support team at{" "}
+              <a
+                href="mailto:support@example.com"
+                className="text-blue-600 hover:underline"
+              >
+                support@example.com
+              </a>
+            </p>
           </motion.div>
         </div>
       </div>
@@ -544,11 +893,12 @@ export const CompleteProfilePage: React.FC = () => {
             </div>
             <div>
               <p className="text-gray-700">
-                You have unsaved changes. Are you sure you want to leave? Your progress will be lost.
+                You have unsaved changes. Are you sure you want to leave? Your
+                progress will be lost.
               </p>
             </div>
           </div>
-          
+
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
