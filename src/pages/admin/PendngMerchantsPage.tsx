@@ -1,93 +1,603 @@
 // src/pages/admin/PendingMerchantsPage.tsx
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle,
   XCircle,
   Clock,
   AlertCircle,
   Sparkles,
-} from 'lucide-react';
-import { AdminLayout } from '../../shared/components/layout/AdminLayout';
-import { Button } from '../../shared/components/ui/Button';
-import { Card, CardContent } from '../../shared/components/ui/Card';
-import { Spinner } from '../../shared/components/ui/Spinner';
+  Building,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  FileText,
+  Calendar,
+} from "lucide-react";
+import { AdminLayout } from "../../shared/components/layout/AdminLayout";
+import { Button } from "../../shared/components/ui/Button";
+import { Card, CardContent } from "../../shared/components/ui/Card";
+import { Spinner } from "../../shared/components/ui/Spinner";
 import {
   usePendingMerchants,
   useApproveMerchant,
   useRejectMerchant,
-} from '../../features/admin/hooks/useAdmin';
-import type { MerchantUser } from '../../features/admin/api/admin.api';
-import { PendingMerchantCard } from '../merchant/PendingMerchantCard';
-
+} from "../../features/admin/hooks/useAdmin";
+import type { MerchantUser } from "../../features/admin/api/admin.api";
 
 // ============================================================
-// MAIN PAGE COMPONENT - Where the functions are DEFINED
+// MERCHANT LIST ITEM COMPONENT
+// ============================================================
+
+// ============================================================
+// MERCHANT LIST ITEM COMPONENT (FIXED VERSION)
+// ============================================================
+interface MerchantListItemProps {
+  merchant: MerchantUser;
+  onClick: (merchant: MerchantUser) => void;
+}
+
+const MerchantListItem: React.FC<MerchantListItemProps> = ({
+  merchant,
+  onClick,
+}) => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("CLICKED: Merchant ID:", merchant.id);
+    console.log("CLICKED: Business Name:", merchant.businessName);
+    onClick(merchant);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="mb-4" // Added margin for spacing
+    >
+      <div
+        onClick={handleClick} // Moved click to this div
+        className="cursor-pointer" // Make sure cursor shows pointer
+      >
+        <Card className="hover:shadow-lg transition-all duration-300 hover:border-amber-300 border-2">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-orange-200 rounded-xl flex items-center justify-center">
+                  <Building className="w-6 h-6 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {merchant.businessName}
+                  </h3>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                    <span className="flex items-center gap-1">
+                      <User className="w-4 h-4" />
+                      {merchant.ownerName}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Mail className="w-4 h-4" />
+                      {merchant.email}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {new Date(merchant.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                  Pending
+                </span>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </motion.div>
+  );
+};
+// ============================================================
+// DETAIL MODAL COMPONENT
+// ============================================================
+// ============================================================
+// DETAIL MODAL COMPONENT (UPDATED WITH DOCUMENTS)
+// ============================================================
+interface DetailModalProps {
+  merchant: MerchantUser;
+  isOpen: boolean;
+  onClose: () => void;
+  onApprove: (merchantId: string, notes: string) => Promise<void>;
+  onReject: (
+    merchantId: string,
+    reason: string,
+    notes: string,
+  ) => Promise<void>;
+  isApproving: boolean;
+  isRejecting: boolean;
+}
+
+// Helper function to get document URL
+const getDocumentUrl = (documentPath: string | null): string | null => {
+  if (!documentPath) return null;
+  // Assuming your backend serves files from root
+  return `http://localhost:5000/${documentPath}`; // Adjust based on your backend URL
+};
+
+const DetailModal: React.FC<DetailModalProps> = ({
+  merchant,
+  isOpen,
+  onClose,
+  onApprove,
+  onReject,
+  isApproving,
+  isRejecting,
+}) => {
+  const [notes, setNotes] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState(false);
+
+  // Prepare documents array from the merchant data
+  const documents = React.useMemo(() => {
+    const docs = [];
+
+    if (merchant.registrationDocument) {
+      docs.push({
+        type: "Business Registration Document",
+        url: getDocumentUrl(merchant.registrationDocument),
+        fieldName: "registrationDocument",
+      });
+    }
+
+    if (merchant.taxDocument) {
+      docs.push({
+        type: "Tax Document",
+        url: getDocumentUrl(merchant.taxDocument),
+        fieldName: "taxDocument",
+      });
+    }
+
+    if (merchant.identityDocument) {
+      docs.push({
+        type: "Identity Document",
+        url: getDocumentUrl(merchant.identityDocument),
+        fieldName: "identityDocument",
+      });
+    }
+
+    // Add additional documents if they exist
+    if (
+      merchant.additionalDocuments &&
+      merchant.additionalDocuments.length > 0
+    ) {
+      merchant.additionalDocuments.forEach((doc: string, index: number) => {
+        docs.push({
+          type: `Additional Document ${index + 1}`,
+          url: getDocumentUrl(doc),
+          fieldName: `additionalDocument_${index}`,
+        });
+      });
+    }
+
+    return docs;
+  }, [merchant]);
+
+  const handleApprove = async () => {
+    await onApprove(
+      merchant.userId,
+      notes || "All documents verified. Approved.",
+    );
+    if (!isApproving) {
+      onClose();
+      setNotes("");
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      alert("Please provide a rejection reason");
+      return;
+    }
+    await onReject(
+      merchant.userId,
+      rejectionReason,
+      notes || "Rejected due to incomplete/invalid documents.",
+    );
+    if (!isRejecting) {
+      onClose();
+      setRejectionReason("");
+      setNotes("");
+      setShowRejectForm(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+          >
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-8 rounded-t-2xl z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl flex items-center justify-center">
+                    <Building className="w-8 h-8 text-amber-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {merchant.businessName}
+                    </h2>
+                    <p className="text-gray-600">Application Review</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={onClose}
+                  className="p-2 hover:bg-gray-100 rounded-xl"
+                >
+                  <XCircle className="w-6 h-6" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-8">
+              <div className="gap-8">
+                {/* Left Column - Business Details */}
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <User className="w-5 h-5" />
+                      Business Information
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <User className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Owner Name</p>
+                          <p className="font-medium">
+                            {merchant.user?.name || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Mail className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Email</p>
+                          <p className="font-medium">
+                            {merchant.user?.email || merchant.businessEmail}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <Phone className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Phone</p>
+                          <p className="font-medium">
+                            {merchant.businessPhone ||
+                              merchant.user?.phone ||
+                              "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <MapPin className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">
+                            Business Address
+                          </p>
+                          <p className="font-medium">
+                            {merchant.address
+                              ? `${merchant.address}, ${merchant.city}, ${merchant.state}, ${merchant.country}`
+                              : "Not provided"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      Application Details
+                    </h3>
+                    <div className="space-y-3 ">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Application Date</span>
+                        <span className="font-medium">
+                          {new Date(merchant.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Status</span>
+                        <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                          Pending Review
+                        </span>
+                      </div>
+                      {merchant.description && (
+                        <div>
+                          <span className="text-gray-600">Description</span>
+                          <p className="font-medium mt-1">
+                            {merchant.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column - Documents & Actions */}
+                <div className="space-y-6 mt-8">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Submitted Documents
+                    </h3>
+                    <div className="space-y-2">
+                      {documents.length > 0 ? (
+                        documents.map((doc, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-5 h-5 text-gray-500" />
+                              <div>
+                                <span className="font-medium block">
+                                  {doc.type}
+                                </span>
+                                <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                                  {doc.url
+                                    ? doc.url.split("/").pop()
+                                    : "No file"}
+                                </span>
+                              </div>
+                            </div>
+                            {doc.url ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(doc.url!, "_blank")}
+                              >
+                                View
+                              </Button>
+                            ) : (
+                              <span className="text-sm text-gray-500">
+                                Missing
+                              </span>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">
+                          No documents submitted
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Notes Textarea */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Verification Notes
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Add notes about your verification process..."
+                      rows={3}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:ring focus:ring-amber-200 transition-all resize-none"
+                    />
+                  </div>
+
+                  {/* Rejection Form (Conditional) */}
+                  {showRejectForm && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3"
+                    >
+                      <label className="block text-sm font-semibold text-red-700 mb-2">
+                        Rejection Reason *
+                      </label>
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Provide specific reason for rejection..."
+                        rows={2}
+                        className="w-full px-4 py-3 border-2 border-red-200 rounded-xl focus:border-red-500 focus:ring focus:ring-red-200 transition-all resize-none"
+                        required
+                      />
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-8 pt-8 border-t border-gray-200 flex flex-col sm:flex-row gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRejectForm(!showRejectForm)}
+                  className={`flex-1 ${
+                    showRejectForm
+                      ? "border-red-500 text-red-600 hover:bg-red-50"
+                      : "border-gray-300"
+                  }`}
+                  disabled={isApproving || isRejecting}
+                >
+                  {showRejectForm ? (
+                    <>
+                      <XCircle className="w-5 h-5 mr-2" />
+                      Cancel Rejection
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-5 h-5 mr-2" />
+                      Reject Application
+                    </>
+                  )}
+                </Button>
+
+                {showRejectForm ? (
+                  <Button
+                    onClick={handleReject}
+                    disabled={isRejecting || !rejectionReason.trim()}
+                    className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700"
+                  >
+                    {isRejecting ? (
+                      <span className="flex items-center gap-2">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Rejecting...
+                      </span>
+                    ) : (
+                      <>
+                        <XCircle className="w-5 h-5 mr-2" />
+                        Confirm Rejection
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleApprove}
+                    disabled={isApproving || isRejecting}
+                    className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                  >
+                    {isApproving ? (
+                      <span className="flex items-center gap-2">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                        />
+                        Approving...
+                      </span>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        Approve Application
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// Add ChevronRight icon component
+const ChevronRight: React.FC<{ className?: string }> = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 5l7 7-7 7"
+    />
+  </svg>
+);
+
+// ============================================================
+// MAIN PAGE COMPONENT
 // ============================================================
 export const PendingMerchantsPage: React.FC = () => {
-  // Fetch pending merchants
   const { data: merchants, isLoading } = usePendingMerchants();
-  
-  // Mutation hooks for approve/reject
   const approveMutation = useApproveMerchant();
   const rejectMutation = useRejectMerchant();
 
-  // State for modals
-  const [selectedMerchant, setSelectedMerchant] = useState<MerchantUser | null>(null);
-  const [showApproveModal, setShowApproveModal] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedMerchant, setSelectedMerchant] = useState<MerchantUser | null>(
+    null,
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // ============================================================
-  // APPROVE HANDLER - Called when user confirms approval
-  // ============================================================
-  const handleApprove = async () => {
-    if (!selectedMerchant) return;
+  const handleMerchantClick = (merchant: MerchantUser) => {
+    console.log("Merchant clicked:", merchant.id); // Add this
+    console.log("Opening modal for:", merchant.businessName); // Add this
+    setSelectedMerchant(merchant);
+    setIsModalOpen(true);
+  };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMerchant(null);
+  };
+
+  const handleApprove = async (merchantId: string, notes: string) => {
     try {
       await approveMutation.mutateAsync({
-        merchantId: selectedMerchant.userId,
-        notes: notes || 'All documents verified. Approved.',
+        merchantId,
+        notes,
       });
-      
-      // Reset state after success
-      setShowApproveModal(false);
-      setSelectedMerchant(null);
-      setNotes('');
+      // Modal will close after successful approval
     } catch (error) {
-      console.error('Failed to approve merchant:', error);
+      console.error("Failed to approve merchant:", error);
     }
   };
 
-  // ============================================================
-  // REJECT HANDLER - Called when user confirms rejection
-  // ============================================================
-  const handleReject = async () => {
-    if (!selectedMerchant || !rejectionReason.trim()) {
-      alert('Please provide a rejection reason');
-      return;
-    }
-
+  const handleReject = async (
+    merchantId: string,
+    reason: string,
+    notes: string,
+  ) => {
     try {
       await rejectMutation.mutateAsync({
-        merchantId: selectedMerchant.userId,
-        reason: rejectionReason,
-        notes: notes || 'Rejected due to incomplete/invalid documents.',
+        merchantId,
+        reason,
+        notes,
       });
-      
-      // Reset state after success
-      setShowRejectModal(false);
-      setSelectedMerchant(null);
-      setRejectionReason('');
-      setNotes('');
+      // Modal will close after successful rejection
     } catch (error) {
-      console.error('Failed to reject merchant:', error);
+      console.error("Failed to reject merchant:", error);
     }
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <AdminLayout>
@@ -113,14 +623,18 @@ export const PendingMerchantsPage: React.FC = () => {
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
               className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30"
             >
               <Clock className="w-8 h-8 text-white" />
             </motion.div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Pending Verifications</h1>
-              <p className="text-gray-600 mt-1">Review and approve merchant applications</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Pending Verifications
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Click on any merchant to review details
+              </p>
             </div>
           </div>
 
@@ -131,31 +645,23 @@ export const PendingMerchantsPage: React.FC = () => {
             className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-amber-100 to-orange-100 rounded-2xl border border-amber-200"
           >
             <Sparkles className="w-5 h-5 text-amber-600" />
-            <span className="text-2xl font-bold text-amber-900">{merchants?.length || 0}</span>
-            <span className="text-gray-600 font-medium">Applications Waiting</span>
+            <span className="text-2xl font-bold text-amber-900">
+              {merchants?.length || 0}
+            </span>
+            <span className="text-gray-600 font-medium">
+              Applications Waiting
+            </span>
           </motion.div>
         </motion.div>
 
         {/* Merchants List */}
         {merchants && merchants.length > 0 ? (
-          <div className="space-y-6">
-            {merchants.map((merchant, index) => (
-              <PendingMerchantCard
+          <div className="space-y-4">
+            {merchants.map((merchant) => (
+              <MerchantListItem
                 key={merchant.id}
                 merchant={merchant}
-                index={index}
-                // ============================================================
-                // PASSING FUNCTIONS AS PROPS
-                // These open the modals and set the selected merchant
-                // ============================================================
-                onApprove={(m) => {
-                  setSelectedMerchant(m);      // Set which merchant to approve
-                  setShowApproveModal(true);   // Open approve modal
-                }}
-                onReject={(m) => {
-                  setSelectedMerchant(m);      // Set which merchant to reject
-                  setShowRejectModal(true);    // Open reject modal
-                }}
+                onClick={handleMerchantClick}
               />
             ))}
           </div>
@@ -181,184 +687,30 @@ export const PendingMerchantsPage: React.FC = () => {
                 >
                   <CheckCircle className="w-12 h-12 text-emerald-600" />
                 </motion.div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">All Caught Up! 🎉</h3>
-                <p className="text-gray-600 text-lg">No pending merchant applications at the moment</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  All Caught Up! 🎉
+                </h3>
+                <p className="text-gray-600 text-lg">
+                  No pending merchant applications at the moment
+                </p>
               </CardContent>
             </Card>
           </motion.div>
         )}
 
-        {/* ============================================================ */}
-        {/* APPROVE MODAL */}
-        {/* ============================================================ */}
-        <AnimatePresence>
-          {showApproveModal && selectedMerchant && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-              onClick={() => setShowApproveModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl"
-              >
-                <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="w-8 h-8 text-emerald-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">Approve Merchant</h3>
-                <p className="text-gray-600 mb-6 text-center">
-                  Confirm approval for <strong>{selectedMerchant.businessName}</strong>
-                </p>
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Verification Notes (Optional)
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="All documents verified. Approved for platform access."
-                    rows={4}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring focus:ring-emerald-200 transition-all resize-none"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowApproveModal(false);
-                      setSelectedMerchant(null);
-                      setNotes('');
-                    }}
-                    className="flex-1 border-2 py-2.5"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleApprove}  // <-- Calls the actual approve API
-                    disabled={approveMutation.isPending}
-                    className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-2.5"
-                  >
-                    {approveMutation.isPending ? (
-                      <span className="flex items-center gap-2">
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                        />
-                        Approving...
-                      </span>
-                    ) : (
-                      <>
-                        <CheckCircle className="w-5 h-5 mr-2" />
-                        Approve
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ============================================================ */}
-        {/* REJECT MODAL */}
-        {/* ============================================================ */}
-        <AnimatePresence>
-          {showRejectModal && selectedMerchant && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-              onClick={() => setShowRejectModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl"
-              >
-                <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <AlertCircle className="w-8 h-8 text-red-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-                  Reject Application
-                </h3>
-                <p className="text-gray-600 mb-6 text-center">
-                  Provide a reason for rejecting <strong>{selectedMerchant.businessName}</strong>
-                </p>
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Rejection Reason <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="e.g., Identity document is unclear. Please resubmit with a clearer copy."
-                    rows={3}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring focus:ring-red-200 transition-all resize-none"
-                    required
-                  />
-                </div>
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Additional Notes (Optional)
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Internal notes for reference"
-                    rows={2}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-red-500 focus:ring focus:ring-red-200 transition-all resize-none"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowRejectModal(false);
-                      setSelectedMerchant(null);
-                      setRejectionReason('');
-                      setNotes('');
-                    }}
-                    className="flex-1 border-2 py-2.5"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleReject}  // <-- Calls the actual reject API
-                    disabled={rejectMutation.isPending || !rejectionReason.trim()}
-                    className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 py-2.5 disabled:opacity-50"
-                  >
-                    {rejectMutation.isPending ? (
-                      <span className="flex items-center gap-2">
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                        />
-                        Rejecting...
-                      </span>
-                    ) : (
-                      <>
-                        <XCircle className="w-5 h-5 mr-2" />
-                        Reject
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Detail Modal */}
+        {selectedMerchant && (
+          <DetailModal
+            merchant={selectedMerchant}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            isApproving={approveMutation.isPending}
+            isRejecting={rejectMutation.isPending}
+          />
+        )}
       </div>
     </AdminLayout>
   );
 };
-

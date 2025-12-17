@@ -23,11 +23,15 @@ import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 import { PendingMerchantsPage } from "@/pages/admin/PendngMerchantsPage";
 import { AllMerchantsPage } from "@/pages/admin/AllMerchantsPage";
 import { CreateMerchantPage } from "@/pages/admin/CreateMerchantPage";
-import GiftPages from "@/pages/admin/GiftPages";
+
 import RevenuePage from "@/pages/admin/RevenuePage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import ActivityLogPage from "@/pages/admin/ActitivityPage";
 import AdminSettingPage from "@/pages/admin/SettingPage";
+import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
+import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
+import MerchantsAndCardsApp from "@/pages/admin/GiftPages";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -41,6 +45,9 @@ const AppRoutes: React.FC = () => {
 
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-otp" element={<VerifyOtpPage />} />
       {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
       <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
       <Route path="/merchant/orders" element={<OrdersPage />} />
@@ -65,7 +72,14 @@ const AppRoutes: React.FC = () => {
       />
 
       <Route path="/admin/create-merchant" element={<CreateMerchantPage />} />
-
+      <Route
+        path="/admin/merchants/edit/:id"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <CreateMerchantPage />
+          </ProtectedRoute>
+        }
+      />
       {/* <Route
         path="/admin"
         element={
@@ -86,7 +100,7 @@ const AppRoutes: React.FC = () => {
         path="/admin/giftcards"
         element={
           <ProtectedRoute requiredRole="ADMIN">
-            <GiftPages />
+            <MerchantsAndCardsApp />
           </ProtectedRoute>
         }
       />
