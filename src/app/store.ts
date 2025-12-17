@@ -2,12 +2,14 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "../features/auth/slices/authSlice";
 import giftCardReducer from "../features/giftCards/slices/giftCardSlice";
 import merchantReducer from "../features/admin/slices/MerchantCreateSlice";
+import profileReducer from "../features/auth/slices/profileSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     giftCards: giftCardReducer,
     merchant: merchantReducer,
+    profile: profileReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

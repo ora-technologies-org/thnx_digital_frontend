@@ -1,28 +1,30 @@
 // src/pages/auth/RegisterPage.tsx - ENHANCED VERSION! ✨
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { motion } from 'framer-motion';
-import { Gift, Store, User, Mail, Lock, Phone, ArrowRight, Sparkles } from 'lucide-react';
-import { Card } from '../../shared/components/ui/Card';
-import { Input } from '../../shared/components/ui/Input';
-import { MagneticButton } from '../../shared/components/animated/MagneticButton';
-import { useAuth } from '../../features/auth/hooks/useAuth';
-import { fadeInUp, staggerContainer } from '../../shared/utils/animations';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { motion } from "framer-motion";
+import { Gift, Store, User, ArrowRight, Sparkles } from "lucide-react";
+import { Card } from "../../shared/components/ui/Card";
+import { Input } from "../../shared/components/ui/Input";
+import { MagneticButton } from "../../shared/components/animated/MagneticButton";
+import { useAuth } from "../../features/auth/hooks/useAuth";
+import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 
 const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone must be at least 10 digits'),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone must be at least 10 digits"),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
-  businessName: z.string().min(2, 'Business name is required'),
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  businessName: z
+    .string()
+    .min(2, "Business name must be at least 2 characters"),
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -43,10 +45,10 @@ export const RegisterPage: React.FC = () => {
     try {
       await registerMerchant(data);
       // After successful registration, go directly to dashboard
-      navigate('/merchant/dashboard');
+      navigate("/merchant/dashboard");
     } catch (error) {
       // Error handling is done in the useAuth hook
-      console.error('Registration error:', error);
+      console.error("Registration error:", error);
     }
   };
 
@@ -87,7 +89,10 @@ export const RegisterPage: React.FC = () => {
           </motion.div>
 
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Become a <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Merchant</span>
+            Become a{" "}
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Merchant
+            </span>
           </h1>
           <p className="text-gray-600 text-lg">
             Start selling digital gift cards in minutes!
@@ -99,7 +104,9 @@ export const RegisterPage: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-full mt-4"
           >
             <Sparkles className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-600">Step 1 of 2 • Quick Registration</span>
+            <span className="text-sm font-medium text-blue-600">
+              Step 1 of 2 • Quick Registration
+            </span>
           </motion.div>
         </motion.div>
 
@@ -123,7 +130,7 @@ export const RegisterPage: React.FC = () => {
                       label="Full Name"
                       placeholder="John Doe"
                       error={errors.name?.message}
-                      {...register('name')}
+                      {...register("name")}
                       className="transition-all focus:scale-[1.02]"
                     />
                   </motion.div>
@@ -139,7 +146,7 @@ export const RegisterPage: React.FC = () => {
                         type="email"
                         placeholder="your@email.com"
                         error={errors.email?.message}
-                        {...register('email')}
+                        {...register("email")}
                         className="transition-all focus:scale-[1.02]"
                       />
                     </motion.div>
@@ -153,7 +160,7 @@ export const RegisterPage: React.FC = () => {
                         label="Phone"
                         placeholder="+919876543210"
                         error={errors.phone?.message}
-                        {...register('phone')}
+                        {...register("phone")}
                         className="transition-all focus:scale-[1.02]"
                       />
                     </motion.div>
@@ -170,7 +177,7 @@ export const RegisterPage: React.FC = () => {
                       placeholder="••••••••"
                       error={errors.password?.message}
                       helperText="Min 8 characters with uppercase, lowercase, and number"
-                      {...register('password')}
+                      {...register("password")}
                       className="transition-all focus:scale-[1.02]"
                     />
                   </motion.div>
@@ -178,14 +185,14 @@ export const RegisterPage: React.FC = () => {
               </div>
 
               {/* Divider */}
-              <div className="relative">
+              {/* <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-300" />
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-4 bg-white text-gray-500">Business Details</span>
                 </div>
-              </div>
+              </div> */}
 
               {/* Business Info Section */}
               <div>
@@ -202,7 +209,7 @@ export const RegisterPage: React.FC = () => {
                     label="Business Name"
                     placeholder="ABC Company Ltd"
                     error={errors.businessName?.message}
-                    {...register('businessName')}
+                    {...register("businessName")}
                     className="transition-all focus:scale-[1.02]"
                   />
                 </motion.div>
@@ -222,7 +229,9 @@ export const RegisterPage: React.FC = () => {
                       What's next?
                     </p>
                     <p className="text-sm text-blue-700">
-                      After registration, you'll complete your profile with business documents for verification. This helps us keep the platform secure!
+                      After registration, you'll complete your profile with
+                      business documents for verification. This helps us keep
+                      the platform secure!
                     </p>
                   </div>
                 </div>
@@ -245,7 +254,11 @@ export const RegisterPage: React.FC = () => {
                     <>
                       <motion.div
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                       />
                       Creating Account...
@@ -266,10 +279,10 @@ export const RegisterPage: React.FC = () => {
                 transition={{ delay: 0.9 }}
                 className="text-center text-sm text-gray-600"
               >
-                Already have an account?{' '}
+                Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate("/login")}
                   className="text-blue-600 hover:underline font-medium"
                 >
                   Login here
@@ -285,9 +298,9 @@ export const RegisterPage: React.FC = () => {
           className="mt-8 grid grid-cols-3 gap-4 text-center"
         >
           {[
-            { icon: '✅', text: 'Free to Join' },
-            { icon: '🚀', text: 'Quick Setup' },
-            { icon: '💰', text: 'Start Earning' },
+            { icon: "✅", text: "Free to Join" },
+            { icon: "🚀", text: "Quick Setup" },
+            { icon: "💰", text: "Start Earning" },
           ].map((item, index) => (
             <motion.div
               key={index}

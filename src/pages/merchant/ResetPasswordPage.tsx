@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,10 +8,10 @@ import { Lock, CheckCircle, Gift, Eye, EyeOff, Check } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
-
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useForgotPassword } from "@/features/merchant/hooks/useForgotPssword";
 
+// Password validation with strength requirements
 const resetPasswordSchema = z
   .object({
     password: z
@@ -29,18 +29,25 @@ const resetPasswordSchema = z
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
+/**
+ * Reset password with new password
+ */
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Get email and OTP from previous one
   const email = location.state?.email || "";
   const otp = location.state?.otp || "";
+
   const { resetPassword, isLoading, resetSuccess } = useForgotPassword();
 
+  // Local state for password visibility toggles
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
 
-  // Password requirements validation
+  // Password strength requirements for visual feedback
   const requirements = [
     {
       label: "At least 8 characters long",
@@ -60,7 +67,7 @@ export const ResetPasswordPage: React.FC = () => {
     },
   ];
 
-  // Debug log
+  // Debug: Log received state
   React.useEffect(() => {
     console.log("Reset Password Page - Received state:", { email, otp });
   }, [email, otp]);
@@ -69,17 +76,24 @@ export const ResetPasswordPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
+    control,
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  const password = watch("password");
+  const password = useWatch({
+    control,
+    name: "password",
+  });
 
+  // Update password value for requirements checker
   React.useEffect(() => {
     setPasswordValue(password || "");
   }, [password]);
 
+  /**
+   * Submit new password to API
+   */
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!email || !otp) {
       console.error("Missing email or OTP:", { email, otp });
@@ -98,8 +112,10 @@ export const ResetPasswordPage: React.FC = () => {
       email,
       otp,
       data.password,
-      data.confirmPassword
+      data.confirmPassword,
     );
+
+    // On success, show success UI then redirect to login
     if (success) {
       setTimeout(() => {
         navigate("/login");
@@ -107,20 +123,22 @@ export const ResetPasswordPage: React.FC = () => {
     }
   };
 
-  // If no email or otp, redirect to forgot password
+  // Redirect if no email/otp (direct access without flow)
   React.useEffect(() => {
     if (!email || !otp) {
       navigate("/forgot-password");
     }
   }, [email, otp, navigate]);
 
+  /**
+   * Navigate to login after success
+   */
   const handleGoToLogin = () => {
     navigate("/login");
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
       <motion.div
         className="absolute top-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
         animate={{
@@ -167,10 +185,11 @@ export const ResetPasswordPage: React.FC = () => {
           </p>
         </motion.div>
 
-        {/* Form Card */}
+        {/* Form Card - Switches between form and success message */}
         <motion.div variants={fadeInUp}>
           <Card className="backdrop-blur-sm bg-white/90 border-2 border-gray-200/50 shadow-2xl">
             {!resetSuccess ? (
+              // Password reset form
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-8">
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -181,6 +200,7 @@ export const ResetPasswordPage: React.FC = () => {
                   Please enter your new password below.
                 </motion.p>
 
+                {/* New password input with visibility toggle */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -209,6 +229,7 @@ export const ResetPasswordPage: React.FC = () => {
                   </button>
                 </motion.div>
 
+                {/* Confirm password input with visibility toggle */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -237,6 +258,7 @@ export const ResetPasswordPage: React.FC = () => {
                   </button>
                 </motion.div>
 
+                {/* Password requirements checklist */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -296,6 +318,7 @@ export const ResetPasswordPage: React.FC = () => {
                   </ul>
                 </motion.div>
 
+                {/* Submit button */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -331,6 +354,7 @@ export const ResetPasswordPage: React.FC = () => {
                 </motion.div>
               </form>
             ) : (
+              // Success message after password reset
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -369,7 +393,7 @@ export const ResetPasswordPage: React.FC = () => {
           </Card>
         </motion.div>
 
-        {/* Help Link */}
+        {/* Support link */}
         <motion.div variants={fadeInUp} className="mt-6 text-center">
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
             <div className="p-4">

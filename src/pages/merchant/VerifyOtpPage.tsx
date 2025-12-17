@@ -1,3 +1,4 @@
+// src/features/auth/pages/VerifyOtpPage.tsx
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -8,10 +9,10 @@ import { ShieldCheck, ArrowLeft, Gift } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
-
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useForgotPassword } from "@/features/merchant/hooks/useForgotPssword";
 
+// OTP must be exactly 6 characters
 const verifyOtpSchema = z.object({
   otp: z
     .string()
@@ -21,9 +22,14 @@ const verifyOtpSchema = z.object({
 
 type VerifyOtpFormData = z.infer<typeof verifyOtpSchema>;
 
+/**
+ * Verify the OTP sent to email
+ */
 export const VerifyOtpPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Get email from previous one
   const email = location.state?.email || "";
   const { verifyOtp, requestOtp, isLoading } = useForgotPassword();
   const [isResending, setIsResending] = useState(false);
@@ -36,6 +42,9 @@ export const VerifyOtpPage: React.FC = () => {
     resolver: zodResolver(verifyOtpSchema),
   });
 
+  /**
+   * Verify OTP and navigate to reset password page
+   */
   const onSubmit = async (data: VerifyOtpFormData) => {
     if (!email) {
       navigate("/forgot-password");
@@ -44,11 +53,14 @@ export const VerifyOtpPage: React.FC = () => {
 
     const success = await verifyOtp(email, data.otp);
     if (success) {
-      // Navigate to reset password page with email and otp
+      // Pass email AND otp to reset password page
       navigate("/reset-password", { state: { email, otp: data.otp } });
     }
   };
 
+  /**
+   * Resend OTP if user didn't receive it
+   */
   const handleResendOtp = async () => {
     if (!email) return;
     setIsResending(true);
@@ -56,7 +68,7 @@ export const VerifyOtpPage: React.FC = () => {
     setIsResending(false);
   };
 
-  // If no email, redirect to forgot password
+  // Redirect if no email (user came directly without going through forgot password)
   React.useEffect(() => {
     if (!email) {
       navigate("/forgot-password");
@@ -123,6 +135,7 @@ export const VerifyOtpPage: React.FC = () => {
                 We sent a verification code to <strong>{email}</strong>
               </motion.p>
 
+              {/* OTP input field */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -140,6 +153,7 @@ export const VerifyOtpPage: React.FC = () => {
                 />
               </motion.div>
 
+              {/* Verify button */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -180,6 +194,7 @@ export const VerifyOtpPage: React.FC = () => {
                 transition={{ delay: 0.4 }}
                 className="text-center space-y-4"
               >
+                {/* Resend OTP option */}
                 <div className="bg-blue-50 rounded-lg p-4 text-sm text-gray-700">
                   <p>
                     Didn't receive the code?{" "}
@@ -194,6 +209,7 @@ export const VerifyOtpPage: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Back link */}
                 <Link
                   to="/forgot-password"
                   className="text-sm text-blue-600 hover:underline inline-flex items-center gap-1"
@@ -206,7 +222,7 @@ export const VerifyOtpPage: React.FC = () => {
           </Card>
         </motion.div>
 
-        {/* Help Link */}
+        {/* Support link */}
         <motion.div variants={fadeInUp} className="mt-6 text-center">
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
             <div className="p-4">
