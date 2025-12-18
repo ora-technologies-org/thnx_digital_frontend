@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
@@ -6,13 +6,32 @@ import { Card } from "../../shared/components/ui/Card";
 import { jwtDecode } from "jwt-decode";
 import { passwordService } from "@/features/admin/services/resetPasswordService";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import {
+  fetchProfile,
+  clearUpdateSuccess,
+  clearError,
+  updateProfile,
+} from "@/features/auth/slices/adminprofileSlice";
 
 interface DecodedToken {
   email: string;
   [key: string]: unknown;
 }
+interface ApiError {
+  message?: string;
+  errors?: Record<string, string[]>;
+}
 
 export const AdminSettingPage: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+    updateSuccess,
+  } = useAppSelector((state) => state.profile);
+
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState({
@@ -20,24 +39,69 @@ export const AdminSettingPage: React.FC = () => {
     new: false,
     confirm: false,
   });
-  const [formData, setFormData] = useState({
+
+  // Profile form data
+  const [profileData, setProfileData] = useState({
+    name: "",
+    phone: "",
+    bio: "",
+  });
+
+  // Password form data
+  const [passwordData, setPasswordData] = useState({
     password: "",
     newPassword: "",
     confirmPassword: "",
   });
+
   const [errors, setErrors] = useState<{
     password?: string;
     newPassword?: string;
     confirmPassword?: string;
     general?: string;
   }>({});
+
+  const [profileErrors, setProfileErrors] = useState<{
+    name?: string;
+    phone?: string;
+    bio?: string;
+    general?: string;
+  }>({});
+
   const [successMessage, setSuccessMessage] = useState("");
 
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "Reset", label: "Reset Password", icon: Lock },
   ];
-  console.log("Form Data:", setShowPassword);
+
+  // Fetch profile on component mount
+  useEffect(() => {
+    dispatch(fetchProfile());
+  }, [dispatch]);
+
+  // Update form when profile is loaded
+  useEffect(() => {
+    if (profile) {
+      setProfileData({
+        name: profile.name || "",
+        phone: profile.phone || "",
+        bio: profile.bio || "",
+      });
+    }
+  }, [profile]);
+
+  // Handle update success
+  useEffect(() => {
+    if (updateSuccess) {
+      setSuccessMessage("Profile updated successfully!");
+      setTimeout(() => {
+        dispatch(clearUpdateSuccess());
+        setSuccessMessage("");
+      }, 3000);
+    }
+  }, [updateSuccess, dispatch]);
+
   const getUserEmail = (): string | null => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -50,22 +114,39 @@ export const AdminSettingPage: React.FC = () => {
     }
   };
 
-  const validateForm = (): boolean => {
+  const validateProfileForm = (): boolean => {
+    const newErrors: typeof profileErrors = {};
+
+    if (!profileData.name.trim()) {
+      newErrors.name = "Name is required";
+    } else if (profileData.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+    }
+
+    if (profileData.phone && !/^\d{10}$/.test(profileData.phone)) {
+      newErrors.phone = "Phone number should be 10 digits";
+    }
+
+    setProfileErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validatePasswordForm = (): boolean => {
     const newErrors: typeof errors = {};
 
-    if (!formData.password) {
+    if (!passwordData.password) {
       newErrors.password = "Current password is required";
     }
 
-    if (!formData.newPassword) {
+    if (!passwordData.newPassword) {
       newErrors.newPassword = "New password is required";
-    } else if (formData.newPassword.length < 8) {
+    } else if (passwordData.newPassword.length < 8) {
       newErrors.newPassword = "Password must be at least 8 characters";
     }
 
-    if (!formData.confirmPassword) {
+    if (!passwordData.confirmPassword) {
       newErrors.confirmPassword = "Please confirm your password";
-    } else if (formData.newPassword !== formData.confirmPassword) {
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
@@ -73,21 +154,83 @@ export const AdminSettingPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field
+    setProfileData((prev) => ({ ...prev, [name]: value }));
+    // Clear error for this field when user starts typing
+    if (profileErrors[name as keyof typeof profileErrors]) {
+      setProfileErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handlePasswordInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
     if (errors[name as keyof typeof errors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
+  const handleProfileSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    setSuccessMessage("");
+    setProfileErrors({});
+    dispatch(clearError());
+
+    // Validate form before submitting
+    if (!validateProfileForm()) return;
+
+    try {
+      await dispatch(
+        updateProfile({
+          name: profileData.name,
+          phone: profileData.phone,
+          bio: profileData.bio,
+        }),
+      ).unwrap();
+    } catch (error: unknown) {
+      console.error("Profile update error:", error);
+
+      if (typeof error !== "object" || error === null) {
+        setProfileErrors({
+          general: "Something went wrong. Please try again.",
+        });
+        return;
+      }
+
+      const apiError = error as ApiError;
+
+      // Handle field-level validation errors
+      if (apiError.errors) {
+        const fieldErrors: typeof profileErrors = {};
+
+        Object.entries(apiError.errors).forEach(([key, messages]) => {
+          if (messages?.length) {
+            fieldErrors[key as keyof typeof profileErrors] = messages[0];
+          }
+        });
+
+        setProfileErrors(fieldErrors);
+        return;
+      }
+
+      // Handle general error message
+      if (apiError.message) {
+        setProfileErrors({ general: apiError.message });
+      } else {
+        setProfileErrors({ general: "Profile update failed." });
+      }
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMessage("");
     setErrors({});
 
-    if (!validateForm()) return;
+    if (!validatePasswordForm()) return;
 
     const email = getUserEmail();
     if (!email) {
@@ -100,20 +243,16 @@ export const AdminSettingPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Ensure all values are strings
       const payload = {
         email: String(email),
-        password: String(formData.password),
-        newPassword: String(formData.newPassword),
-        confirmPassword: String(formData.confirmPassword),
+        password: String(passwordData.password),
+        newPassword: String(passwordData.newPassword),
+        confirmPassword: String(passwordData.confirmPassword),
       };
 
-      console.log("Sending payload:", payload); // Debug log
-
       const response = await passwordService.changePassword(payload);
-
       setSuccessMessage(response.message || "Password changed successfully!");
-      setFormData({ password: "", newPassword: "", confirmPassword: "" });
+      setPasswordData({ password: "", newPassword: "", confirmPassword: "" });
     } catch (error: unknown) {
       console.error("Password change error:", error);
       if (error instanceof Error) {
@@ -121,16 +260,18 @@ export const AdminSettingPage: React.FC = () => {
       } else {
         setErrors({ general: "Something went wrong. Please try again." });
       }
+    } finally {
+      setLoading(false);
     }
   };
-  // const togglePasswordVisibility = (field: keyof typeof showPassword) => {
-  //   setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
-  // };
+
+  const togglePasswordVisibility = (field: keyof typeof showPassword) => {
+    setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
 
   return (
     <AdminLayout>
       <div className="p-8">
-        {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -143,7 +284,6 @@ export const AdminSettingPage: React.FC = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Tabs Sidebar */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -178,7 +318,6 @@ export const AdminSettingPage: React.FC = () => {
             </Card>
           </motion.div>
 
-          {/* Content Area */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -191,28 +330,139 @@ export const AdminSettingPage: React.FC = () => {
               </h3>
 
               {activeTab === "profile" && (
-                <div className="text-center py-12">
-                  <p className="text-gray-600">Profile settings coming soon</p>
-                </div>
-              )}
-
-              {activeTab === "Reset" && (
-                <form onSubmit={handleSubmit} className="max-w-md space-y-6">
-                  {/* Success Message */}
+                <form
+                  onSubmit={handleProfileSubmit}
+                  className="max-w-md space-y-6"
+                >
                   {successMessage && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                       <p className="text-green-800">{successMessage}</p>
                     </div>
                   )}
 
-                  {/* General Error */}
+                  {profileError && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-800">{profileError}</p>
+                    </div>
+                  )}
+
+                  {profileErrors.general && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-800">{profileErrors.general}</p>
+                    </div>
+                  )}
+
+                  {/* Email (read-only) */}
+                  {/* <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={profile?.email || ""}
+                      disabled
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed"
+                    />
+                  </div> */}
+
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={profileData.name}
+                      onChange={handleProfileInputChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        profileErrors.name
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      placeholder="Enter your name"
+                    />
+                    {profileErrors.name && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {profileErrors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={profileData.phone}
+                      onChange={handleProfileInputChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        profileErrors.phone
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      placeholder="Enter your phone number (10 digits)"
+                      maxLength={10}
+                    />
+                    {profileErrors.phone && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {profileErrors.phone}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* bio */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bio
+                    </label>
+                    <input
+                      type="text"
+                      name="bio"
+                      value={profileData.bio}
+                      onChange={handleProfileInputChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        profileErrors.bio ? "border-red-500" : "border-gray-300"
+                      }`}
+                      placeholder="Enter bio"
+                    />
+                    {profileErrors.bio && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {profileErrors.bio}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={profileLoading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {profileLoading ? "Updating Profile..." : "Update Profile"}
+                  </button>
+                </form>
+              )}
+
+              {activeTab === "Reset" && (
+                <form
+                  onSubmit={handlePasswordSubmit}
+                  className="max-w-md space-y-6"
+                >
+                  {successMessage && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-800">{successMessage}</p>
+                    </div>
+                  )}
+
                   {errors.general && (
                     <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                       <p className="text-red-800">{errors.general}</p>
                     </div>
                   )}
 
-                  {/* Current Password */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Current Password
@@ -221,8 +471,8 @@ export const AdminSettingPage: React.FC = () => {
                       <input
                         type={showPassword.current ? "text" : "password"}
                         name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
+                        value={passwordData.password}
+                        onChange={handlePasswordInputChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
                           errors.password ? "border-red-500" : "border-gray-300"
                         }`}
@@ -247,7 +497,6 @@ export const AdminSettingPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* New Password */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       New Password
@@ -256,8 +505,8 @@ export const AdminSettingPage: React.FC = () => {
                       <input
                         type={showPassword.new ? "text" : "password"}
                         name="newPassword"
-                        value={formData.newPassword}
-                        onChange={handleInputChange}
+                        value={passwordData.newPassword}
+                        onChange={handlePasswordInputChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
                           errors.newPassword
                             ? "border-red-500"
@@ -284,7 +533,6 @@ export const AdminSettingPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Confirm Password */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Confirm New Password
@@ -293,8 +541,8 @@ export const AdminSettingPage: React.FC = () => {
                       <input
                         type={showPassword.confirm ? "text" : "password"}
                         name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
+                        value={passwordData.confirmPassword}
+                        onChange={handlePasswordInputChange}
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 ${
                           errors.confirmPassword
                             ? "border-red-500"
@@ -321,7 +569,6 @@ export const AdminSettingPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}

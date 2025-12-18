@@ -40,7 +40,6 @@ export interface ResetPasswordResponse {
   data?: unknown;
 }
 export interface ChangePasswordRequest {
-  email: string;
   password: string;
   newPassword: string;
   confirmPassword: string;
@@ -55,23 +54,20 @@ export interface ChangePasswordResponse {
 export const changePasswordService = {
   /**
    * Change user password
-   * Requires email and current password verification
+   *
    */
   changePassword: async (
-    email: string,
     password: string,
     newPassword: string,
     confirmPassword: string,
   ): Promise<ChangePasswordResponse> => {
     const payload: ChangePasswordRequest = {
-      email,
       password,
       newPassword,
       confirmPassword,
     };
 
     console.log("Change Password Payload being sent:", {
-      email,
       password: "***",
       newPassword: "***",
       confirmPassword: "***",

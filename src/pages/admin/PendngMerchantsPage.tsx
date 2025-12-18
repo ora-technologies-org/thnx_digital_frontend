@@ -20,19 +20,17 @@ import { AdminLayout } from "../../shared/components/layout/AdminLayout";
 import { Button } from "../../shared/components/ui/Button";
 import { Card, CardContent } from "../../shared/components/ui/Card";
 import { Spinner } from "../../shared/components/ui/Spinner";
+
 import {
   usePendingMerchants,
   useApproveMerchant,
   useRejectMerchant,
 } from "../../features/admin/hooks/useAdmin";
 import type { MerchantUser } from "../../features/admin/api/admin.api";
+import DocumentPreviewCard from "@/shared/components/modals/DocumentPreviewCard";
 
 // ============================================================
 // MERCHANT LIST ITEM COMPONENT
-// ============================================================
-
-// ============================================================
-// MERCHANT LIST ITEM COMPONENT (FIXED VERSION)
 // ============================================================
 interface MerchantListItemProps {
   merchant: MerchantUser;
@@ -56,12 +54,9 @@ const MerchantListItem: React.FC<MerchantListItemProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="mb-4" // Added margin for spacing
+      className="mb-4"
     >
-      <div
-        onClick={handleClick} // Moved click to this div
-        className="cursor-pointer" // Make sure cursor shows pointer
-      >
+      <div onClick={handleClick} className="cursor-pointer">
         <Card className="hover:shadow-lg transition-all duration-300 hover:border-amber-300 border-2">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
@@ -102,11 +97,9 @@ const MerchantListItem: React.FC<MerchantListItemProps> = ({
     </motion.div>
   );
 };
+
 // ============================================================
 // DETAIL MODAL COMPONENT
-// ============================================================
-// ============================================================
-// DETAIL MODAL COMPONENT (UPDATED WITH DOCUMENTS)
 // ============================================================
 interface DetailModalProps {
   merchant: MerchantUser;
@@ -125,8 +118,21 @@ interface DetailModalProps {
 // Helper function to get document URL
 const getDocumentUrl = (documentPath: string | null): string | null => {
   if (!documentPath) return null;
-  // Assuming your backend serves files from root
-  return `http://localhost:5000/${documentPath}`; // Adjust based on your backend URL
+
+  // If it's already a full URL, return as is
+  if (
+    documentPath.startsWith("http://") ||
+    documentPath.startsWith("https://")
+  ) {
+    return documentPath;
+  }
+
+  // Otherwise, prepend your backend API URL
+  const API_URL = import.meta.env.VITE_DOMAIN;
+  const cleanPath = documentPath.startsWith("/")
+    ? documentPath
+    : `${documentPath}`;
+  return `${API_URL}${cleanPath}`;
 };
 
 const DetailModal: React.FC<DetailModalProps> = ({
@@ -170,7 +176,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
       });
     }
 
-    // Add additional documents if they exist
     if (
       merchant.additionalDocuments &&
       merchant.additionalDocuments.length > 0
@@ -358,40 +363,14 @@ const DetailModal: React.FC<DetailModalProps> = ({
                       <FileText className="w-5 h-5" />
                       Submitted Documents
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {documents.length > 0 ? (
                         documents.map((doc, index) => (
-                          <div
+                          <DocumentPreviewCard
                             key={index}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <FileText className="w-5 h-5 text-gray-500" />
-                              <div>
-                                <span className="font-medium block">
-                                  {doc.type}
-                                </span>
-                                <span className="text-xs text-gray-500 truncate max-w-[200px]">
-                                  {doc.url
-                                    ? doc.url.split("/").pop()
-                                    : "No file"}
-                                </span>
-                              </div>
-                            </div>
-                            {doc.url ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(doc.url!, "_blank")}
-                              >
-                                View
-                              </Button>
-                            ) : (
-                              <span className="text-sm text-gray-500">
-                                Missing
-                              </span>
-                            )}
-                          </div>
+                            label={doc.type}
+                            url={doc.url || undefined}
+                          />
                         ))
                       ) : (
                         <p className="text-gray-500 text-center py-4">
@@ -558,8 +537,8 @@ export const PendingMerchantsPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleMerchantClick = (merchant: MerchantUser) => {
-    console.log("Merchant clicked:", merchant.id); // Add this
-    console.log("Opening modal for:", merchant.businessName); // Add this
+    console.log("Merchant clicked:", merchant.id);
+    console.log("Opening modal for:", merchant.businessName);
     setSelectedMerchant(merchant);
     setIsModalOpen(true);
   };
@@ -575,7 +554,6 @@ export const PendingMerchantsPage: React.FC = () => {
         merchantId,
         notes,
       });
-      // Modal will close after successful approval
     } catch (error) {
       console.error("Failed to approve merchant:", error);
     }
@@ -592,7 +570,6 @@ export const PendingMerchantsPage: React.FC = () => {
         reason,
         notes,
       });
-      // Modal will close after successful rejection
     } catch (error) {
       console.error("Failed to reject merchant:", error);
     }

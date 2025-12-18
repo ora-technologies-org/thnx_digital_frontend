@@ -3,13 +3,14 @@ import authReducer from "../features/auth/slices/authSlice";
 import giftCardReducer from "../features/giftCards/slices/giftCardSlice";
 import merchantReducer from "../features/admin/slices/MerchantCreateSlice";
 import profileReducer from "../features/auth/slices/profileSlice";
-
+import AdminprofileReducer from "../features/auth/slices/adminprofileSlice";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     giftCards: giftCardReducer,
     merchant: merchantReducer,
     profile: profileReducer,
+    Adminprofile: AdminprofileReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

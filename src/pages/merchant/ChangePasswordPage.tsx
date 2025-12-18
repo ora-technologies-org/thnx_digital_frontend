@@ -4,27 +4,17 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Lock,
-  CheckCircle,
-  Shield,
-  Eye,
-  EyeOff,
-  Check,
-  Mail,
-} from "lucide-react";
+import { Lock, CheckCircle, Shield, Eye, EyeOff, Check } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 
-import { useAppSelector } from "@/app/hooks";
 import { useChangePassword } from "@/features/merchant/hooks/usechangePassword";
 
 // Password validation with strength requirements
 const changePasswordSchema = z
   .object({
-    email: z.string().email("Please enter a valid email address"),
     currentPassword: z.string().min(1, "Current password is required"),
     newPassword: z
       .string()
@@ -51,10 +41,6 @@ type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 export const ChangePasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const { changePassword, isLoading, changeSuccess } = useChangePassword();
-
-  // Get user email
-  const user = useAppSelector((state) => state.auth.user);
-  const userEmail = user?.email || "";
 
   // Local state for password visibility toggles
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -89,9 +75,7 @@ export const ChangePasswordPage: React.FC = () => {
     control,
   } = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
-    defaultValues: {
-      email: userEmail, // Pre-fill email from Redux state
-    },
+    defaultValues: {},
   });
 
   const newPassword = useWatch({
@@ -109,14 +93,12 @@ export const ChangePasswordPage: React.FC = () => {
    */
   const onSubmit = async (data: ChangePasswordFormData) => {
     console.log("Submitting change password with:", {
-      email: data.email,
       currentPassword: "***",
       newPassword: "***",
       confirmPassword: "***",
     });
 
     const success = await changePassword(
-      data.email,
       data.currentPassword,
       data.newPassword,
       data.confirmPassword,
@@ -181,7 +163,7 @@ export const ChangePasswordPage: React.FC = () => {
           <p className="text-gray-600 text-lg">
             {changeSuccess
               ? "Password changed successfully!"
-              : "Update your account password"}
+              : "This is your first time logging in. Please change your password."}
           </p>
         </motion.div>
 
@@ -199,24 +181,6 @@ export const ChangePasswordPage: React.FC = () => {
                 >
                   Please enter your current password and choose a new one.
                 </motion.p>
-
-                {/* Email input (pre-filled, read-only) */}
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <Input
-                    label="Email Address"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    error={errors.email?.message}
-                    {...register("email")}
-                    className="transition-all focus:scale-[1.02] bg-gray-50"
-                    icon={<Mail className="w-5 h-5 text-gray-400" />}
-                    readOnly
-                  />
-                </motion.div>
 
                 {/* Current password input with visibility toggle */}
                 <motion.div

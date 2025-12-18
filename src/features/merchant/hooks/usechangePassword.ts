@@ -24,14 +24,12 @@ export const useChangePassword = () => {
    */
   const changePasswordMutation = useMutation({
     mutationFn: (params: {
-      email: string;
       password: string;
       newPassword: string;
       confirmPassword: string;
     }) => {
       console.log("Hook received params:", params);
       return changePasswordService.changePassword(
-        params.email,
         params.password,
         params.newPassword,
         params.confirmPassword,
@@ -50,13 +48,11 @@ export const useChangePassword = () => {
    * Returns a Promise that resolves to boolean indicating success
    */
   const changePassword = async (
-    email: string,
     currentPassword: string,
     newPassword: string,
     confirmPassword: string,
   ): Promise<boolean> => {
     console.log("changePassword called with:", {
-      email,
       currentPassword: "***",
       newPassword: "***",
       confirmPassword: "***",
@@ -64,7 +60,6 @@ export const useChangePassword = () => {
 
     try {
       await changePasswordMutation.mutateAsync({
-        email,
         password: currentPassword,
         newPassword,
         confirmPassword,

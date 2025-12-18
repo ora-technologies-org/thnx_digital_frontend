@@ -12,6 +12,10 @@ export interface ProfileFormData {
   businessPhone: string;
   businessEmail: string;
   website: string;
+  profile: string | null;
+  loading: boolean;
+  error: string;
+  updateSuccess: boolean;
 
   // Bank Information
   bankName: string;
