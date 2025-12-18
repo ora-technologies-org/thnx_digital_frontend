@@ -1,4 +1,3 @@
-
 import api from "../../../shared/utils/api";
 
 export interface GetOtpRequest {
@@ -38,8 +37,54 @@ export interface ResetPasswordRequest {
 export interface ResetPasswordResponse {
   success: boolean;
   message: string;
-  data?: any;
+  data?: unknown;
 }
+export interface ChangePasswordRequest {
+  email: string;
+  password: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+  data?: unknown;
+}
+
+export const changePasswordService = {
+  /**
+   * Change user password
+   * Requires email and current password verification
+   */
+  changePassword: async (
+    email: string,
+    password: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Promise<ChangePasswordResponse> => {
+    const payload: ChangePasswordRequest = {
+      email,
+      password,
+      newPassword,
+      confirmPassword,
+    };
+
+    console.log("Change Password Payload being sent:", {
+      email,
+      password: "***",
+      newPassword: "***",
+      confirmPassword: "***",
+    });
+
+    const response = await api.post<ChangePasswordResponse>(
+      "/auth/change-password",
+      payload,
+    );
+
+    return response.data;
+  },
+};
 
 export const forgotPasswordService = {
   /**
@@ -68,7 +113,7 @@ export const forgotPasswordService = {
     email: string,
     otp: string,
     password: string,
-    confirmPassword: string
+    confirmPassword: string,
   ): Promise<ResetPasswordResponse> => {
     const payload = {
       email,
@@ -79,7 +124,7 @@ export const forgotPasswordService = {
     console.log("Reset Password Payload being sent:", payload);
     const response = await api.post<ResetPasswordResponse>(
       "/auth/reset-password",
-      payload
+      payload,
     );
     return response.data;
   },

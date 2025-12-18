@@ -6,15 +6,17 @@ import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { setCredentials, logout as logoutAction } from "../slices/authSlice";
 import { authService } from "../services/authService";
 import { LoginCredentials, RegisterData } from "../types/auth.types";
-
+import { AxiosError } from "axios";
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading, error } = useAppSelector(
-    (state) => state.auth
+    (state) => state.auth,
   );
-
+  interface LoginErrorResponse {
+    message: string;
+  }
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: authService.login,
@@ -33,7 +35,7 @@ export const useAuth = () => {
           user: data.data.user,
           accessToken: data.data.tokens.accessToken,
           refreshToken: data.data.tokens.refreshToken,
-        })
+        }),
       );
 
       console.log("✅ Credentials dispatched to Redux");
@@ -41,27 +43,34 @@ export const useAuth = () => {
 
       toast.success("Login successful!");
 
+      if (data.data.user.isFirstTime === true) {
+        console.log("🔐 First time user - redirecting to change password");
+        navigate("/change-password", { replace: true });
+        return;
+      }
       // ✅ Navigate immediately - ProtectedRoute will handle the check
       const targetRoute =
         data.data.user.role === "MERCHANT"
           ? "/merchant/dashboard"
           : data.data.user.role === "ADMIN"
-          ? "/admin/dashboard"
-          : "/";
+            ? "/admin/dashboard"
+            : "/";
 
       console.log("🚀 Navigating to:", targetRoute);
       navigate(targetRoute, { replace: true });
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<LoginErrorResponse>) => {
       console.error("❌ Login failed:", error);
       console.error("📋 Error details:", {
         status: error.response?.status,
         message: error.response?.data?.message,
         data: error.response?.data,
       });
+
       const message =
         error.response?.data?.message ||
         "Login failed. Please check your credentials.";
+
       toast.error(message);
     },
   });
@@ -84,7 +93,7 @@ export const useAuth = () => {
           user: data.data.user,
           accessToken: data.data.tokens.accessToken,
           refreshToken: data.data.tokens.refreshToken,
-        })
+        }),
       );
 
       console.log("✅ Google credentials dispatched to Redux");
@@ -97,22 +106,24 @@ export const useAuth = () => {
         data.data.user.role === "MERCHANT"
           ? "/merchant/dashboard"
           : data.data.user.role === "ADMIN"
-          ? "/admin/dashboard"
-          : "/";
+            ? "/admin/dashboard"
+            : "/";
 
       console.log("🚀 Navigating to:", targetRoute);
       navigate(targetRoute, { replace: true });
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ message?: string }>) => {
       console.error("❌ Google login failed:", error);
       console.error("📋 Error details:", {
         status: error.response?.status,
         message: error.response?.data?.message,
         data: error.response?.data,
       });
+
       const message =
         error.response?.data?.message ||
         "Google login failed. Please try again.";
+
       toast.error(message);
     },
   });
@@ -126,14 +137,16 @@ export const useAuth = () => {
           user: data.data.user,
           accessToken: data.data.tokens.accessToken,
           refreshToken: data.data.tokens.refreshToken,
-        })
+        }),
       );
       toast.success(data.message || "Registration successful!");
       navigate("/merchant/dashboard", { replace: true });
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ message?: string }>) => {
       console.error("❌ Registration failed:", error);
+
       const message = error.response?.data?.message || "Registration failed";
+
       toast.error(message);
     },
   });

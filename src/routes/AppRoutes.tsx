@@ -36,6 +36,7 @@ import { AdminSettingPage } from "@/pages/admin/SettingPage";
 import { SupportTicketPage } from "@/pages/merchant/SupportTicket";
 import { AdminSupportTicketPage } from "@/pages/admin/SupportTicket";
 import ContactUsPage from "@/pages/admin/ContactUsPage";
+import { ChangePasswordPage } from "@/pages/merchant/ChangePasswordPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -46,7 +47,7 @@ const AppRoutes: React.FC = () => {
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.BROWSE} element={<BrowsePage />} />
       <Route path={ROUTES.PURCHASE} element={<PurchasePage />} />
-
+      <Route path={ROUTES.CHANGE} element={<ChangePasswordPage />} />
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
       <Route path="/merchant/support" element={<SupportTicketPage />} />
