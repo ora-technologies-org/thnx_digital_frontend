@@ -1,13 +1,18 @@
 // src/features/admin/hooks/useAdmin.ts - ADMIN HOOKS! 🎣
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminApi, CreateMerchantRequest, MerchantUser } from '../api/admin.api';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  adminApi,
+  CreateMerchantRequest,
+  MerchantUser,
+} from "../api/admin.api";
+import { ContactMessage, contactUsService } from "../services/contactusService";
 
 // ==================== QUERY KEYS ====================
 export const adminQueryKeys = {
-  all: ['admin'] as const,
-  merchants: () => [...adminQueryKeys.all, 'merchants'] as const,
-  pendingMerchants: () => [...adminQueryKeys.all, 'pending-merchants'] as const,
+  all: ["admin"] as const,
+  merchants: () => [...adminQueryKeys.all, "merchants"] as const,
+  pendingMerchants: () => [...adminQueryKeys.all, "pending-merchants"] as const,
   merchant: (id: string) => [...adminQueryKeys.merchants(), id] as const,
 };
 
@@ -39,7 +44,7 @@ export const useCreateMerchant = () => {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.merchants() });
     },
     onError: (error: Error) => {
-      console.error('Create merchant error:', error.message);
+      console.error("Create merchant error:", error.message);
     },
   });
 };
@@ -58,17 +63,19 @@ export const useApproveMerchant = () => {
     }) => adminApi.approveMerchant(merchantId, notes),
     onSuccess: (_, variables) => {
       // Invalidate both lists
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.pendingMerchants() });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.pendingMerchants(),
+      });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.merchants() });
 
       // Optionally update cache directly for instant UI update
       queryClient.setQueryData<MerchantUser[]>(
         adminQueryKeys.pendingMerchants(),
-        (old) => old?.filter((m) => m.userId !== variables.merchantId)
+        (old) => old?.filter((m) => m.userId !== variables.merchantId),
       );
     },
     onError: (error: Error) => {
-      console.error('Approve merchant error:', error.message);
+      console.error("Approve merchant error:", error.message);
     },
   });
 };
@@ -89,17 +96,19 @@ export const useRejectMerchant = () => {
     }) => adminApi.rejectMerchant(merchantId, reason, notes),
     onSuccess: (_, variables) => {
       // Invalidate both lists
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.pendingMerchants() });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.pendingMerchants(),
+      });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.merchants() });
 
       // Optionally update cache directly for instant UI update
       queryClient.setQueryData<MerchantUser[]>(
         adminQueryKeys.pendingMerchants(),
-        (old) => old?.filter((m) => m.userId !== variables.merchantId)
+        (old) => old?.filter((m) => m.userId !== variables.merchantId),
       );
     },
     onError: (error: Error) => {
-      console.error('Reject merchant error:', error.message);
+      console.error("Reject merchant error:", error.message);
     },
   });
 };
@@ -118,21 +127,23 @@ export const useDeleteMerchant = () => {
     }) => adminApi.deleteMerchant(merchantId, hardDelete),
     onSuccess: (_, variables) => {
       // Invalidate all merchant lists
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.pendingMerchants() });
+      queryClient.invalidateQueries({
+        queryKey: adminQueryKeys.pendingMerchants(),
+      });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.merchants() });
 
       // Update cache directly for instant UI update
       queryClient.setQueryData<MerchantUser[]>(
         adminQueryKeys.merchants(),
-        (old) => old?.filter((m) => m.userId !== variables.merchantId)
+        (old) => old?.filter((m) => m.userId !== variables.merchantId),
       );
       queryClient.setQueryData<MerchantUser[]>(
         adminQueryKeys.pendingMerchants(),
-        (old) => old?.filter((m) => m.userId !== variables.merchantId)
+        (old) => old?.filter((m) => m.userId !== variables.merchantId),
       );
     },
     onError: (error: Error) => {
-      console.error('Delete merchant error:', error.message);
+      console.error("Delete merchant error:", error.message);
     },
   });
 };
@@ -162,3 +173,12 @@ export const usePermanentlyDeleteMerchant = () => {
       deleteMutation.mutateAsync({ merchantId, hardDelete: true }),
   };
 };
+export const CONTACT_MESSAGES_QUERY_KEY = ["contact-messages"];
+export function useContactMessages() {
+  return useQuery<ContactMessage[], Error>({
+    queryKey: CONTACT_MESSAGES_QUERY_KEY,
+    queryFn: contactUsService.getContactMessages,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true,
+  });
+}
