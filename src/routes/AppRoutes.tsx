@@ -35,6 +35,7 @@ import MerchantsAndCardsApp from "@/pages/admin/GiftPages";
 import { AdminSettingPage } from "@/pages/admin/SettingPage";
 import { SupportTicketPage } from "@/pages/merchant/SupportTicket";
 import { AdminSupportTicketPage } from "@/pages/admin/SupportTicket";
+import ContactUsPage from "@/pages/admin/ContactUsPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -151,6 +152,16 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/admin/contact-us"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <ContactUsPage />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/admin/merchants"
         element={
