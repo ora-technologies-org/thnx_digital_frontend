@@ -22,6 +22,9 @@ import {
 } from 'lucide-react';
 import { usePendingMerchants } from '../../../features/admin/hooks/useAdmin';
 
+import NotificationBell from '../notifications/NotificationBell';
+
+
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
@@ -385,22 +388,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
             <div className="flex items-center gap-4">
               {/* Notifications with dynamic badge */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Bell className="w-6 h-6" />
-                {pendingCount > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
-                  >
-                    {pendingCount > 9 ? '9+' : pendingCount}
-                  </motion.span>
-                )}
-              </motion.button>
+              <NotificationBell />
+
 
               {/* User Profile */}
               <motion.button

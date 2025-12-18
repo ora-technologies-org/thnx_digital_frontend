@@ -28,6 +28,9 @@ import RevenuePage from "@/pages/admin/RevenuePage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import ActivityLogPage from "@/pages/admin/ActitivityPage";
 import AdminSettingPage from "@/pages/admin/SettingPage";
+// import NotificationsPage from '../pages/NotificationsPage';
+import NotificationsPage from "@/pages/merchant/NotificationsPage";
+
 
 const AppRoutes: React.FC = () => {
   return (
@@ -53,6 +56,19 @@ const AppRoutes: React.FC = () => {
         path="/merchant/complete-profile"
         element={<CompleteProfilePage />}
       />
+
+      <Route path="/admin/notifications" element={
+      <ProtectedRoute requiredRole="ADMIN">
+        <NotificationsPage />
+      </ProtectedRoute>
+    } />
+
+
+    <Route path="/merchant/notifications" element={
+      <ProtectedRoute requiredRole="MERCHANT">
+        <NotificationsPage />
+      </ProtectedRoute>
+    } />
 
       {/* Admin Routes */}
       <Route
