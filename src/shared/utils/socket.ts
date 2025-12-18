@@ -1,6 +1,5 @@
-
-import { io, Socket } from 'socket.io-client';
-import { config } from '../../config/env';
+import { io, Socket } from "socket.io-client";
+import { config } from "../../config/env";
 
 let socket: Socket | null = null;
 
@@ -13,13 +12,13 @@ export const connectSocket = (token: string): Socket => {
     return socket;
   }
 
-  const baseUrl = config.apiUrl.replace('/api', '');
+  const baseUrl = config.apiUrl.replace("/api", "");
 
   socket = io(baseUrl, {
     auth: {
       token,
     },
-    transports: ['websocket', 'polling'],
+    transports: ["websocket", "polling"],
     reconnection: true,
     reconnectionAttempts: 5,
     reconnectionDelay: 1000,
@@ -27,24 +26,24 @@ export const connectSocket = (token: string): Socket => {
     timeout: 20000,
   });
 
-  socket.on('connect', () => {
-    console.log('🔌 Socket connected:', socket?.id);
+  socket.on("connect", () => {
+    console.log("🔌 Socket connected:", socket?.id);
   });
 
-  socket.on('disconnect', (reason) => {
-    console.log('🔌 Socket disconnected:', reason);
+  socket.on("disconnect", (reason) => {
+    console.log("🔌 Socket disconnected:", reason);
   });
 
-  socket.on('connect_error', (error) => {
-    console.error('🔌 Socket connection error:', error.message);
+  socket.on("connect_error", (error) => {
+    console.error("🔌 Socket connection error:", error.message);
   });
 
-  socket.on('reconnect', (attemptNumber) => {
-    console.log('🔌 Socket reconnected after', attemptNumber, 'attempts');
+  socket.on("reconnect", (attemptNumber) => {
+    console.log("🔌 Socket reconnected after", attemptNumber, "attempts");
   });
 
-  socket.on('reconnect_error', (error) => {
-    console.error('🔌 Socket reconnection error:', error.message);
+  socket.on("reconnect_error", (error) => {
+    console.error("🔌 Socket reconnection error:", error.message);
   });
 
   return socket;
@@ -54,7 +53,7 @@ export const disconnectSocket = (): void => {
   if (socket) {
     socket.disconnect();
     socket = null;
-    console.log('🔌 Socket disconnected manually');
+    console.log("🔌 Socket disconnected manually");
   }
 };
 
