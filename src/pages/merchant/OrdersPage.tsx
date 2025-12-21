@@ -1,170 +1,194 @@
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Plus, ShoppingBag, Search, X } from "lucide-react";
+import { DashboardLayout } from "../../shared/components/layout/DashboardLayout";
+import { Button } from "../../shared/components/ui/Button";
+import { CreateOrderModal } from "../../features/orders/components/CreateOrderModal";
 
-// import React from 'react';
-// import { motion } from 'framer-motion';
-// import { ShoppingBag, Filter, Search } from 'lucide-react';
-// import { DashboardLayout } from '../../shared/components/layout/DashboardLayout';
-// import { Card } from '../../shared/components/ui/Card';
-// import { Input } from '../../shared/components/ui/Input';
-// import { MagneticButton } from '../../shared/components/animated/MagneticButton';
-// import { fadeInUp, staggerContainer } from '../../shared/utils/animations';
+import { useCreateOrder } from "../../features/orders/hooks/useCreateOrder";
+import { useOrders } from "../../features/orders/hooks/useOrders";
+import type { CreateOrderData } from "../../features/orders/types/order.types";
+import { OrderDetailModal } from "@/features/orders/components/OrderModal";
 
-// export const OrdersPage: React.FC = () => {
-//   return (
-//     <DashboardLayout>
-//       <div className="p-8">
-//         {/* Page Header */}
-//         <motion.div
-//           initial={{ opacity: 0, y: -20 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           className="mb-8"
-//         >
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-//                 Orders
-//               </h1>
-//               <p className="text-gray-600">
-//                 Track and manage all gift card orders
-//               </p>
-//             </div>
+/**
+ * Type definition for Order object
+ */
+interface Order {
+  id: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  customer?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+  purchaseAmount?: number;
+  amount?: number;
+  status?: "ACTIVE" | "USED" | "EXPIRED";
+  qrCode?: string;
+}
 
-//             <div className="flex gap-3">
-//               <MagneticButton variant="outline">
-//                 <Filter className="w-4 h-4 mr-2" />
-//                 Filter
-//               </MagneticButton>
-//             </div>
-//           </div>
-//         </motion.div>
-
-//         {/* Search Bar */}
-//         <motion.div
-//           initial={{ opacity: 0, y: 20 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           transition={{ delay: 0.1 }}
-//           className="mb-6"
-//         >
-//           <div className="relative max-w-md">
-//             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-//             <Input
-//               placeholder="Search orders by ID, customer, or gift card..."
-//               className="pl-10"
-//             />
-//           </div>
-//         </motion.div>
-
-//         {/* Orders List */}
-//         <motion.div
-//           initial="hidden"
-//           animate="visible"
-//           variants={staggerContainer}
-//         >
-//           <Card className="p-8">
-//             <div className="text-center py-12">
-//               <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-//                 <ShoppingBag className="w-10 h-10 text-blue-600" />
-//               </div>
-//               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-//                 No Orders Yet
-//               </h3>
-//               <p className="text-gray-600 mb-6">
-//                 Orders will appear here when customers purchase your gift cards
-//               </p>
-//             </div>
-//           </Card>
-//         </motion.div>
-//       </div>
-//     </DashboardLayout>
-//   );
-// };
-
-
-
-
-
-// // src/pages/merchant/OrdersPage.tsx - FULL ORDERS MANAGEMENT! 🎯
-// import React from 'react';
-// import { motion } from 'framer-motion';
-// import { DashboardLayout } from '../../shared/components/layout/DashboardLayout';
-// // import { OrdersList } from '../../features/orders/components/OrdersList';
-// import { fadeInUp } from '../../shared/utils/animations';
-// import { OrdersList } from '@/features/orders/components/OrderList';
-
-// export const OrdersPage: React.FC = () => {
-//   return (
-//     <DashboardLayout>
-//       <div className="p-8">
-//         {/* Page Header */}
-//         <motion.div
-//           initial={{ opacity: 0, y: -20 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           className="mb-8"
-//         >
-//           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-//             Orders
-//           </h1>
-//           <p className="text-gray-600">
-//             Track and manage all gift card purchases
-//           </p>
-//         </motion.div>
-
-//         {/* Orders List Component */}
-//         <motion.div
-//           initial="hidden"
-//           animate="visible"
-//           variants={fadeInUp}
-//         >
-//           <OrdersList />
-//         </motion.div>
-//       </div>
-//     </DashboardLayout>
-//   );
-// };
-
-
-
-// src/pages/merchant/OrdersPage.tsx - SIMPLE! JUST CREATE! 🎯
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, ShoppingBag } from 'lucide-react';
-import { DashboardLayout } from '../../shared/components/layout/DashboardLayout';
-import { Button } from '../../shared/components/ui/Button';
-import { CreateOrderModal } from '../../features/orders/components/CreateOrderModal';
-import { useCreateOrder } from '../../features/orders/hooks/useCreateOrder';
-import type { CreateOrderData } from '../../features/orders/types/order.types';
-
+/**
+ * OrdersPage Component
+ * Main page for displaying and managing gift card orders
+ * Features: Order listing, search, filtering, stats display, and order creation
+ */
 export const OrdersPage: React.FC = () => {
+  /** Controls visibility of create order modal */
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  /** Controls visibility of order detail modal */
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  /** Stores the currently selected order for detail view */
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  /** Search query for filtering orders by customer name, phone, or QR code */
+  const [searchQuery, setSearchQuery] = useState("");
+
+  /** Status filter for filtering orders by their current status */
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  /** Mutation hook for creating new orders */
   const createOrderMutation = useCreateOrder();
 
+  /** Query hook for fetching orders data in descending order */
+  const { data: ordersData, isLoading, error } = useOrders("desc");
+
+  /**
+   * Handles the submission of create order form
+   */
   const handleCreateOrder = async (formData: CreateOrderData) => {
     try {
       await createOrderMutation.mutateAsync(formData);
       setShowCreateModal(false);
     } catch (error) {
-      console.error('Failed to create order:', error);
+      console.error("Failed to create order:", error);
       throw error;
     }
   };
 
+  /**
+   * Opens the detail modal with the selected order
+   */
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setShowDetailModal(true);
+  };
+
+  /**
+   * Closes the detail modal and clears selected order
+   */
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedOrder(null);
+  };
+
+  // ============================================================================
+  // Helper Functions
+  // ============================================================================
+
+  /**
+   * Returns the appropriate Tailwind CSS classes for order status badge
+   */
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "USED":
+        return "bg-gray-100 text-gray-800";
+      case "EXPIRED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // ============================================================================
+  // Data Processing
+  // ============================================================================
+
+  /**
+   * Extract orders array from the API response
+   * Handles different possible response structures from the backend
+   */
+  const orders: Order[] =
+    ordersData?.orders || ordersData?.data || ordersData || [];
+
+  /**
+   * Filter orders based on search query and status filter
+   * Search matches: customer name, phone number, or QR code
+   */
+  const filteredOrders = Array.isArray(orders)
+    ? orders.filter((order: Order) => {
+        // Check if order matches search query
+        const matchesSearch =
+          searchQuery === "" ||
+          order.customerName
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          order.customer?.name
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          order.customerPhone?.includes(searchQuery) ||
+          order.customer?.phone?.includes(searchQuery) ||
+          order.qrCode?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        // Check if order matches status filter
+        const matchesStatus =
+          statusFilter === "all" || order.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+      })
+    : [];
+
+  /**
+   * Calculate statistics for all orders
+   * Used to display stats cards at the top of the page
+   */
+  const stats = {
+    total: orders.length,
+    active: orders.filter((o: Order) => o.status === "ACTIVE").length,
+    used: orders.filter((o: Order) => o.status === "USED").length,
+    expired: orders.filter((o: Order) => o.status === "EXPIRED").length,
+  };
+
+  // ============================================================================
+  // Render
+  // ============================================================================
+
   return (
     <DashboardLayout>
-      <div className="p-8">
-        {/* Page Header */}
+      <div className="p-6 lg:p-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Orders
-              </h1>
-              <p className="text-gray-600">
-                Create and manage gift card orders
-              </p>
+          <div className="flex items-center justify-between mb-6">
+            {/* Left side: Icon and title */}
+            <div className="flex items-center gap-4">
+              {/* Animated icon container */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30"
+              >
+                <ShoppingBag className="w-8 h-8 text-white" />
+              </motion.div>
+
+              {/* Title and description */}
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
+                <p className="text-gray-600 mt-1">
+                  Create and manage gift card orders
+                </p>
+              </div>
             </div>
+
+            {/* Right side: Create order button */}
             <Button
               onClick={() => setShowCreateModal(true)}
               className="bg-blue-600 hover:bg-blue-700"
@@ -174,33 +198,325 @@ export const OrdersPage: React.FC = () => {
               Create Order
             </Button>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {/* Total Orders Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+            >
+              <div className="text-sm text-gray-600 mb-1">Total Orders</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {stats.total}
+              </div>
+            </motion.div>
+
+            {/* Active Orders Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+            >
+              <div className="text-sm text-gray-600 mb-1">Active</div>
+              <div className="text-2xl font-bold text-green-600">
+                {stats.active}
+              </div>
+            </motion.div>
+
+            {/* Used Orders Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+            >
+              <div className="text-sm text-gray-600 mb-1">Used</div>
+              <div className="text-2xl font-bold text-gray-600">
+                {stats.used}
+              </div>
+            </motion.div>
+
+            {/* Expired Orders Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+            >
+              <div className="text-sm text-gray-600 mb-1">Expired</div>
+              <div className="text-2xl font-bold text-red-600">
+                {stats.expired}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* ================================================================
+              Filters Section
+              Search input, status filter dropdown, and reset button
+          ================================================================ */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm"
+          >
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Search Input */}
+              <div className="flex-1 relative">
+                {/* Search icon */}
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+                {/* Search input field */}
+                <input
+                  type="text"
+                  placeholder="Search by customer name, phone, or QR code..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+
+                {/* Clear search button - only shown when there's a search query */}
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filter Dropdown */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="all">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="USED">Used</option>
+                <option value="EXPIRED">Expired</option>
+              </select>
+
+              {/* Reset Filters Button - only shown when filters are active */}
+              {(searchQuery || statusFilter !== "all") && (
+                <Button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("all");
+                  }}
+                  variant="outline"
+                  className="whitespace-nowrap"
+                >
+                  Reset Filters
+                </Button>
+              )}
+            </div>
+          </motion.div>
         </motion.div>
 
-        {/* Empty State */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-sm p-16 text-center border border-gray-200"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mb-4"
         >
-          <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShoppingBag className="w-12 h-12 text-blue-600" />
-          </div>
-          <h3 className="text-2xl font-semibold text-gray-900 mb-3">
-            Ready to Create Orders
-          </h3>
-          <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            Click the "Create Order" button above to start creating gift card orders for your customers
+          <p className="text-gray-600">
+            Showing{" "}
+            <span className="font-bold text-gray-900">
+              {filteredOrders.length}
+            </span>{" "}
+            of <span className="font-bold text-gray-900">{stats.total}</span>{" "}
+            orders
           </p>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-            size="lg"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create Your First Order
-          </Button>
         </motion.div>
+
+        {/* ====================================================================
+            Loading State
+            Displayed while orders are being fetched from the API
+        ==================================================================== */}
+        {isLoading && (
+          <div className="bg-white rounded-2xl shadow-sm p-16 text-center border border-gray-200">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">Loading orders...</p>
+          </div>
+        )}
+
+        {/* ====================================================================
+            Error State
+            Displayed when there's an error fetching orders
+        ==================================================================== */}
+        {error && (
+          <div className="bg-red-50 rounded-2xl shadow-sm p-8 text-center border border-red-200">
+            <p className="text-red-600">
+              Failed to load orders: {error.message || "Unknown error"}
+            </p>
+          </div>
+        )}
+
+        {!isLoading &&
+          !error &&
+          filteredOrders.length === 0 &&
+          stats.total === 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl shadow-sm p-16 text-center border border-gray-200"
+            >
+              {/* Icon */}
+              <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ShoppingBag className="w-12 h-12 text-blue-600" />
+              </div>
+
+              {/* Message */}
+              <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+                Ready to Create Orders
+              </h3>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                Click the "Create Order" button above to start creating gift
+                card orders for your customers
+              </p>
+
+              {/* Call to action button */}
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Create Your First Order
+              </Button>
+            </motion.div>
+          )}
+
+        {!isLoading &&
+          !error &&
+          filteredOrders.length === 0 &&
+          stats.total > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-white rounded-2xl shadow-sm p-12 text-center border border-gray-200"
+            >
+              {/* Search icon */}
+              <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+
+              {/* Message */}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No orders found
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Try adjusting your search or filters
+              </p>
+
+              {/* Clear filters button */}
+              <Button
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                }}
+                variant="outline"
+              >
+                Clear Filters
+              </Button>
+            </motion.div>
+          )}
+
+        {!isLoading && !error && filteredOrders.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                {/* Table Header */}
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Customer
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Phone
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Amount
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                {/* Table Body */}
+                <tbody className="divide-y divide-gray-200">
+                  {filteredOrders.map((order: Order) => (
+                    <motion.tr
+                      key={order.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => handleViewDetails(order)}
+                    >
+                      {/* Customer Name & Email Column */}
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {order.customerName || order.customer?.name || "N/A"}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {order.customerEmail || order.customer?.email || ""}
+                        </div>
+                      </td>
+
+                      {/* Phone Number Column */}
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {order.customerPhone || order.customer?.phone || "N/A"}
+                      </td>
+
+                      {/* Amount Column */}
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                        Rs.{" "}
+                        {parseFloat(
+                          String(order.purchaseAmount || order.amount || 0),
+                        ).toLocaleString()}
+                      </td>
+
+                      {/* Status Column */}
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status || "ACTIVE")}`}
+                        >
+                          {order.status || "N/A"}
+                        </span>
+                      </td>
+
+                      {/* Actions Column */}
+                      <td className="px-6 py-4">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click from firing
+                            handleViewDetails(order);
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          View Details
+                        </Button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
 
         {/* Create Order Modal */}
         <CreateOrderModal
@@ -209,52 +525,14 @@ export const OrdersPage: React.FC = () => {
           onSubmit={handleCreateOrder}
           isLoading={createOrderMutation.isLoading}
         />
+
+        {/* Order Detail Modal */}
+        <OrderDetailModal
+          order={selectedOrder}
+          isOpen={showDetailModal}
+          onClose={handleCloseDetailModal}
+        />
       </div>
     </DashboardLayout>
   );
 };
-
-
-// import React from 'react';
-// import { Search, Filter } from 'lucide-react';
-// import { Sidebar } from '@/shared/components/layout/Sidebar';
-
-// export const OrdersPage: React.FC = () => {
-//   return (
-//     <div className="flex">
-//       <Sidebar />
-//       <main className="flex-1 p-8 bg-gray-50">
-//         <div className="flex items-center justify-between mb-6">
-//           <div>
-//             <h1 className="text-3xl font-bold text-gray-900 mb-2">Orders</h1>
-//             <p className="text-gray-600">Track and manage gift card orders</p>
-//           </div>
-//           <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-//             <Filter className="w-4 h-4" />
-//             Filter
-//           </button>
-//         </div>
-
-//         {/* Search Bar */}
-//         <div className="mb-6">
-//           <div className="relative max-w-md">
-//             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-//             <input
-//               type="text"
-//               placeholder="Search orders..."
-//               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-//             />
-//           </div>
-//         </div>
-
-//         {/* Orders List */}
-//         <div className="bg-white rounded-lg shadow">
-//           <div className="p-8 text-center">
-//             <p className="text-gray-600">No orders yet</p>
-//             <p className="text-sm text-gray-500 mt-2">Orders will appear here when customers purchase gift cards</p>
-//           </div>
-//         </div>
-//       </main>
-//     </div>
-//   );
-// };

@@ -14,90 +14,45 @@ import {
   XCircle,
 } from "lucide-react";
 
-export type OrderStatus = "ACTIVE" | "USED" | "EXPIRED";
-export type PaymentStatus = "COMPLETED" | "PENDING" | "FAILED";
-
-export interface Customer {
-  name?: string;
-  phone?: string;
-  email?: string;
-}
-
-export interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-}
-
-export interface Order {
-  id: string;
-
-  // Identifiers
+interface Order {
   orderId?: string;
-  orderNumber?: string;
   qrCode?: string;
-
-  // Status
-  status: OrderStatus;
-  paymentStatus?: PaymentStatus;
-
-  // Amounts
-  purchaseAmount?: number | string;
-  currentBalance?: number | string;
-  bonusAmount?: number | string;
-  amount?: number | string;
-  totalAmount?: number;
-
-  // Customer
+  status?: string;
+  paymentStatus?: string;
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
-  customer?: Customer;
-
-  // Payment
+  customer?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
+  purchaseAmount?: string | number;
+  amount?: string | number;
+  currentBalance?: string | number;
+  bonusAmount?: string | number;
   paymentMethod?: string;
   transactionId?: string;
-
-  // Dates
-  createdAt: string;
   purchasedAt?: string;
+  createdAt?: string;
   expiresAt?: string;
   usedAt?: string;
-
-  // Extras
   notes?: string;
-
-  // Items (if applicable)
-  items?: OrderItem[];
 }
 
 interface OrderDetailModalProps {
-  order: Order;
-
+  order: Order | null;
   isOpen: boolean;
-
   onClose: () => void;
 }
 
-/**
- * OrderDetailModal Component
- * Displays comprehensive details of a selected order in a modal dialog
- * Shows customer info, order details, payment info, dates, and additional information
- */
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   order,
   isOpen,
   onClose,
 }) => {
-  // Early return if no order is provided
   if (!order) return null;
 
-  /**
-   * Returns the appropriate icon component for order status
-   * @param status - The order status (ACTIVE, USED, EXPIRED)
-   * @returns React icon component with appropriate color
-   */
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "ACTIVE":
@@ -111,11 +66,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     }
   };
 
-  /**
-   * Returns the appropriate Tailwind CSS classes for order status badge
-   * @param status - The order status (ACTIVE, USED, EXPIRED)
-   * @returns Tailwind CSS classes for background and text color
-   */
   const getStatusColor = (status: string) => {
     switch (status) {
       case "ACTIVE":
@@ -129,11 +79,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     }
   };
 
-  /**
-   * Returns the appropriate Tailwind CSS classes for payment status badge
-   * @param status - The payment status (COMPLETED, PENDING, FAILED)
-   * @returns Tailwind CSS classes for background and text color
-   */
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
       case "COMPLETED":
@@ -147,14 +92,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     }
   };
 
-  // ============================================================================
-  // Render
-  // ============================================================================
-
   return (
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -163,6 +105,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
           />
 
+          {/* Modal */}
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -171,14 +114,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               transition={{ type: "spring", duration: 0.5 }}
               className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
             >
+              {/* Header */}
               <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {/* QR Code Icon */}
                   <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                     <QrCode className="w-6 h-6 text-white" />
                   </div>
-
-                  {/* Title and Order ID */}
                   <div>
                     <h2 className="text-xl font-bold text-white">
                       Order Details
@@ -190,8 +131,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </p>
                   </div>
                 </div>
-
-                {/* Close Button */}
                 <button
                   onClick={onClose}
                   className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
@@ -200,11 +139,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </button>
               </div>
 
+              {/* Content */}
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+                {/* Status Section */}
                 <div className="mb-6 flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  {/* Order Status */}
                   <div className="flex items-center gap-3">
-                    {getStatusIcon(order.status)}
+                    {getStatusIcon(order.status || "ACTIVE")}
                     <div>
                       <div className="text-sm text-gray-600">Order Status</div>
                       <span
@@ -214,8 +154,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       </span>
                     </div>
                   </div>
-
-                  {/* Payment Status */}
                   <div className="text-right">
                     <div className="text-sm text-gray-600">Payment Status</div>
                     <span
@@ -226,14 +164,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </div>
                 </div>
 
+                {/* Customer Information */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <User className="w-5 h-5 text-blue-600" />
                     Customer Information
                   </h3>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Full Name */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                         <User className="w-4 h-4" />
@@ -243,8 +180,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         {order.customerName || order.customer?.name || "N/A"}
                       </div>
                     </div>
-
-                    {/* Phone Number */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                         <Phone className="w-4 h-4" />
@@ -254,8 +189,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         {order.customerPhone || order.customer?.phone || "N/A"}
                       </div>
                     </div>
-
-                    {/* Email Address - spans full width on desktop */}
                     <div className="p-4 bg-gray-50 rounded-xl md:col-span-2">
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                         <Mail className="w-4 h-4" />
@@ -268,14 +201,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </div>
                 </div>
 
+                {/* Order Details */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <DollarSign className="w-5 h-5 text-green-600" />
                     Order Details
                   </h3>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Purchase Amount */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="text-sm text-gray-600 mb-1">
                         Purchase Amount
@@ -283,12 +215,10 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       <div className="text-2xl font-bold text-gray-900">
                         Rs.{" "}
                         {parseFloat(
-                          order.purchaseAmount || order.amount || 0,
+                          String(order.purchaseAmount || order.amount || 0),
                         ).toLocaleString()}
                       </div>
                     </div>
-
-                    {/* Current Balance */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="text-sm text-gray-600 mb-1">
                         Current Balance
@@ -296,33 +226,34 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       <div className="text-2xl font-bold text-green-600">
                         Rs.{" "}
                         {parseFloat(
-                          order.currentBalance || order.amount || 0,
+                          String(order.currentBalance || order.amount || 0),
                         ).toLocaleString()}
                       </div>
                     </div>
-
-                    {/* Bonus Amount - only shown if bonus exists */}
-                    {order.bonusAmount && parseFloat(order.bonusAmount) > 0 && (
-                      <div className="p-4 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
-                        <div className="text-sm text-orange-700 mb-1">
-                          Bonus Amount
+                    {order.bonusAmount &&
+                      parseFloat(String(order.bonusAmount)) > 0 && (
+                        <div className="p-4 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
+                          <div className="text-sm text-orange-700 mb-1">
+                            Bonus Amount
+                          </div>
+                          <div className="text-xl font-bold text-orange-600">
+                            Rs.{" "}
+                            {parseFloat(
+                              String(order.bonusAmount),
+                            ).toLocaleString()}
+                          </div>
                         </div>
-                        <div className="text-xl font-bold text-orange-600">
-                          Rs. {parseFloat(order.bonusAmount).toLocaleString()}
-                        </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 </div>
 
+                {/* Payment Information */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-purple-600" />
                     Payment Information
                   </h3>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Payment Method */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="text-sm text-gray-600 mb-1">
                         Payment Method
@@ -331,8 +262,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         {order.paymentMethod || "N/A"}
                       </div>
                     </div>
-
-                    {/* Transaction ID - only shown if transaction ID exists */}
                     {order.transactionId && (
                       <div className="p-4 bg-gray-50 rounded-xl">
                         <div className="text-sm text-gray-600 mb-1">
@@ -346,29 +275,26 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </div>
                 </div>
 
+                {/* QR Code & Dates */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-blue-600" />
                     Additional Information
                   </h3>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* QR Code */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="text-sm text-gray-600 mb-1">QR Code</div>
                       <div className="font-mono text-sm text-gray-900 break-all">
                         {order.qrCode || "N/A"}
                       </div>
                     </div>
-
-                    {/* Purchase Date */}
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="text-sm text-gray-600 mb-1">
                         Purchase Date
                       </div>
                       <div className="font-semibold text-gray-900">
                         {new Date(
-                          order.purchasedAt || order.createdAt,
+                          order.purchasedAt || order.createdAt || "",
                         ).toLocaleDateString("en-US", {
                           month: "long",
                           day: "numeric",
@@ -378,8 +304,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         })}
                       </div>
                     </div>
-
-                    {/* Expiry Date - only shown if expiry date exists */}
                     {order.expiresAt && (
                       <div className="p-4 bg-gray-50 rounded-xl">
                         <div className="text-sm text-gray-600 mb-1">
@@ -397,8 +321,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         </div>
                       </div>
                     )}
-
-                    {/* Used Date - only shown if order has been used */}
                     {order.usedAt && (
                       <div className="p-4 bg-gray-50 rounded-xl">
                         <div className="text-sm text-gray-600 mb-1">
@@ -418,6 +340,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </div>
                 </div>
 
+                {/* Notes */}
                 {order.notes && (
                   <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                     <div className="text-sm text-blue-700 mb-2 font-semibold">
@@ -428,6 +351,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 )}
               </div>
 
+              {/* Footer */}
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
                 <button
                   onClick={onClose}

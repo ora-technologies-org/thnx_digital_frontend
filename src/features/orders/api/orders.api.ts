@@ -1,4 +1,5 @@
 // src/features/orders/api/orders.api.ts - REAL API INTEGRATION! 🔌
+
 import type {
   OrdersResponse,
   Order,
@@ -59,34 +60,37 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 // Helper to get auth token
 const getAuthToken = () => {
-  return localStorage.getItem("token") || "";
+  return localStorage.getItem("accessToken") || "";
 };
 
 export const ordersApi = {
   // Get all purchases/orders for the merchant
   getOrders: async (): Promise<OrdersResponse> => {
     try {
-      const response = await fetch(`${API_BASE_URL}merchant/purchases`, {
-        headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${API_BASE_URL}merchants/orders?order=desc`,
+        {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch orders");
       }
 
-      const data = await response.json();
+      const apiResponse = await response.json();
 
       // Transform API response to match our Order type
       const orders: Order[] =
-        data.purchases?.map((purchase: Purchase) => ({
+        apiResponse.data?.map((purchase: Purchase) => ({
           id: purchase.id,
-          orderId: purchase.code || purchase.id,
+          orderId: purchase.qrCode || purchase.id,
 
           customer: {
-            id: purchase.customerId || purchase.id,
+            id: purchase.id,
             name: purchase.customerName,
             email: purchase.customerEmail,
             phone: purchase.customerPhone,
@@ -94,22 +98,22 @@ export const ordersApi = {
 
           giftCard: {
             id: purchase.giftCardId,
-            title: purchase.giftCard?.title || "Gift Card",
-            description: purchase.giftCard?.description,
-            price: purchase.amount ?? purchase.giftCard?.price,
-            code: purchase.code,
+            title: "Gift Card",
+            description: undefined,
+            price: parseFloat(purchase.purchaseAmount),
+            code: purchase.qrCode,
           },
 
           quantity: 1,
-          amount: purchase.amount ?? purchase.giftCard?.price,
-          status: purchase.isRedeemed ? "completed" : "pending",
+          amount: parseFloat(purchase.purchaseAmount),
+          status: purchase.status === "ACTIVE" ? "pending" : "completed",
 
           paymentMethod: purchase.paymentMethod,
           transactionId: purchase.transactionId,
 
-          createdAt: purchase.createdAt,
-          updatedAt: purchase.updatedAt,
-          completedAt: purchase.redeemedAt,
+          createdAt: purchase.purchasedAt,
+          updatedAt: purchase.purchasedAt,
+          completedAt: purchase.lastUsedAt,
         })) ?? [];
 
       return {
@@ -123,6 +127,73 @@ export const ordersApi = {
       throw error;
     }
   },
+  // getOrders: async (): Promise<OrdersResponse> => {
+  //   try {
+  //     const response = await fetch(
+  //       `${API_BASE_URL}merchants/orders?order=desc`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${getAuthToken()}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
+
+  //     if (!response.ok) {
+  //       throw new Error("Failed to fetch orders");
+  //     }
+
+  //     const data = await response.json();
+
+  //     // Transform API response to match our Order type
+  //     const orders: Order[] =
+  //       data.purchases?.map((purchase: Purchase) => ({
+  //         id: purchase.id,
+  //         orderId: purchase.code || purchase.id,
+
+  //         customer: {
+  //           id: purchase.customerId || purchase.id,
+  //           name: purchase.customerName,
+  //           email: purchase.customerEmail,
+  //           phone: purchase.customerPhone,
+  //         },
+
+  //         giftCard: {
+  //           id: purchase.giftCardId,
+  //           title: purchase.giftCard?.title || "Gift Card",
+  //           description: purchase.giftCard?.description,
+  //           price: purchase.amount ?? purchase.giftCard?.price,
+  //           code: purchase.code,
+  //         },
+
+  //         quantity: 1,
+  //         amount: purchase.amount ?? purchase.giftCard?.price,
+  //         status: purchase.isRedeemed ? "completed" : "pending",
+
+  //         paymentMethod: purchase.paymentMethod,
+  //         transactionId: purchase.transactionId,
+
+  //         createdAt: purchase.createdAt,
+  //         updatedAt: purchase.updatedAt,
+  //         completedAt: purchase.redeemedAt,
+  //       })) ?? [];
+
+  //     return {
+  //       orders,
+  //       total: orders.length,
+  //       page: 1,
+  //       limit: 100,
+  //     };
+  //   } catch (error) {
+  //     console.error("Error fetching orders:", error);
+  //     throw error;
+  //   }
+  // },
+
+  // getOrder: async (order: "asc" | "desc" = "desc") => {
+  //   const response = await api.get(`/merchants/orders?order=${order}`);
+  //   return response.data;
+  // },
 
   // Verify purchase by QR code
   verifyPurchase: async (qrCode: string): Promise<PurchaseVerification> => {
