@@ -4,6 +4,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface ProfileFormData {
   // Business Details
   businessName: string;
+  businessLogo: string;
   address: string;
   city: string;
   state: string;
@@ -63,6 +64,7 @@ export interface ProfileFormData {
 
 const initialState: ProfileFormData = {
   businessName: "",
+  businessLogo: "", // NEW: Initialize as empty string
   address: "",
   city: "",
   state: "",
@@ -71,6 +73,10 @@ const initialState: ProfileFormData = {
   businessPhone: "",
   businessEmail: "",
   website: "",
+  profile: null,
+  loading: false,
+  error: "",
+  updateSuccess: false,
   bankName: "",
   accountNumber: "",
   accountHolderName: "",
@@ -94,7 +100,7 @@ const profileSlice = createSlice({
       return { ...state, ...action.payload };
     },
 
-    // Update business details
+    // Update business details (including logo)
     updateBusinessDetails: (
       state,
       action: PayloadAction<
@@ -102,6 +108,7 @@ const profileSlice = createSlice({
           Pick<
             ProfileFormData,
             | "businessName"
+            | "businessLogo"
             | "address"
             | "city"
             | "state"
@@ -115,6 +122,12 @@ const profileSlice = createSlice({
       >,
     ) => {
       Object.assign(state, action.payload);
+      state.lastUpdated = new Date().toISOString();
+    },
+
+    // NEW: Update business logo specifically
+    updateBusinessLogo: (state, action: PayloadAction<string>) => {
+      state.businessLogo = action.payload;
       state.lastUpdated = new Date().toISOString();
     },
 
@@ -221,6 +234,7 @@ const profileSlice = createSlice({
 export const {
   setProfile,
   updateBusinessDetails,
+  updateBusinessLogo,
   updateBankInfo,
   updateAdditionalInfo,
   updateDocument,

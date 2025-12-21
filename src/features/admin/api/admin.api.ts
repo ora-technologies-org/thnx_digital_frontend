@@ -147,6 +147,7 @@ export const adminApi = {
 
   // ==================== APPROVE MERCHANT ====================
   // POST /api/merchants/:merchantId/verify
+
   approveMerchant: async (
     merchantId: string,
     notes?: string,
@@ -166,6 +167,7 @@ export const adminApi = {
 
   // ==================== REJECT MERCHANT ====================
   // POST /api/merchants/:merchantId/verify
+
   rejectMerchant: async (
     merchantId: string,
     reason: string,

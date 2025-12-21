@@ -1,11 +1,11 @@
 // src/pages/auth/CompleteProfilePage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Building,
   MapPin,
@@ -17,6 +17,9 @@ import {
   ArrowRight,
   AlertTriangle,
   Loader2,
+  Upload,
+  X,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
@@ -37,6 +40,7 @@ import { setProfile } from "@/features/auth/slices/profileSlice";
 // Custom hooks
 import { useProfileData } from "@/features/merchant/hooks/useProfileData";
 import { useSubmitProfile } from "@/features/merchant/hooks/useProfileComplete";
+import { RootState } from "@/app/store";
 
 // Zod Schema
 const profileSchema = z.object({
@@ -78,8 +82,12 @@ export const CompleteProfilePage: React.FC = () => {
     null,
   );
   const [validationAttempted, setValidationAttempted] = useState(false);
+  const [isFormPrefilled, setIsFormPrefilled] = useState(false);
 
-  // Custom hooks
+  // Get profile from Redux store
+  const reduxProfile = useSelector((state: RootState) => state.profile);
+
+  // Fetch profile data from API
   const {
     data: profileData,
     isLoading: isLoadingProfile,
@@ -89,13 +97,37 @@ export const CompleteProfilePage: React.FC = () => {
 
   const submitProfileMutation = useSubmitProfile();
 
-  // Determine if we're in edit mode (profile exists with ID)
-  const isEditMode = !!profileData?.id;
+  // Determine edit mode from BOTH sources - use useMemo to avoid recalculation
+  const isEditMode = useMemo(() => {
+    const hasApiProfileId = !!profileData?.id;
+    const hasReduxProfileId = !!reduxProfile?.id;
+    const editMode = hasApiProfileId || hasReduxProfileId;
+
+    console.log("🔍 Edit Mode Calculation:", {
+      hasApiProfileId,
+      apiProfileId: profileData?.id,
+      hasReduxProfileId,
+      reduxProfileId: reduxProfile?.id,
+      finalEditMode: editMode,
+    });
+
+    return editMode;
+  }, [profileData, reduxProfile]); // Watch entire objects
+
+  // Get profile ID from either source
+  const profileId = useMemo(() => {
+    return profileData?.id || reduxProfile?.id;
+  }, [profileData?.id, reduxProfile?.id]);
 
   // Document states
   const [identityDoc, setIdentityDoc] = useState<File | null>(null);
   const [registrationDoc, setRegistrationDoc] = useState<File | null>(null);
   const [taxDoc, setTaxDoc] = useState<File | null>(null);
+
+  // Business Logo state
+  const [businessLogo, setBusinessLogo] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
 
   const {
     register,
@@ -114,82 +146,229 @@ export const CompleteProfilePage: React.FC = () => {
     isDirty ||
     identityDoc !== null ||
     registrationDoc !== null ||
-    taxDoc !== null;
+    taxDoc !== null ||
+    businessLogo !== null;
 
-  // Handle profile status and navigation
+  // Log edit mode status whenever it changes
   useEffect(() => {
-    if (isLoadingProfile) return;
+    console.log("🔍 Current State:", {
+      isEditMode,
+      profileId,
+      hasProfileData: !!profileData,
+      hasReduxProfile: !!reduxProfile?.id,
+      profileStatus: profileData?.profileStatus || reduxProfile?.profileStatus,
+    });
+  }, [isEditMode, profileId, profileData, reduxProfile]);
 
-    const status = profileData?.profileStatus;
+  // Debug profile loading
+  useEffect(() => {
+    console.log("🔍 Profile Loading Debug:", {
+      isLoadingProfile,
+      isFetching,
+      profileData,
+      reduxProfile,
+      isEditMode,
+      profileId: profileData?.id || reduxProfile?.id,
+      formPrefilled: isFormPrefilled,
+    });
+  }, [
+    isLoadingProfile,
+    isFetching,
+    profileData,
+    reduxProfile,
+    isEditMode,
+    isFormPrefilled,
+  ]);
 
-    // If pending review, redirect
-    if (status === "pending") {
-      toast.success("Your profile is already under review");
-      navigate("/merchant/dashboard");
+  // Handle logo file selection
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/svg+xml",
+    ];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please upload a valid image file (PNG, JPG, or SVG)");
       return;
     }
 
-    // If approved, redirect to dashboard
-    if (status === "approved") {
-      toast.success("Your profile is already verified!");
-      navigate("/merchant/dashboard");
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Logo file size should not exceed 5MB");
       return;
     }
 
-    // If we have profile data but status is rejected/incomplete, show edit mode
-    if (profileData?.id) {
-      console.log("📝 Profile exists, enabling edit mode");
-    }
-  }, [profileData, isLoadingProfile, navigate]);
+    setBusinessLogo(file);
 
-  // Prefill form with fetched data
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Remove logo
+  const handleRemoveLogo = () => {
+    setBusinessLogo(null);
+    setLogoPreview(null);
+  };
+
+  // Sync profile data to Redux when fetched from API
   useEffect(() => {
     if (!profileData || isLoadingProfile) return;
 
-    console.log("🔄 Prefilling form with profile data:", profileData);
+    console.log("🔄 Syncing API data to Redux:", profileData);
 
-    const formValues = {
-      businessName: profileData.businessName || "",
-      address: profileData.address || "",
-      city: profileData.city || "",
-      state: profileData.state || "",
-      zipCode: profileData.zipCode || "",
-      country: profileData.country || "India",
-      businessPhone: profileData.businessPhone || "",
-      businessEmail: profileData.businessEmail || "",
-      website: profileData.website || "",
-      bankName: profileData.bankName || "",
-      accountNumber: profileData.accountNumber || "",
-      accountHolderName: profileData.accountHolderName || "",
-      ifscCode: profileData.ifscCode || "",
-      swiftCode: profileData.swiftCode || "",
-      businessRegistrationNumber: profileData.businessRegistrationNumber || "",
-      taxId: profileData.taxId || "",
-      businessType: profileData.businessType || "",
-      businessCategory: profileData.businessCategory || "",
-      description: profileData.description || "",
-    };
-
-    reset(formValues, {
-      keepDirty: false,
-      keepErrors: false,
-      keepDefaultValues: false,
-    });
-
+    // Update Redux store with fetched data
     dispatch(
       setProfile({
-        ...formValues,
+        businessName: profileData.businessName || "",
+        businessLogo: profileData.businessLogo || "",
+        address: profileData.address || "",
+        city: profileData.city || "",
+        state: profileData.state || "",
+        zipCode: profileData.zipCode || "",
+        country: profileData.country || "India",
+        businessPhone: profileData.businessPhone || "",
+        businessEmail: profileData.businessEmail || "",
+        website: profileData.website || "",
+        bankName: profileData.bankName || "",
+        accountNumber: profileData.accountNumber || "",
+        accountHolderName: profileData.accountHolderName || "",
+        ifscCode: profileData.ifscCode || "",
+        swiftCode: profileData.swiftCode || "",
+        businessRegistrationNumber:
+          profileData.businessRegistrationNumber || "",
+        taxId: profileData.taxId || "",
+        businessType: profileData.businessType || "",
+        businessCategory: profileData.businessCategory || "",
+        description: profileData.description || "",
         id: profileData.id,
         status: profileData.profileStatus || "incomplete",
         profileStatus: profileData.profileStatus,
         lastUpdated: profileData.updatedAt || new Date().toISOString(),
         submittedAt: profileData.submittedAt,
         rejectionReason: profileData.rejectionReason,
+        documents: {},
+        profile: null,
+        loading: false,
+        error: "",
+        updateSuccess: false,
       }),
     );
 
-    console.log("✅ Form prefilled successfully");
-  }, [profileData, isLoadingProfile, reset, dispatch]);
+    console.log("✅ Redux store updated with API data");
+  }, [profileData, isLoadingProfile, dispatch]);
+
+  // Handle profile status and navigation
+  useEffect(() => {
+    if (isLoadingProfile) return;
+
+    const status = profileData?.profileStatus || reduxProfile?.profileStatus;
+
+    console.log("🔍 Profile status check:", {
+      status,
+      hasProfileData: !!profileData,
+      profileId: profileData?.id || reduxProfile?.id,
+    });
+
+    // Only redirect if status is approved
+    if (status === "approved" || status === "PENDING_VERIFICATION") {
+      if (status === "PENDING_VERIFICATION") {
+        toast.success("Your profile is under review!");
+      } else {
+        toast.success("Your profile is already verified!");
+      }
+      navigate("/merchant/dashboard");
+      return;
+    }
+  }, [profileData, reduxProfile, isLoadingProfile, navigate]);
+
+  // Prefill form with fetched data from both API and Redux
+  const prefillForm = useCallback(() => {
+    // Use API data first, then Redux as fallback
+    const sourceData = profileData || reduxProfile;
+
+    // Skip if no data or still loading or already prefilled
+    if (!sourceData?.id || isLoadingProfile || isFormPrefilled) {
+      return;
+    }
+
+    console.log("🔄 Prefilling form with data:", {
+      source: profileData ? "API" : "Redux",
+      profileId: sourceData.id,
+      businessName: sourceData.businessName,
+      status: sourceData.profileStatus,
+    });
+
+    const formValues: ProfileFormData = {
+      businessName: sourceData.businessName || "",
+      address: sourceData.address || "",
+      city: sourceData.city || "",
+      state: sourceData.state || "",
+      zipCode: sourceData.zipCode || "",
+      country: sourceData.country || "India",
+      businessPhone: sourceData.businessPhone || "",
+      businessEmail: sourceData.businessEmail || "",
+      website: sourceData.website || "",
+      bankName: sourceData.bankName || "",
+      accountNumber: sourceData.accountNumber || "",
+      accountHolderName: sourceData.accountHolderName || "",
+      ifscCode: sourceData.ifscCode || "",
+      swiftCode: sourceData.swiftCode || "",
+      businessRegistrationNumber: sourceData.businessRegistrationNumber || "",
+      taxId: sourceData.taxId || "",
+      businessType: sourceData.businessType || "",
+      businessCategory: sourceData.businessCategory || "",
+      description: sourceData.description || "",
+    };
+
+    console.log("📝 Setting form values:", formValues);
+
+    // Reset form with fetched data
+    reset(formValues, {
+      keepDirty: false,
+      keepErrors: false,
+      keepDefaultValues: false,
+    });
+
+    // Set existing logo URL
+    if (sourceData.businessLogo) {
+      console.log("🖼️ Setting existing logo URL:", sourceData.businessLogo);
+      setExistingLogoUrl(sourceData.businessLogo);
+    }
+
+    // Mark form as prefilled
+    setIsFormPrefilled(true);
+
+    console.log(
+      "✅ Form prefilled successfully from",
+      profileData ? "API" : "Redux",
+    );
+  }, [profileData, reduxProfile, isLoadingProfile, reset, isFormPrefilled]);
+
+  // Run prefill when data is available
+  useEffect(() => {
+    if (
+      !isLoadingProfile &&
+      (profileData || reduxProfile?.id) &&
+      !isFormPrefilled
+    ) {
+      // Use setTimeout to avoid setState in synchronous effect
+      setTimeout(() => {
+        prefillForm();
+      }, 0);
+    }
+  }, [
+    profileData,
+    reduxProfile,
+    isLoadingProfile,
+    isFormPrefilled,
+    prefillForm,
+  ]);
 
   // Prevent accidental navigation with unsaved changes
   useEffect(() => {
@@ -204,7 +383,10 @@ export const CompleteProfilePage: React.FC = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges, submitProfileMutation.isPending]);
 
-  const handleNext = async () => {
+  const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     let fieldsToValidate: (keyof ProfileFormData)[] = [];
 
     if (currentStep === 1) {
@@ -224,15 +406,13 @@ export const CompleteProfilePage: React.FC = () => {
 
     if (isValid) {
       setCurrentStep(currentStep + 1);
-      // Reset validation attempt when moving to next step
-      setValidationAttempted(false);
+      setValidationAttempted(false); // Reset validation attempted when navigating
     }
   };
 
   const handleBack = () => {
     setCurrentStep(currentStep - 1);
-    // Reset validation attempt when going back
-    setValidationAttempted(false);
+    setValidationAttempted(false); // Reset validation attempted when navigating
   };
 
   const handleConfirmLeave = () => {
@@ -248,46 +428,66 @@ export const CompleteProfilePage: React.FC = () => {
     setPendingNavigation(null);
   };
 
+  // In the onSubmit function, replace the FormData creation section:
   const onSubmit = async (data: ProfileFormData) => {
+    // Log current state for debugging
     console.log("📝 Form submission started", {
-      isEditMode,
       hasProfileData: !!profileData,
       profileId: profileData?.id,
-      hasIdentityDoc: !!identityDoc,
+      hasReduxProfile: !!reduxProfile?.id,
+      reduxProfileId: reduxProfile?.id,
     });
 
-    // Mark that validation was attempted
-    setValidationAttempted(true);
+    setValidationAttempted(true); // Set validation attempted only on submit
+
+    // Determine edit mode based on ACTUAL profile ID existence
+    const currentProfileId = profileData?.id || reduxProfile?.id;
+    const isCurrentlyEditing = !!currentProfileId;
+
+    console.log("🔍 Edit mode determination:", {
+      currentProfileId,
+      isCurrentlyEditing,
+      profileDataId: profileData?.id,
+      reduxProfileId: reduxProfile?.id,
+    });
 
     // Validation: Identity document is required for NEW profiles only
-    if (!isEditMode && !identityDoc) {
+    // ONLY validate on submit, not when navigating
+    if (!isCurrentlyEditing && !identityDoc) {
       toast.error("Please upload an identity document to continue");
       setCurrentStep(3);
+      return;
+    }
+
+    // If we're in edit mode but don't have a profile ID, something is wrong
+    if (isCurrentlyEditing && !currentProfileId) {
+      console.error("❌ CRITICAL: Edit mode but no profile ID found!");
+      toast.error("Profile ID not found. Please refresh and try again.");
       return;
     }
 
     const formData = new FormData();
 
     // Append all form fields
-    // Object.entries(data).forEach(([key, value]) => {
-    //   if (value !== undefined && value !== null && value !== "") {
-    //     formData.append(key, value.toString());
-    //   }
-    // });
-    (
-      Object.entries(data) as [keyof ProfileFormData, string | undefined][]
-    ).forEach(([key, value]) => {
+    Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
         formData.append(key, value.toString());
       }
     });
 
-    // Append documents
+    // Append business logo if a new one is uploaded
+    // DO NOT append keepExistingLogo - backend doesn't accept it
+    if (businessLogo) {
+      formData.append("businessLogo", businessLogo);
+      console.log("🖼️ Adding new business logo:", businessLogo.name);
+    }
+    // Note: If editing and not uploading new logo, we don't need to send anything
+    // The backend should keep the existing logo automatically
+
+    // Append documents only if new ones are uploaded (optional for edit mode)
     if (identityDoc) {
       formData.append("identityDocument", identityDoc);
       console.log("📄 Adding identity document:", identityDoc.name);
-    } else if (isEditMode) {
-      console.log("📄 Keeping existing identity document");
     }
 
     if (registrationDoc) {
@@ -300,54 +500,83 @@ export const CompleteProfilePage: React.FC = () => {
       console.log("📄 Adding tax document:", taxDoc.name);
     }
 
-    console.log(
-      "📤 Submission mode:",
-      isEditMode ? "PUT (Edit)" : "POST (New)",
-    );
+    // DO NOT add _method - backend doesn't accept it
+    // The HTTP method (PUT vs POST) is determined by the endpoint URL
+
+    console.log("📤 Final submission details:", {
+      method: isCurrentlyEditing ? "PUT" : "POST",
+      profileId: currentProfileId,
+      isEdit: isCurrentlyEditing,
+      endpoint: isCurrentlyEditing
+        ? `/merchants/${currentProfileId}`
+        : "/auth/merchant/complete-profile",
+      formDataSize: Array.from(formData.entries()).length,
+    });
+
+    // Log all FormData entries for debugging
+    console.log("📦 FormData Contents:");
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(
+          `  - ${key}: [File: ${value.name}, ${value.size} bytes, ${value.type}]`,
+        );
+      } else {
+        console.log(`  - ${key}: ${value}`);
+      }
+    }
 
     // Submit the form
     submitProfileMutation.mutate(
       {
         formData,
-        isEdit: isEditMode,
-        profileId: isEditMode ? profileData?.id : undefined,
+        isEdit: isCurrentlyEditing,
+        profileId: currentProfileId,
       },
       {
         onSuccess: (response) => {
           console.log("✅ Profile submission successful:", response);
 
-          // Update Redux store with the response data
+          // Get the response profile data
+          const responseProfile = response?.data || response;
+
+          // Update Redux store with response
           dispatch(
             setProfile({
               ...data,
+              id: currentProfileId || responseProfile?.id,
               status: "pending",
+              profileStatus: "pending",
+              businessLogo:
+                responseProfile?.businessLogo || existingLogoUrl || "",
               lastUpdated: new Date().toISOString(),
               submittedAt: new Date().toISOString(),
-
-              documents: response.documents || {},
+              documents: responseProfile?.documents || {},
+              loading: false,
+              error: "",
+              updateSuccess: true,
             }),
           );
 
           toast.success(
-            isEditMode
+            isCurrentlyEditing
               ? "Profile updated successfully!"
               : "Profile submitted for verification!",
+            { duration: 3000 },
           );
 
           // Refetch profile data
           refetchProfile();
 
-          // Navigate to dashboard after success
+          // Navigate after a brief delay
           setTimeout(() => {
             navigate("/merchant/dashboard");
-          }, 1000);
+          }, 1500);
         },
         onError: (error: unknown) => {
           console.error("❌ Profile submission failed:", error);
 
           let errorMessage = "Failed to submit profile. Please try again.";
 
-          // Type-safe error handling
           if (
             error &&
             typeof error === "object" &&
@@ -369,6 +598,8 @@ export const CompleteProfilePage: React.FC = () => {
                 const firstError = Object.values(dataObj.errors)[0];
                 if (typeof firstError === "string") {
                   errorMessage = firstError;
+                } else if (Array.isArray(firstError) && firstError.length > 0) {
+                  errorMessage = firstError[0];
                 }
               }
             }
@@ -412,7 +643,10 @@ export const CompleteProfilePage: React.FC = () => {
               className={`mb-6 rounded-xl p-4 ${
                 profileData?.profileStatus === "rejected"
                   ? "bg-red-50 border border-red-200"
-                  : "bg-blue-50 border border-blue-200"
+                  : profileData?.profileStatus === "pending" ||
+                      profileData?.profileStatus === "PENDING_VERIFICATION"
+                    ? "bg-yellow-50 border border-yellow-200"
+                    : "bg-blue-50 border border-blue-200"
               }`}
             >
               <div className="flex items-start gap-3">
@@ -420,7 +654,10 @@ export const CompleteProfilePage: React.FC = () => {
                   className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
                     profileData?.profileStatus === "rejected"
                       ? "text-red-600"
-                      : "text-blue-600"
+                      : profileData?.profileStatus === "pending" ||
+                          profileData?.profileStatus === "PENDING_VERIFICATION"
+                        ? "text-yellow-600"
+                        : "text-blue-600"
                   }`}
                 />
                 <div>
@@ -428,24 +665,41 @@ export const CompleteProfilePage: React.FC = () => {
                     className={`text-sm font-medium mb-1 ${
                       profileData?.profileStatus === "rejected"
                         ? "text-red-900"
-                        : "text-blue-900"
+                        : profileData?.profileStatus === "pending" ||
+                            profileData?.profileStatus ===
+                              "PENDING_VERIFICATION"
+                          ? "text-yellow-900"
+                          : "text-blue-900"
                     }`}
                   >
                     {profileData?.profileStatus === "rejected"
                       ? "Profile Rejected - Edit Required"
-                      : "Editing Existing Profile"}
+                      : profileData?.profileStatus === "pending" ||
+                          profileData?.profileStatus === "PENDING_VERIFICATION"
+                        ? "Profile Under Review - Edit if Needed"
+                        : "Editing Existing Profile"}
                   </p>
                   <p
                     className={`text-sm ${
                       profileData?.profileStatus === "rejected"
                         ? "text-red-700"
-                        : "text-blue-700"
+                        : profileData?.profileStatus === "pending" ||
+                            profileData?.profileStatus ===
+                              "PENDING_VERIFICATION"
+                          ? "text-yellow-700"
+                          : "text-blue-700"
                     }`}
                   >
                     {profileData?.profileStatus === "rejected"
                       ? profileData.rejectionReason ||
                         "Please review and correct your information"
-                      : "You are updating your existing profile. Upload new documents only if you want to replace existing ones."}
+                      : profileData?.profileStatus === "pending" ||
+                          profileData?.profileStatus === "PENDING_VERIFICATION"
+                        ? "Your profile is currently being reviewed. You can still make edits if needed."
+                        : "You are updating your existing profile. Upload new documents only if you want to replace existing ones."}
+                  </p>
+                  <p className="text-xs mt-2 text-gray-600">
+                    Profile ID: {profileId}
                   </p>
                 </div>
               </div>
@@ -505,6 +759,79 @@ export const CompleteProfilePage: React.FC = () => {
                           Tell us about your business location and contact
                           information
                         </p>
+                      </div>
+
+                      {/* Business Logo Upload */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <ImageIcon className="w-5 h-5 text-purple-600" />
+                          Business Logo{" "}
+                          {isEditMode && "(Optional - update if needed)"}
+                        </h3>
+
+                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-400 transition-colors">
+                          {logoPreview || existingLogoUrl ? (
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="relative w-32 h-32 rounded-lg overflow-hidden border-2 border-gray-200">
+                                <img
+                                  src={logoPreview || existingLogoUrl || ""}
+                                  alt="Business Logo"
+                                  className="w-full h-full object-contain bg-gray-50"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <label className="cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                                    onChange={handleLogoChange}
+                                    className="hidden"
+                                  />
+                                  <span className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium inline-flex items-center gap-2">
+                                    <Upload className="w-4 h-4" />
+                                    Change Logo
+                                  </span>
+                                </label>
+                                {logoPreview && (
+                                  <button
+                                    type="button"
+                                    onClick={handleRemoveLogo}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium inline-flex items-center gap-2"
+                                  >
+                                    <X className="w-4 h-4" />
+                                    Remove New
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-500 text-center">
+                                {logoPreview
+                                  ? "New logo selected"
+                                  : "Current logo"}{" "}
+                                - PNG, JPG, or SVG up to 5MB
+                              </p>
+                            </div>
+                          ) : (
+                            <label className="cursor-pointer flex flex-col items-center gap-3">
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                                onChange={handleLogoChange}
+                                className="hidden"
+                              />
+                              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Upload className="w-8 h-8 text-blue-600" />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-sm font-medium text-gray-900">
+                                  Upload Business Logo
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  PNG, JPG, or SVG up to 5MB
+                                </p>
+                              </div>
+                            </label>
+                          )}
+                        </div>
                       </div>
 
                       {/* Business Name */}
@@ -745,8 +1072,7 @@ export const CompleteProfilePage: React.FC = () => {
                           onChange={setIdentityDoc}
                           accept={{
                             "application/pdf": [".pdf"],
-                            "image/png": [".png"],
-                            "image/jpeg": [".jpg", ".jpeg"],
+                            "image/*": [".png", ".jpg", ".jpeg"],
                           }}
                           maxSize={10 * 1024 * 1024}
                           helperText={
@@ -754,37 +1080,58 @@ export const CompleteProfilePage: React.FC = () => {
                               ? "Leave empty to keep existing document, or upload new to replace"
                               : "Upload Aadhaar, PAN, Passport, or Driver's License (PDF, JPG, PNG up to 10MB)"
                           }
+                          // Only show error if validation was attempted (on submit) AND we're not in edit mode AND no document
                           error={
                             validationAttempted && !isEditMode && !identityDoc
                               ? "Identity document is required"
                               : undefined
                           }
+                          existingDocumentUrl={
+                            isEditMode
+                              ? profileData?.identityDocument
+                              : undefined
+                          }
+                          existingDocumentName={
+                            isEditMode ? "Identity Document" : undefined
+                          }
                         />
-
                         <DocumentUpload
                           label="Business Registration Document (Optional)"
                           value={registrationDoc}
                           onChange={setRegistrationDoc}
                           accept={{
                             "application/pdf": [".pdf"],
-                            "image/png": [".png"],
-                            "image/jpeg": [".jpg", ".jpeg"],
+                            "image/*": [".png", ".jpg", ".jpeg"],
                           }}
                           maxSize={10 * 1024 * 1024}
                           helperText="GST Certificate, Shop Act License, or Incorporation Certificate (PDF, JPG, PNG up to 10MB)"
+                          // NEW: Add existing document info for edit mode
+                          existingDocumentUrl={
+                            isEditMode
+                              ? profileData?.registrationDocument
+                              : undefined
+                          }
+                          existingDocumentName={
+                            isEditMode ? "Registration Document" : undefined
+                          }
                         />
-
                         <DocumentUpload
                           label="Tax Document (Optional)"
                           value={taxDoc}
                           onChange={setTaxDoc}
                           accept={{
                             "application/pdf": [".pdf"],
-                            "image/png": [".png"],
-                            "image/jpeg": [".jpg", ".jpeg"],
+                            "image/*": [".png", ".jpg", ".jpeg"],
                           }}
                           maxSize={10 * 1024 * 1024}
                           helperText="GST Registration or Tax Registration Document (PDF, JPG, PNG up to 10MB)"
+                          // NEW: Add existing document info for edit mode
+                          existingDocumentUrl={
+                            isEditMode ? profileData?.taxDocument : undefined
+                          }
+                          existingDocumentName={
+                            isEditMode ? "Tax Document" : undefined
+                          }
                         />
                       </div>
 
@@ -859,6 +1206,32 @@ export const CompleteProfilePage: React.FC = () => {
               </form>
             </Card>
           </motion.div>
+
+          {/* Debug Button (Optional - remove in production) */}
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                console.log("🔄 Debug Info:", {
+                  isEditMode,
+                  profileData,
+                  reduxProfile,
+                  profileId,
+                  isFormPrefilled,
+                  currentStep,
+                  identityDoc,
+                  registrationDoc,
+                  taxDoc,
+                  businessLogo,
+                });
+                refetchProfile();
+              }}
+              className="text-xs text-gray-500 underline"
+            >
+              Debug Info
+            </button>
+          </div>
+
           {/* Help Text */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

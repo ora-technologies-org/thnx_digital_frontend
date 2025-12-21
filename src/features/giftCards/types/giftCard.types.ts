@@ -32,11 +32,21 @@ export interface UpdateGiftCardData {
   expiryDate?: string;
   isActive?: boolean;
 }
-
+export interface GiftCardSettings {
+  id: string;
+  merchantId: string;
+  primaryColor: string;
+  secondaryColor: string;
+  gradientDirection: string;
+  fontFamily: string;
+  createdAt: string;
+  updatedAt: string;
+}
 export interface GiftCardsResponse {
   success: boolean;
   data: {
     giftCards: GiftCard[];
+    settings: GiftCardSettings[];
     total: number;
     limit: number;
     remaining: number;

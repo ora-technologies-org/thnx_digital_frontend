@@ -69,9 +69,9 @@ export const useSubmitProfile = () => {
         }
       }
 
-      // Determine endpoint - Fixed the edit endpoint to include profileId
+      // Determine endpoint
       const endpoint = isEdit
-        ? `/merchants/${profileId}/`
+        ? `/merchants/`
         : "/auth/merchant/complete-profile";
 
       console.log("🎯 API Endpoint:", endpoint);
@@ -86,9 +86,18 @@ export const useSubmitProfile = () => {
           },
         };
 
-        const response: AxiosResponse<ApiSuccessResponse> = isEdit
-          ? await api.put(endpoint, formData, config)
-          : await api.post(endpoint, formData, config);
+        let response: AxiosResponse<ApiSuccessResponse>;
+
+        // Use appropriate HTTP method based on edit mode
+        if (isEdit) {
+          // For PUT requests
+          response = await api.put(endpoint, formData, config);
+          console.log("✏️ Using PUT method for profile update");
+        } else {
+          // For POST requests
+          response = await api.post(endpoint, formData, config);
+          console.log("📝 Using POST method for new profile creation");
+        }
 
         console.log("✅ API Response received:", response.data);
         console.log("✅ Status:", response.status);
@@ -102,8 +111,11 @@ export const useSubmitProfile = () => {
           const axiosError = error as AxiosError<ApiErrorResponse>;
           console.error("📋 Axios Error Details:", {
             status: axiosError.response?.status,
+            statusText: axiosError.response?.statusText,
             data: axiosError.response?.data,
             message: axiosError.message,
+            endpoint: endpoint,
+            method: isEdit ? "PUT" : "POST",
           });
         }
 
@@ -111,10 +123,10 @@ export const useSubmitProfile = () => {
       }
     },
     onSuccess: (data: ApiSuccessResponse, variables: FormDataEntry) => {
-      console.log("Success data:", data);
-      console.log("Variables:", variables);
+      console.log("✅ Success data:", data);
+      console.log("✅ Variables:", variables);
 
-      // Invalidate queries
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["merchant-profile"] });
       queryClient.invalidateQueries({ queryKey: ["profile-status"] });
 
@@ -124,14 +136,14 @@ export const useSubmitProfile = () => {
 
       toast.success(message);
     },
-    onError: (error: ErrorMessage) => {
-      console.error("Error Response:", error.response);
+    onError: (error: ErrorMessage, variables: FormDataEntry) => {
+      console.error("❌ Error Response:", error.response);
+      console.error("❌ Variables:", variables);
 
       let errorMessage = "Failed to submit profile. Please try again.";
 
       if (error.response) {
-        console.error("📋 Response Status:", error.response.status);
-        console.error("📋 Response Data:", error.response.data);
+        console.error("📋 Response Status:", error.response.data);
 
         if (error.response.data?.message) {
           errorMessage = error.response.data.message;
@@ -157,13 +169,18 @@ export const useSubmitProfile = () => {
       toast.error(errorMessage);
     },
     onMutate: (variables: FormDataEntry) => {
-      console.log("Variables:", variables);
+      console.log("🔄 Mutation starting with variables:", {
+        isEdit: variables.isEdit,
+        profileId: variables.profileId,
+        hasFormData: !!variables.formData,
+      });
     },
     onSettled: (
       data: ApiSuccessResponse | undefined,
       error: ErrorMessage | null,
       variables: FormDataEntry,
     ) => {
+      console.log("🏁 Mutation settled");
       console.log("Data:", data);
       console.log("Error:", error);
       console.log("Variables:", variables);

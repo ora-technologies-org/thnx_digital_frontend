@@ -2,7 +2,15 @@
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, X, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Upload,
+  X,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Eye,
+  Download,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { FileRejection } from "react-dropzone";
 
@@ -19,6 +27,8 @@ interface DocumentUploadProps {
   value?: File | null;
   onChange: (file: File | null) => void;
   helperText?: string;
+  existingDocumentUrl?: string; // NEW: URL of existing document for edit mode
+  existingDocumentName?: string; // NEW: Name of existing document for edit mode
 }
 
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({
@@ -33,6 +43,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   value,
   onChange,
   helperText,
+  existingDocumentUrl,
+  existingDocumentName,
 }) => {
   const [isDragActive, setIsDragActive] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -93,6 +105,25 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     toast.success("File removed");
   };
 
+  const handleViewExisting = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (existingDocumentUrl) {
+      window.open(existingDocumentUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleDownloadExisting = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (existingDocumentUrl) {
+      const link = document.createElement("a");
+      link.href = existingDocumentUrl;
+      link.download = existingDocumentName || "document";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -103,6 +134,9 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const hasError = error || uploadError;
 
+  // Check if we have an existing document but no new upload
+  const hasExistingDocument = existingDocumentUrl && !value;
+
   return (
     <div className="w-full">
       {/* Label */}
@@ -111,7 +145,61 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
 
-      {/* Upload Area */}
+      {/* Existing Document Display (for edit mode) */}
+      {hasExistingDocument && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FileText className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-green-900 truncate">
+                  Existing document uploaded
+                </p>
+                <p className="text-xs text-green-700 truncate">
+                  {existingDocumentName || "Document"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <motion.button
+                type="button"
+                onClick={handleViewExisting}
+                className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="View document"
+              >
+                <Eye className="w-4 h-4 text-green-600" />
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={handleDownloadExisting}
+                className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Download document"
+              >
+                <Download className="w-4 h-4 text-green-600" />
+              </motion.button>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            </div>
+          </div>
+          <p className="text-xs text-green-600 mt-2">
+            This document is already uploaded. Upload a new file only if you
+            want to replace it.
+          </p>
+        </motion.div>
+      )}
+
+      {/* Upload Area - Only show if no existing document or we have a new upload */}
+
       <motion.div
         {...getRootProps()}
         className={cn(

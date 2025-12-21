@@ -22,9 +22,9 @@ const registerSchema = z.object({
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number"),
-  businessName: z
-    .string()
-    .min(2, "Business name must be at least 2 characters"),
+  // businessName: z
+  //   .string()
+  //   .min(2, "Business name must be at least 2 characters"),
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -195,7 +195,7 @@ export const RegisterPage: React.FC = () => {
               </div> */}
 
               {/* Business Info Section */}
-              <div>
+              {/* <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Store className="w-5 h-5 text-purple-600" />
                   Business Information
@@ -213,7 +213,7 @@ export const RegisterPage: React.FC = () => {
                     className="transition-all focus:scale-[1.02]"
                   />
                 </motion.div>
-              </div>
+              </div> */}
 
               {/* Info Box */}
               <motion.div

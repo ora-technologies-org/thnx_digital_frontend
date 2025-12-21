@@ -71,11 +71,11 @@ const MerchantListItem: React.FC<MerchantListItemProps> = ({
                   <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       <User className="w-4 h-4" />
-                      {merchant.ownerName}
+                      {merchant.user?.name || "N/A"}
                     </span>
                     <span className="flex items-center gap-1">
                       <Mail className="w-4 h-4" />
-                      {merchant.email}
+                      {merchant.user?.email || merchant.businessEmail}
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
@@ -192,24 +192,23 @@ const DetailModal: React.FC<DetailModalProps> = ({
     return docs;
   }, [merchant]);
 
+  // ✅ FIXED: Use merchant.id instead of merchant.userId
   const handleApprove = async () => {
-    await onApprove(
-      merchant.userId,
-      notes || "All documents verified. Approved.",
-    );
+    await onApprove(merchant.id, notes || "All documents verified. Approved.");
     if (!isApproving) {
       onClose();
       setNotes("");
     }
   };
 
+  // ✅ FIXED: Use merchant.id instead of merchant.userId
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
       alert("Please provide a rejection reason");
       return;
     }
     await onReject(
-      merchant.userId,
+      merchant.id,
       rejectionReason,
       notes || "Rejected due to incomplete/invalid documents.",
     );

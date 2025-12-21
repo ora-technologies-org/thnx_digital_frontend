@@ -6,6 +6,7 @@ import { AxiosError } from "axios";
 export interface ProfileData {
   id?: string;
   businessName: string;
+  businessLogo?: string;
   address: string;
   city: string;
   state?: string;
@@ -24,15 +25,25 @@ export interface ProfileData {
   businessType?: string;
   businessCategory?: string;
   description?: string;
-  profileStatus?: "incomplete" | "pending" | "approved" | "rejected";
+  profileStatus?:
+    | "incomplete"
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "PENDING_VERIFICATION";
   rejectionReason?: string;
+  submittedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 interface ApiResponse {
-  data?: ProfileData | { user?: { merchantProfile?: ProfileData } };
   success?: boolean;
+  data?: {
+    profile?: ProfileData;
+    stats?: Record<string, unknown>;
+  };
+  profile?: ProfileData;
 }
 
 interface EndpointError {
@@ -42,7 +53,6 @@ interface EndpointError {
   };
 }
 
-// Type guard to check if an object is a valid ProfileData
 function isValidProfileData(data: unknown): data is ProfileData {
   if (!data || typeof data !== "object") {
     return false;
@@ -50,7 +60,6 @@ function isValidProfileData(data: unknown): data is ProfileData {
 
   const obj = data as Record<string, unknown>;
 
-  // Check required string fields
   const requiredFields = [
     "businessName",
     "address",
@@ -63,7 +72,6 @@ function isValidProfileData(data: unknown): data is ProfileData {
     "accountHolderName",
   ];
 
-  // All required fields must exist and be strings
   return requiredFields.every(
     (field) =>
       field in obj && typeof obj[field] === "string" && obj[field] !== "",
@@ -75,78 +83,101 @@ export const useProfileData = () => {
     queryKey: ["merchant-profile"],
     queryFn: async (): Promise<ProfileData | null> => {
       try {
-        // Try different possible endpoints for fetching merchant profile
-        const endpoints = ["/auth/me"];
-
+        const endpoints = ["/auth/me", "/merchants/profile"];
         let lastError: EndpointError | null = null;
 
-        // Try each endpoint until one works
         for (const endpoint of endpoints) {
           try {
             console.log(`🔄 Trying endpoint: ${endpoint}`);
             const response = await api.get<ApiResponse>(endpoint);
 
             if (response.data) {
-              console.log(`✅ Success with endpoint: ${endpoint}`);
+              console.log(
+                `✅ Success with endpoint: ${endpoint}`,
+                response.data,
+              );
 
-              // Handle different response structures
               let profileData: unknown = response.data;
 
-              // If response has success wrapper
+              // Handle different response structures
               if (
                 typeof profileData === "object" &&
                 profileData !== null &&
                 "success" in profileData &&
-                profileData.success &&
+                profileData.success === true &&
                 "data" in profileData
               ) {
-                profileData = (profileData as { data: unknown }).data;
+                const data = (profileData as { data: unknown }).data;
+
+                // Check if data has a profile property
+                if (
+                  typeof data === "object" &&
+                  data !== null &&
+                  "profile" in data
+                ) {
+                  profileData = (data as { profile: unknown }).profile;
+                  console.log(
+                    "📦 Extracted profile from data.profile:",
+                    profileData,
+                  );
+                }
               }
 
-              // If profile is nested under user
+              // Handle direct profile response
               if (
                 typeof profileData === "object" &&
                 profileData !== null &&
-                "user" in profileData &&
-                profileData.user &&
-                typeof profileData.user === "object" &&
-                "merchantProfile" in profileData.user
+                "profile" in profileData
               ) {
-                profileData = (profileData.user as { merchantProfile: unknown })
-                  .merchantProfile;
+                profileData = (profileData as { profile: unknown }).profile;
+                console.log(
+                  "📦 Extracted profile from root.profile:",
+                  profileData,
+                );
               }
 
-              // If it's an array, take first item
-              if (Array.isArray(profileData) && profileData.length > 0) {
-                profileData = profileData[0];
-              }
-
-              // Validate and transform the data
               if (isValidProfileData(profileData)) {
-                // Format profileStatus if present
-                const formattedData = { ...profileData };
+                const formattedData = { ...profileData } as ProfileData;
 
-                if (
-                  formattedData.profileStatus &&
-                  typeof formattedData.profileStatus === "string"
-                ) {
+                // Normalize profileStatus
+                if (formattedData.profileStatus) {
                   const status = formattedData.profileStatus.toLowerCase();
                   if (
-                    ["pending", "approved", "rejected", "incomplete"].includes(
-                      status,
-                    )
+                    status.includes("pending") ||
+                    status.includes("pending_verification")
                   ) {
-                    formattedData.profileStatus = status as
-                      | "pending"
-                      | "approved"
-                      | "rejected"
-                      | "incomplete";
+                    formattedData.profileStatus = "pending";
+                  } else if (
+                    status.includes("approved") ||
+                    status.includes("verified")
+                  ) {
+                    formattedData.profileStatus = "approved";
+                  } else if (status.includes("rejected")) {
+                    formattedData.profileStatus = "rejected";
+                  } else if (status.includes("incomplete")) {
+                    formattedData.profileStatus = "incomplete";
                   }
                 }
 
+                console.log(
+                  "✅ Returning formatted profile data:",
+                  formattedData,
+                );
                 return formattedData;
               } else {
-                console.log("❌ Invalid profile data structure");
+                console.log("❌ Invalid profile data structure:", profileData);
+                // Try to see what we actually got
+                if (typeof profileData === "object" && profileData !== null) {
+                  console.log(
+                    "🔍 Actual object keys:",
+                    Object.keys(profileData),
+                  );
+                  console.log("🔍 Has id property:", "id" in profileData);
+                  console.log(
+                    "🔍 Has businessName:",
+                    "businessName" in profileData,
+                  );
+                }
                 continue;
               }
             }
@@ -164,39 +195,38 @@ export const useProfileData = () => {
                     }
                   : undefined,
             };
-            // Continue to next endpoint
           }
         }
 
-        // If all endpoints failed with 404, return null (no profile exists)
         if (lastError?.response?.status === 404) {
-          console.log("📭 No existing profile found");
+          console.log("📭 No existing profile found (404)");
           return null;
         }
 
-        // If other errors occurred, throw the last error
         throw new Error(lastError?.message || "Failed to fetch profile data");
       } catch (error: unknown) {
         console.error("❌ Profile fetch error:", error);
 
-        // Check if it's an AxiosError with 404 status
         if (error instanceof AxiosError && error.response?.status === 404) {
+          console.log("📭 No profile exists - returning null");
           return null;
         }
 
-        // Check if it's a regular Error with 404 status
         if (error instanceof Error && error.message.includes("404")) {
+          console.log("📭 No profile exists - returning null");
           return null;
         }
 
-        // For other errors, show console error but don't throw
         console.error("Failed to fetch profile:", error);
         return null;
       }
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
     retry: 1,
     refetchOnWindowFocus: false,
   });
 };
+
+// Default export for convenience
+export default useProfileData;

@@ -50,6 +50,7 @@ const AppRoutes: React.FC = () => {
       <Route path={ROUTES.CHANGE} element={<ChangePasswordPage />} />
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
+
       <Route path="/merchant/support" element={<SupportTicketPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
