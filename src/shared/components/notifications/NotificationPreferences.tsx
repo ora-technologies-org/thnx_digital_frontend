@@ -1,9 +1,9 @@
 // src/features/admin/components/notifications/NotificationPreferences.tsx
 
-import React from 'react';
-import { Loader2, Bell, BellOff } from 'lucide-react';
-import { useNotificationPreferences } from '@/features/admin/hooks/useNotifications';
-import { useAppSelector } from '@/app/hooks';
+import React from "react";
+import { Loader2, Bell, BellOff } from "lucide-react";
+import { useNotificationPreferences } from "@/features/admin/hooks/useNotifications";
+import { useAppSelector } from "@/app/hooks";
 // import { useNotificationPreferences } from '../../hooks/useNotifications';
 // import { useAppSelector } from '../../../../app/hooks';
 
@@ -32,14 +32,14 @@ const PreferenceToggle: React.FC<PreferenceToggleProps> = ({
       disabled={disabled}
       className={`
         relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-        ${checked ? 'bg-blue-600' : 'bg-gray-200'}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        ${checked ? "bg-blue-600" : "bg-gray-200"}
+        ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
       `}
     >
       <span
         className={`
           inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-          ${checked ? 'translate-x-6' : 'translate-x-1'}
+          ${checked ? "translate-x-6" : "translate-x-1"}
         `}
       />
     </button>
@@ -50,7 +50,7 @@ const NotificationPreferences: React.FC = () => {
   const { preferences, isLoading, updatePreference, isUpdating } =
     useNotificationPreferences();
   const user = useAppSelector((state) => state.auth.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === "ADMIN";
 
   if (isLoading) {
     return (
@@ -99,7 +99,9 @@ const NotificationPreferences: React.FC = () => {
               label="New Merchant Registration"
               description="Get notified when a new merchant registers"
               checked={preferences.merchantRegistered}
-              onChange={(checked) => updatePreference('merchantRegistered', checked)}
+              onChange={(checked) =>
+                updatePreference("merchantRegistered", checked)
+              }
               disabled={isUpdating}
             />
             <PreferenceToggle
@@ -107,7 +109,7 @@ const NotificationPreferences: React.FC = () => {
               description="Get notified when a merchant submits their profile for verification"
               checked={preferences.profileSubmittedForVerification}
               onChange={(checked) =>
-                updatePreference('profileSubmittedForVerification', checked)
+                updatePreference("profileSubmittedForVerification", checked)
               }
               disabled={isUpdating}
             />
@@ -115,14 +117,16 @@ const NotificationPreferences: React.FC = () => {
               label="Purchases"
               description="Get notified when a gift card is purchased"
               checked={preferences.purchaseMade}
-              onChange={(checked) => updatePreference('purchaseMade', checked)}
+              onChange={(checked) => updatePreference("purchaseMade", checked)}
               disabled={isUpdating}
             />
             <PreferenceToggle
               label="Redemptions"
               description="Get notified when a gift card is redeemed"
               checked={preferences.redemptionMade}
-              onChange={(checked) => updatePreference('redemptionMade', checked)}
+              onChange={(checked) =>
+                updatePreference("redemptionMade", checked)
+              }
               disabled={isUpdating}
             />
           </div>
@@ -140,28 +144,36 @@ const NotificationPreferences: React.FC = () => {
               label="Profile Verified"
               description="Get notified when your profile is verified by admin"
               checked={preferences.profileVerified}
-              onChange={(checked) => updatePreference('profileVerified', checked)}
+              onChange={(checked) =>
+                updatePreference("profileVerified", checked)
+              }
               disabled={isUpdating}
             />
             <PreferenceToggle
               label="Profile Rejected"
               description="Get notified if your profile is rejected"
               checked={preferences.profileRejected}
-              onChange={(checked) => updatePreference('profileRejected', checked)}
+              onChange={(checked) =>
+                updatePreference("profileRejected", checked)
+              }
               disabled={isUpdating}
             />
             <PreferenceToggle
               label="Gift Card Purchased"
               description="Get notified when someone buys your gift card"
               checked={preferences.giftCardPurchased}
-              onChange={(checked) => updatePreference('giftCardPurchased', checked)}
+              onChange={(checked) =>
+                updatePreference("giftCardPurchased", checked)
+              }
               disabled={isUpdating}
             />
             <PreferenceToggle
               label="Gift Card Redeemed"
               description="Get notified when your gift card is redeemed"
               checked={preferences.giftCardRedeemed}
-              onChange={(checked) => updatePreference('giftCardRedeemed', checked)}
+              onChange={(checked) =>
+                updatePreference("giftCardRedeemed", checked)
+              }
               disabled={isUpdating}
             />
           </div>

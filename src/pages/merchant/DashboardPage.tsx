@@ -1,27 +1,31 @@
-
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Gift, Plus, BarChart3, QrCode,
-  TrendingUp, DollarSign, ShoppingBag, Clock, AlertCircle
-} from 'lucide-react';
-import { Card } from '../../shared/components/ui/Card';
-import { MagneticButton } from '../../shared/components/animated/MagneticButton';
-import { DashboardLayout } from '../../shared/components/layout/DashboardLayout';
-import { ProfileIncompleteAlert } from '../../shared/components/alerts/ProfileIncompleteAlert';
-import { CompleteProfileModal } from '../../shared/components/modals/CompleteProfileModal';
-import { useProfileStatus } from '../../features/merchant/hooks/useProfileStatus';
-import { fadeInUp, staggerContainer } from '../../shared/utils/animations';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Gift,
+  Plus,
+  BarChart3,
+  QrCode,
+  TrendingUp,
+  DollarSign,
+  ShoppingBag,
+  Clock,
+  AlertCircle,
+  Edit,
+} from "lucide-react";
+import { Card } from "../../shared/components/ui/Card";
+import { MagneticButton } from "../../shared/components/animated/MagneticButton";
+import { DashboardLayout } from "../../shared/components/layout/DashboardLayout";
+import { ProfileIncompleteAlert } from "../../shared/components/alerts/ProfileIncompleteAlert";
+import { CompleteProfileModal } from "../../shared/components/modals/CompleteProfileModal";
+import { useProfileStatus } from "../../features/merchant/hooks/useProfileStatus";
+import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 
 export const DashboardPage: React.FC = () => {
-  const { 
-    status, 
-    canCreateGiftCards,
-    isLoading 
-  } = useProfileStatus();
+  const { status, canCreateGiftCards, canEdit, rejectionReason, isLoading } =
+    useProfileStatus();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [modalAction, setModalAction] = useState('');
+  const [modalAction, setModalAction] = useState("");
   const [showIncompleteAlert, setShowIncompleteAlert] = useState(true);
 
   // Handle action attempts (create gift card, etc.)
@@ -34,13 +38,18 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  // Navigate to profile edit page
+  const handleEditProfile = () => {
+    window.location.href = "/merchant/complete-profile";
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-screen">
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full"
           />
         </div>
@@ -67,48 +76,65 @@ export const DashboardPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Status Badge */}
-            <div>
-              {status === 'incomplete' && (
-                <div className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  Profile Incomplete
-                </div>
+            {/* Status Badge & Edit Button */}
+            <div className="flex items-center gap-3">
+              {/* Edit Button (shown when canEdit is true) */}
+              {canEdit && (
+                <MagneticButton
+                  variant="secondary"
+                  onClick={handleEditProfile}
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Profile
+                </MagneticButton>
               )}
-              {status === 'pending' && (
-                <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Verification Pending
-                </div>
-              )}
-              {status === 'approved' && (
-                <div className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                  ✅ Verified
-                </div>
-              )}
-              {status === 'rejected' && (
-                <div className="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" />
-                  Verification Failed
-                </div>
-              )}
+
+              {/* Status Badge */}
+              <div>
+                {status === "incomplete" && (
+                  <div className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Profile Incomplete
+                  </div>
+                )}
+                {status === "pending" && (
+                  <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Verification Pending
+                  </div>
+                )}
+                {status === "approved" && (
+                  <div className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                    ✅ Verified
+                  </div>
+                )}
+                {status === "rejected" && (
+                  <div className="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Verification Failed
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
 
         {/* Alerts */}
-        {status === 'incomplete' && showIncompleteAlert && (
-          <ProfileIncompleteAlert onDismiss={() => setShowIncompleteAlert(false)} />
+        {status === "incomplete" && showIncompleteAlert && (
+          <ProfileIncompleteAlert
+            onDismiss={() => setShowIncompleteAlert(false)}
+          />
         )}
 
-        {status === 'pending' && (
+        {status === "pending" && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-400 rounded-2xl p-6 mb-6"
           >
             <div className="flex items-center gap-4">
-              <motion.div 
+              <motion.div
                 className="w-12 h-12 bg-blue-400 rounded-full flex items-center justify-center"
                 animate={{
                   scale: [1, 1.1, 1],
@@ -118,35 +144,56 @@ export const DashboardPage: React.FC = () => {
                 <Clock className="w-6 h-6 text-white" />
               </motion.div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 mb-1">🎉 Profile Submitted Successfully!</h3>
-                <p className="text-gray-700">Your profile is under review by our admin team. You'll be notified once approved (typically within 24-48 hours).</p>
+                <h3 className="font-bold text-gray-900 mb-1">
+                  🎉 Profile Submitted Successfully!
+                </h3>
+                <p className="text-gray-700">
+                  Your profile is under review by our admin team. You'll be
+                  notified once approved (typically within 24-48 hours).
+                </p>
               </div>
             </div>
           </motion.div>
         )}
 
-        {status === 'rejected' && (
+        {status === "rejected" && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-400 rounded-2xl p-6 mb-6"
           >
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="w-12 h-12 bg-red-400 rounded-full flex items-center justify-center">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-red-400 rounded-full flex items-center justify-center flex-shrink-0">
                   <AlertCircle className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-1">Profile Verification Failed</h3>
-                  <p className="text-gray-700">Your documents need to be resubmitted for verification.</p>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900 mb-1">
+                    Profile Verification Failed
+                  </h3>
+                  <p className="text-gray-700">
+                    Your profile was rejected and needs to be updated.
+                  </p>
+                  {rejectionReason && (
+                    <div className="mt-3 p-3 bg-white/60 rounded-lg">
+                      <p className="text-sm font-semibold text-gray-800 mb-1">
+                        Rejection Reason:
+                      </p>
+                      <p className="text-sm text-gray-700">{rejectionReason}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-              <MagneticButton
-                variant="primary"
-                onClick={() => window.location.href = '/merchant/resubmit'}
-              >
-                Resubmit Documents
-              </MagneticButton>
+              <div className="flex justify-end">
+                <MagneticButton
+                  variant="primary"
+                  onClick={handleEditProfile}
+                  className="flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit & Resubmit Profile
+                </MagneticButton>
+              </div>
             </div>
           </motion.div>
         )}
@@ -168,7 +215,7 @@ export const DashboardPage: React.FC = () => {
                   <TrendingUp className="w-5 h-5 text-green-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? '₹0' : '---'}
+                  {canCreateGiftCards ? "₹0" : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </Card>
@@ -179,7 +226,7 @@ export const DashboardPage: React.FC = () => {
                   <Gift className="w-5 h-5 text-blue-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? '0' : '---'}
+                  {canCreateGiftCards ? "0" : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Active cards</p>
               </Card>
@@ -190,7 +237,7 @@ export const DashboardPage: React.FC = () => {
                   <ShoppingBag className="w-5 h-5 text-purple-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? '0' : '---'}
+                  {canCreateGiftCards ? "0" : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </Card>
@@ -201,7 +248,7 @@ export const DashboardPage: React.FC = () => {
                   <DollarSign className="w-5 h-5 text-green-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? '₹0' : '---'}
+                  {canCreateGiftCards ? "₹0" : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </Card>
@@ -210,25 +257,33 @@ export const DashboardPage: React.FC = () => {
 
           {/* Quick Actions */}
           <motion.div variants={fadeInUp}>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Quick Actions
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Create Gift Card */}
               <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                <div 
-                  onClick={() => handleProtectedAction('create a gift card', () => {
-                    console.log('Navigate to create gift card page');
-                  })}
+                <div
+                  onClick={() =>
+                    handleProtectedAction("create a gift card", () => {
+                      console.log("Navigate to create gift card page");
+                    })
+                  }
                 >
                   <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mb-4">
                     <Plus className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Create Gift Card</h3>
-                  <p className="text-sm text-gray-600">Set up a new gift card for your business</p>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Create Gift Card
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Set up a new gift card for your business
+                  </p>
                   {!canCreateGiftCards && (
                     <p className="text-xs text-yellow-600 mt-2 font-medium">
-                      {status === 'incomplete' && '🔒 Complete profile first'}
-                      {status === 'pending' && '⏳ Awaiting verification'}
-                      {status === 'rejected' && '❌ Resubmit documents'}
+                      {status === "incomplete" && "🔒 Complete profile first"}
+                      {status === "pending" && "⏳ Awaiting verification"}
+                      {status === "rejected" && "❌ Update & resubmit profile"}
                     </p>
                   )}
                 </div>
@@ -236,21 +291,27 @@ export const DashboardPage: React.FC = () => {
 
               {/* View Analytics */}
               <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                <div 
-                  onClick={() => handleProtectedAction('view sales analytics', () => {
-                    console.log('Navigate to analytics page');
-                  })}
+                <div
+                  onClick={() =>
+                    handleProtectedAction("view sales analytics", () => {
+                      console.log("Navigate to analytics page");
+                    })
+                  }
                 >
                   <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-600 rounded-xl flex items-center justify-center mb-4">
                     <BarChart3 className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">View Analytics</h3>
-                  <p className="text-sm text-gray-600">Track your sales and performance</p>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    View Analytics
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Track your sales and performance
+                  </p>
                   {!canCreateGiftCards && (
                     <p className="text-xs text-yellow-600 mt-2 font-medium">
-                      {status === 'incomplete' && '🔒 Complete profile first'}
-                      {status === 'pending' && '⏳ Awaiting verification'}
-                      {status === 'rejected' && '❌ Resubmit documents'}
+                      {status === "incomplete" && "🔒 Complete profile first"}
+                      {status === "pending" && "⏳ Awaiting verification"}
+                      {status === "rejected" && "❌ Update & resubmit profile"}
                     </p>
                   )}
                 </div>
@@ -258,21 +319,27 @@ export const DashboardPage: React.FC = () => {
 
               {/* Scan QR */}
               <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                <div 
-                  onClick={() => handleProtectedAction('scan QR codes', () => {
-                    console.log('Navigate to QR scanner');
-                  })}
+                <div
+                  onClick={() =>
+                    handleProtectedAction("scan QR codes", () => {
+                      console.log("Navigate to QR scanner");
+                    })
+                  }
                 >
                   <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-pink-600 rounded-xl flex items-center justify-center mb-4">
                     <QrCode className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Scan QR Code</h3>
-                  <p className="text-sm text-gray-600">Redeem customer gift cards</p>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    Scan QR Code
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Redeem customer gift cards
+                  </p>
                   {!canCreateGiftCards && (
                     <p className="text-xs text-yellow-600 mt-2 font-medium">
-                      {status === 'incomplete' && '🔒 Complete profile first'}
-                      {status === 'pending' && '⏳ Awaiting verification'}
-                      {status === 'rejected' && '❌ Resubmit documents'}
+                      {status === "incomplete" && "🔒 Complete profile first"}
+                      {status === "pending" && "⏳ Awaiting verification"}
+                      {status === "rejected" && "❌ Update & resubmit profile"}
                     </p>
                   )}
                 </div>
@@ -283,42 +350,54 @@ export const DashboardPage: React.FC = () => {
           {/* Recent Activity */}
           <motion.div variants={fadeInUp}>
             <Card className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h2>
-              
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                Recent Activity
+              </h2>
+
               {!canCreateGiftCards ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Gift className="w-8 h-8 text-gray-400" />
                   </div>
-                  {status === 'incomplete' && (
+                  {status === "incomplete" && (
                     <>
-                      <p className="text-gray-600 mb-4">Complete your profile to start tracking activity</p>
+                      <p className="text-gray-600 mb-4">
+                        Complete your profile to start tracking activity
+                      </p>
                       <MagneticButton
                         variant="primary"
-                        onClick={() => handleProtectedAction('view activity')}
+                        onClick={() => handleProtectedAction("view activity")}
                       >
                         Complete Profile
                       </MagneticButton>
                     </>
                   )}
-                  {status === 'pending' && (
-                    <p className="text-gray-600">Waiting for admin verification to unlock features...</p>
+                  {status === "pending" && (
+                    <p className="text-gray-600">
+                      Waiting for admin verification to unlock features...
+                    </p>
                   )}
-                  {status === 'rejected' && (
+                  {status === "rejected" && (
                     <>
-                      <p className="text-gray-600 mb-4">Resubmit your documents to unlock features</p>
+                      <p className="text-gray-600 mb-4">
+                        Update your profile to unlock features
+                      </p>
                       <MagneticButton
                         variant="primary"
-                        onClick={() => window.location.href = '/merchant/resubmit'}
+                        onClick={handleEditProfile}
+                        className="flex items-center gap-2 mx-auto"
                       >
-                        Resubmit Documents
+                        <Edit className="w-4 h-4" />
+                        Edit Profile
                       </MagneticButton>
                     </>
                   )}
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">No activity yet. Create your first gift card to get started!</p>
+                  <p className="text-gray-600">
+                    No activity yet. Create your first gift card to get started!
+                  </p>
                 </div>
               )}
             </Card>
@@ -335,67 +414,3 @@ export const DashboardPage: React.FC = () => {
     </DashboardLayout>
   );
 };
-
-
-// // src/pages/merchant/DashboardPage.tsx
-// // ============================================
-// import React from 'react';
-// import { TrendingUp, DollarSign, ShoppingBag, Gift } from 'lucide-react';
-// import { Sidebar } from '@/shared/components/layout/Sidebar';
-
-// export const DashboardPage: React.FC = () => {
-//   return (
-//     <div className="flex">
-//       <Sidebar />
-//       <main className="flex-1 p-8 bg-gray-50">
-//         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-//         <p className="text-gray-600 mb-8">Welcome back! Here's your overview.</p>
-
-//         {/* Stats Grid */}
-//         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <div className="flex items-center justify-between mb-2">
-//               <p className="text-sm text-gray-600">Total Sales</p>
-//               <TrendingUp className="w-5 h-5 text-green-600" />
-//             </div>
-//             <p className="text-2xl font-bold text-gray-900">₹0</p>
-//             <p className="text-xs text-gray-500 mt-1">This month</p>
-//           </div>
-
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <div className="flex items-center justify-between mb-2">
-//               <p className="text-sm text-gray-600">Gift Cards</p>
-//               <Gift className="w-5 h-5 text-blue-600" />
-//             </div>
-//             <p className="text-2xl font-bold text-gray-900">0</p>
-//             <p className="text-xs text-gray-500 mt-1">Active cards</p>
-//           </div>
-
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <div className="flex items-center justify-between mb-2">
-//               <p className="text-sm text-gray-600">Orders</p>
-//               <ShoppingBag className="w-5 h-5 text-purple-600" />
-//             </div>
-//             <p className="text-2xl font-bold text-gray-900">0</p>
-//             <p className="text-xs text-gray-500 mt-1">This month</p>
-//           </div>
-
-//           <div className="bg-white p-6 rounded-lg shadow">
-//             <div className="flex items-center justify-between mb-2">
-//               <p className="text-sm text-gray-600">Revenue</p>
-//               <DollarSign className="w-5 h-5 text-green-600" />
-//             </div>
-//             <p className="text-2xl font-bold text-gray-900">₹0</p>
-//             <p className="text-xs text-gray-500 mt-1">This month</p>
-//           </div>
-//         </div>
-
-//         {/* Recent Activity */}
-//         <div className="bg-white rounded-lg shadow p-6">
-//           <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Activity</h2>
-//           <p className="text-gray-600 text-center py-8">No activity yet</p>
-//         </div>
-//       </main>
-//     </div>
-//   );
-// };
