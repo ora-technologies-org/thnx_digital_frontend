@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Clock,
@@ -10,13 +9,12 @@ import {
   Tag,
   FileText,
   Hash,
-  MapPin,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   ActivityLog,
   CATEGORY_CONFIG,
   SEVERITY_CONFIG,
-} from '../../types/activityLog.types';
+} from "../../types/activityLog.types";
 
 interface ActivityLogDetailModalProps {
   log: ActivityLog | null;
@@ -25,14 +23,14 @@ interface ActivityLogDetailModalProps {
 }
 
 const formatDateTime = (dateString: string) => {
-  return new Date(dateString).toLocaleString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+  return new Date(dateString).toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 };
 
@@ -66,7 +64,9 @@ export const ActivityLogDetailModal: React.FC<ActivityLogDetailModalProps> = ({
           >
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-500 to-red-600">
-                <h2 className="text-xl font-bold text-white">Activity Details</h2>
+                <h2 className="text-xl font-bold text-white">
+                  Activity Details
+                </h2>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -88,7 +88,9 @@ export const ActivityLogDetailModal: React.FC<ActivityLogDetailModalProps> = ({
                   <span
                     className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full ${severityConfig.bgColor} ${severityConfig.color}`}
                   >
-                    <span className={`w-2 h-2 rounded-full ${severityConfig.dotColor}`} />
+                    <span
+                      className={`w-2 h-2 rounded-full ${severityConfig.dotColor}`}
+                    />
                     {severityConfig.label}
                   </span>
                   <code className="px-4 py-2 bg-gray-100 rounded-full text-sm font-mono">
@@ -100,7 +102,9 @@ export const ActivityLogDetailModal: React.FC<ActivityLogDetailModalProps> = ({
                   <div className="flex items-start gap-3">
                     <FileText className="w-5 h-5 text-gray-500 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Description</p>
+                      <p className="text-sm font-medium text-gray-500 mb-1">
+                        Description
+                      </p>
                       <p className="text-gray-900">{log.description}</p>
                     </div>
                   </div>
@@ -111,8 +115,12 @@ export const ActivityLogDetailModal: React.FC<ActivityLogDetailModalProps> = ({
                     <div className="flex items-center gap-3">
                       <Clock className="w-5 h-5 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Timestamp</p>
-                        <p className="text-gray-900">{formatDateTime(log.createdAt)}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                          Timestamp
+                        </p>
+                        <p className="text-gray-900">
+                          {formatDateTime(log.createdAt)}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -121,65 +129,81 @@ export const ActivityLogDetailModal: React.FC<ActivityLogDetailModalProps> = ({
                     <div className="flex items-center gap-3">
                       <User className="w-5 h-5 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Actor</p>
-                        <p className="text-gray-900 capitalize">{log.actorType}</p>
+                        <p className="text-sm font-medium text-gray-500">
+                          Actor
+                        </p>
+                        <p className="text-gray-900 capitalize">
+                          {log.actorType}
+                        </p>
                         {log.actorId && (
-                          <p className="text-xs text-gray-500 font-mono">{log.actorId}</p>
+                          <p className="text-xs text-gray-500 font-mono">
+                            {log.actorId}
+                          </p>
                         )}
                       </div>
                     </div>
                   </div>
 
-               
                   {log.resourceType && (
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="flex items-center gap-3">
                         <Tag className="w-5 h-5 text-gray-500" />
                         <div>
-                          <p className="text-sm font-medium text-gray-500">Resource</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            Resource
+                          </p>
                           <p className="text-gray-900">{log.resourceType}</p>
                           {log.resourceId && (
-                            <p className="text-xs text-gray-500 font-mono">{log.resourceId}</p>
+                            <p className="text-xs text-gray-500 font-mono">
+                              {log.resourceId}
+                            </p>
                           )}
                         </div>
                       </div>
                     </div>
                   )}
 
-                
                   {log.ipAddress && (
                     <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="flex items-center gap-3">
                         <Globe className="w-5 h-5 text-gray-500" />
                         <div>
-                          <p className="text-sm font-medium text-gray-500">IP Address</p>
-                          <p className="text-gray-900 font-mono">{log.ipAddress}</p>
+                          <p className="text-sm font-medium text-gray-500">
+                            IP Address
+                          </p>
+                          <p className="text-gray-900 font-mono">
+                            {log.ipAddress}
+                          </p>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
 
-              
                 {log.userAgent && (
                   <div className="mb-6 p-4 bg-gray-50 rounded-xl">
                     <div className="flex items-start gap-3">
                       <Monitor className="w-5 h-5 text-gray-500 mt-0.5" />
                       <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-medium text-gray-500 mb-1">User Agent</p>
-                        <p className="text-gray-900 text-sm break-all">{log.userAgent}</p>
+                        <p className="text-sm font-medium text-gray-500 mb-1">
+                          User Agent
+                        </p>
+                        <p className="text-gray-900 text-sm break-all">
+                          {log.userAgent}
+                        </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-            
                 {log.metadata && Object.keys(log.metadata).length > 0 && (
                   <div className="p-4 bg-gray-50 rounded-xl">
                     <div className="flex items-start gap-3">
                       <Hash className="w-5 h-5 text-gray-500 mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-500 mb-2">Metadata</p>
+                        <p className="text-sm font-medium text-gray-500 mb-2">
+                          Metadata
+                        </p>
                         <pre className="text-sm bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
                           {JSON.stringify(log.metadata, null, 2)}
                         </pre>
@@ -188,9 +212,10 @@ export const ActivityLogDetailModal: React.FC<ActivityLogDetailModalProps> = ({
                   </div>
                 )}
 
-           
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-400 font-mono">Log ID: {log.id}</p>
+                  <p className="text-xs text-gray-400 font-mono">
+                    Log ID: {log.id}
+                  </p>
                 </div>
               </div>
             </div>

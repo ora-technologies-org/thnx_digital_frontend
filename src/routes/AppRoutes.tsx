@@ -23,14 +23,23 @@ import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 import { PendingMerchantsPage } from "@/pages/admin/PendngMerchantsPage";
 import { AllMerchantsPage } from "@/pages/admin/AllMerchantsPage";
 import { CreateMerchantPage } from "@/pages/admin/CreateMerchantPage";
-import GiftPages from "@/pages/admin/GiftPages";
+
 import RevenuePage from "@/pages/admin/RevenuePage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import ActivityLogPage from "@/pages/admin/ActitivityPage";
-import AdminSettingPage from "@/pages/admin/SettingPage";
+
+import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
+import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
+import MerchantsAndCardsApp from "@/pages/admin/GiftPages";
+import { AdminSettingPage } from "@/pages/admin/SettingPage";
+import { SupportTicketPage } from "@/pages/merchant/SupportTicket";
+import { AdminSupportTicketPage } from "@/pages/admin/SupportTicket";
+import ContactUsPage from "@/pages/admin/ContactUsPage";
+import { ChangePasswordPage } from "@/pages/merchant/ChangePasswordPage";
+// import AdminSettingPage from "@/pages/admin/SettingPage";
 // import NotificationsPage from '../pages/NotificationsPage';
 import NotificationsPage from "@/pages/merchant/NotificationsPage";
-
 
 const AppRoutes: React.FC = () => {
   return (
@@ -41,9 +50,14 @@ const AppRoutes: React.FC = () => {
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.BROWSE} element={<BrowsePage />} />
       <Route path={ROUTES.PURCHASE} element={<PurchasePage />} />
-
+      <Route path={ROUTES.CHANGE} element={<ChangePasswordPage />} />
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
       <Route path="/merchant/dashboard" element={<DashboardPage />} />
+
+      <Route path="/merchant/support" element={<SupportTicketPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-otp" element={<VerifyOtpPage />} />
       {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
       <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
       <Route path="/merchant/orders" element={<OrdersPage />} />
@@ -57,18 +71,23 @@ const AppRoutes: React.FC = () => {
         element={<CompleteProfilePage />}
       />
 
-      <Route path="/admin/notifications" element={
-      <ProtectedRoute requiredRole="ADMIN">
-        <NotificationsPage />
-      </ProtectedRoute>
-    } />
+      <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
 
-
-    <Route path="/merchant/notifications" element={
-      <ProtectedRoute requiredRole="MERCHANT">
-        <NotificationsPage />
-      </ProtectedRoute>
-    } />
+      <Route
+        path="/merchant/notifications"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin Routes */}
       <Route
@@ -81,7 +100,14 @@ const AppRoutes: React.FC = () => {
       />
 
       <Route path="/admin/create-merchant" element={<CreateMerchantPage />} />
-
+      <Route
+        path="/admin/merchants/edit/:id"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <CreateMerchantPage />
+          </ProtectedRoute>
+        }
+      />
       {/* <Route
         path="/admin"
         element={
@@ -102,7 +128,7 @@ const AppRoutes: React.FC = () => {
         path="/admin/giftcards"
         element={
           <ProtectedRoute requiredRole="ADMIN">
-            <GiftPages />
+            <MerchantsAndCardsApp />
           </ProtectedRoute>
         }
       />
@@ -137,6 +163,24 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <AdminSettingPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/support-tickets"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminSupportTicketPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/contact-us"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <ContactUsPage />
           </ProtectedRoute>
         }
       />

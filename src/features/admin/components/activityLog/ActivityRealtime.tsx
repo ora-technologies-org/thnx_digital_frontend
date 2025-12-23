@@ -1,17 +1,16 @@
-
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Wifi, WifiOff, Radio, X, Clock, Zap } from 'lucide-react';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Wifi, Radio, X, Clock, Zap } from "lucide-react";
 import {
   ActivityLog,
   CATEGORY_CONFIG,
   SEVERITY_CONFIG,
-} from '../../types/activityLog.types';
+} from "../../types/activityLog.types";
 
 interface ActivityLogRealtimeProps {
   logs: ActivityLog[];
   isConnected: boolean;
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: "connecting" | "connected" | "disconnected" | "error";
   error: string | null;
   onClear: () => void;
   onReconnect: () => void;
@@ -23,7 +22,7 @@ const getRelativeTime = (dateString: string) => {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffInSeconds < 5) return 'Just now';
+  if (diffInSeconds < 5) return "Just now";
   if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -44,7 +43,6 @@ export const ActivityLogRealtime: React.FC<ActivityLogRealtimeProps> = ({
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm"
     >
-   
       <div className="px-6 py-4 bg-gradient-to-r from-orange-500 to-red-600 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <motion.div
@@ -54,10 +52,9 @@ export const ActivityLogRealtime: React.FC<ActivityLogRealtimeProps> = ({
             <Radio className="w-5 h-5 text-white" />
           </motion.div>
           <h3 className="text-lg font-bold text-white">Real-time Activity</h3>
-          
-        
+
           <div className="flex items-center gap-2">
-            {connectionStatus === 'connected' && (
+            {connectionStatus === "connected" && (
               <motion.span
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -67,19 +64,19 @@ export const ActivityLogRealtime: React.FC<ActivityLogRealtimeProps> = ({
                 Live
               </motion.span>
             )}
-            {connectionStatus === 'connecting' && (
+            {connectionStatus === "connecting" && (
               <span className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full text-xs text-white">
                 <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
                 Connecting...
               </span>
             )}
-            {connectionStatus === 'disconnected' && (
+            {connectionStatus === "disconnected" && (
               <span className="flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full text-xs text-white">
                 <span className="w-2 h-2 bg-gray-400 rounded-full" />
                 Disconnected
               </span>
             )}
-            {connectionStatus === 'error' && (
+            {connectionStatus === "error" && (
               <span className="flex items-center gap-1 px-2 py-1 bg-red-500/50 rounded-full text-xs text-white">
                 <span className="w-2 h-2 bg-red-400 rounded-full" />
                 Error
@@ -114,14 +111,12 @@ export const ActivityLogRealtime: React.FC<ActivityLogRealtimeProps> = ({
         </div>
       </div>
 
-  
       {error && (
         <div className="px-6 py-3 bg-red-50 border-b border-red-100">
           <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
 
- 
       <div className="max-h-[400px] overflow-y-auto">
         {logs.length === 0 ? (
           <div className="p-8 text-center">
@@ -134,8 +129,8 @@ export const ActivityLogRealtime: React.FC<ActivityLogRealtimeProps> = ({
             </motion.div>
             <p className="text-gray-500">
               {isConnected
-                ? 'Waiting for new activity...'
-                : 'Connect to see real-time activity'}
+                ? "Waiting for new activity..."
+                : "Connect to see real-time activity"}
             </p>
           </div>
         ) : (
@@ -148,25 +143,23 @@ export const ActivityLogRealtime: React.FC<ActivityLogRealtimeProps> = ({
                 <motion.div
                   key={log.id}
                   initial={{ opacity: 0, x: -20, height: 0 }}
-                  animate={{ opacity: 1, x: 0, height: 'auto' }}
+                  animate={{ opacity: 1, x: 0, height: "auto" }}
                   exit={{ opacity: 0, x: 20, height: 0 }}
                   transition={{ duration: 0.3 }}
                   onClick={() => onViewDetails?.(log)}
                   className={`px-6 py-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                    index === 0 ? 'bg-orange-50' : ''
+                    index === 0 ? "bg-orange-50" : ""
                   }`}
                 >
                   <div className="flex items-start gap-4">
-                 
                     <div className="mt-1">
                       <span
                         className={`w-3 h-3 rounded-full ${severityConfig.dotColor} block ${
-                          index === 0 ? 'animate-pulse' : ''
+                          index === 0 ? "animate-pulse" : ""
                         }`}
                       />
                     </div>
 
-              
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span
@@ -187,7 +180,9 @@ export const ActivityLogRealtime: React.FC<ActivityLogRealtimeProps> = ({
                           </motion.span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-900 truncate">{log.description}</p>
+                      <p className="text-sm text-gray-900 truncate">
+                        {log.description}
+                      </p>
                     </div>
 
                     {/* Time */}
