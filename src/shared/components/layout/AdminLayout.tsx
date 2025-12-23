@@ -35,13 +35,6 @@ const getNavigation = (pendingCount: number) => [
     gradient: "from-blue-500 to-blue-600",
   },
   {
-    name: "Pending Merchants",
-    href: "/admin/pending",
-    icon: Users,
-    gradient: "from-orange-500 to-orange-600",
-    badge: pendingCount > 0 ? pendingCount : undefined, // Dynamic badge
-  },
-  {
     name: "All Merchants",
     href: "/admin/merchants",
     icon: CheckCircle,
@@ -53,6 +46,14 @@ const getNavigation = (pendingCount: number) => [
     icon: UserPlus,
     gradient: "from-indigo-500 to-purple-600",
   },
+  {
+    name: "Pending Merchants",
+    href: "/admin/pending",
+    icon: Users,
+    gradient: "from-orange-500 to-orange-600",
+    badge: pendingCount > 0 ? pendingCount : undefined, // Dynamic badge
+  },
+
   {
     name: "Gift Cards",
     href: "/admin/giftcards",
@@ -78,14 +79,14 @@ const getNavigation = (pendingCount: number) => [
     gradient: "from-cyan-500 to-cyan-600",
   },
   {
-    name: "Support Tickets",
-    href: "/admin/support-tickets",
+    name: "Contact us",
+    href: "/admin/contact-us",
     icon: Activity,
     gradient: "from-cyan-500 to-cyan-600",
   },
   {
-    name: "Contact us",
-    href: "/admin/contact-us",
+    name: "Support Tickets",
+    href: "/admin/support-tickets",
     icon: Activity,
     gradient: "from-cyan-500 to-cyan-600",
   },

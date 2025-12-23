@@ -1,16 +1,19 @@
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Input } from '../../../shared/components/ui/Input';
-import { Button } from '../../../shared/components/ui/Button';
-import type { GiftCard } from '../types/giftCard.types';
+import React, { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Input } from "../../../shared/components/ui/Input";
+import { Button } from "../../../shared/components/ui/Button";
+import type { GiftCard } from "../types/giftCard.types";
 
 const giftCardSchema = z.object({
-  title: z.string().min(3, 'Title must be at least 3 characters'),
+  title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
-  price: z.number().positive('Price must be positive').max(999999, 'Price is too high'),
-  expiryDate: z.string().min(1, 'Expiry date is required'),
+  price: z
+    .number()
+    .positive("Price must be positive")
+    .max(999999, "Price is too high"),
+  expiryDate: z.string().min(1, "Expiry date is required"),
 });
 
 type GiftCardFormData = z.infer<typeof giftCardSchema>;
@@ -20,13 +23,20 @@ interface GiftCardFormProps {
   onSubmit: (data: GiftCardFormData) => void;
   isLoading?: boolean;
   submitLabel?: string;
+  buttonVariant?:
+    | "primary"
+    | "secondary"
+    | "danger"
+    | "outline"
+    | "ghost"
+    | "gradient";
 }
 
 export const GiftCardForm: React.FC<GiftCardFormProps> = ({
   initialData,
   onSubmit,
   isLoading = false,
-  submitLabel = 'Create Gift Card',
+  submitLabel = "Create Gift Card",
 }) => {
   const {
     register,
@@ -39,17 +49,17 @@ export const GiftCardForm: React.FC<GiftCardFormProps> = ({
 
   useEffect(() => {
     if (initialData) {
-      setValue('title', initialData.title);
-      setValue('description', initialData.description || '');
-      setValue('price', parseFloat(initialData.price));
-      setValue('expiryDate', initialData.expiryDate.split('T')[0]);
+      setValue("title", initialData.title);
+      setValue("description", initialData.description || "");
+      setValue("price", parseFloat(initialData.price));
+      setValue("expiryDate", initialData.expiryDate.split("T")[0]);
     }
   }, [initialData, setValue]);
 
   // Set minimum date to tomorrow
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
+  const minDate = tomorrow.toISOString().split("T")[0];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -57,7 +67,7 @@ export const GiftCardForm: React.FC<GiftCardFormProps> = ({
         label="Title"
         placeholder="e.g., Holiday Special Gift Card"
         error={errors.title?.message}
-        {...register('title')}
+        {...register("title")}
       />
 
       <div>
@@ -65,13 +75,15 @@ export const GiftCardForm: React.FC<GiftCardFormProps> = ({
           Description
         </label>
         <textarea
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
           rows={4}
           placeholder="Describe your gift card..."
-          {...register('description')}
+          {...register("description")}
         />
         {errors.description && (
-          <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+          <p className="mt-1 text-sm text-red-600">
+            {errors.description.message}
+          </p>
         )}
       </div>
 
@@ -82,7 +94,7 @@ export const GiftCardForm: React.FC<GiftCardFormProps> = ({
           step="0.01"
           placeholder="100.00"
           error={errors.price?.message}
-          {...register('price', { valueAsNumber: true })}
+          {...register("price", { valueAsNumber: true })}
         />
 
         <Input
@@ -90,11 +102,16 @@ export const GiftCardForm: React.FC<GiftCardFormProps> = ({
           type="date"
           min={minDate}
           error={errors.expiryDate?.message}
-          {...register('expiryDate')}
+          {...register("expiryDate")}
         />
       </div>
 
-      <Button type="submit" className="w-full" isLoading={isLoading}>
+      <Button
+        type="submit"
+        variant="gradient"
+        className="w-full"
+        isLoading={isLoading}
+      >
         {submitLabel}
       </Button>
     </form>

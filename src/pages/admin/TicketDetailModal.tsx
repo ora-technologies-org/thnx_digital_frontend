@@ -1,8 +1,6 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useMemo } from "react";
 import {
   X,
-  Loader2,
   CheckCircle,
   User,
   Mail,
@@ -15,12 +13,27 @@ import {
   SupportTicket,
   updateSupportTicket,
 } from "@/features/admin/services/adminTicketService";
-type TicketStatus = "IN_PROGRESS" | "CLOSE";
+
+// Import reusable components
+import { Button } from "@/shared/components/ui/Button";
+import { Modal } from "@/shared/components/ui/Modal";
+
+type TicketStatus = "OPEN" | "IN_PROGRESS" | "CLOSE";
+
 interface TicketDetailModalProps {
   ticketId: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
+}
+
+interface ErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
 }
 
 export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
@@ -32,241 +45,374 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<{
     status: TicketStatus;
+    response: string;
   }>({
     status: "OPEN",
+    response: "",
   });
-  const [showSuccess, setShowSuccess] = useState(false);
+
+  // State for response modal
+  const [responseModal, setResponseModal] = useState<{
+    isOpen: boolean;
+    type: "success" | "error" | "info";
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+    confirmText?: string;
+  }>({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+    confirmText: "OK",
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["supportTicket", ticketId],
     queryFn: () => fetchSupportTicketById(ticketId),
-    enabled: !!ticketId,
+    enabled: !!ticketId && isOpen,
   });
 
   const ticket: SupportTicket | null = data?.data || null;
 
+  // Compute current form data - avoids useEffect for syncing state
+  const currentFormData = useMemo(() => {
+    if (!ticket) return formData;
+
+    // Only use ticket data if formData hasn't been modified
+    if (formData.status === "OPEN" && formData.response === "") {
+      return {
+        status: ticket.status as TicketStatus,
+        response: ticket.response || "",
+      };
+    }
+
+    return formData;
+  }, [ticket, formData]);
+
   const mutation = useMutation({
-    mutationFn: (data: { status: string; response: string }) =>
+    mutationFn: (data: { status: TicketStatus; response: string }) =>
       updateSupportTicket(ticketId, data),
     onSuccess: () => {
-      setShowSuccess(true);
-      queryClient.invalidateQueries({ queryKey: ["supportTickets"] });
-      setTimeout(() => {
-        setShowSuccess(false);
-        onUpdate();
-        onClose();
-      }, 1500);
+      // Show success modal
+      openResponseModal(
+        "success",
+        "Ticket Updated Successfully",
+        "Ticket has been updated successfully.",
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["supportTickets"] });
+          queryClient.invalidateQueries({
+            queryKey: ["supportTicket", ticketId],
+          });
+          onUpdate();
+          onClose();
+        },
+      );
+    },
+    onError: (error: unknown) => {
+      const typedError = error as ErrorResponse;
+      const errorMessage =
+        typedError?.response?.data?.message ||
+        typedError?.message ||
+        "Failed to update ticket. Please try again.";
+
+      openResponseModal("error", "Update Failed", errorMessage);
     },
   });
 
-  React.useEffect(() => {
-    if (ticket) {
-      setFormData({
-        status: ticket.status,
-        response: ticket.response || "",
-      });
-    }
-  }, [ticket]);
+  // Open response modal
+  const openResponseModal = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+    onConfirm?: () => void,
+    confirmText: string = "OK",
+  ) => {
+    setResponseModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm,
+      confirmText,
+    });
+  };
+
+  // Close response modal
+  const closeResponseModal = () => {
+    setResponseModal((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate(formData);
+
+    // Validate response if status is being closed
+    if (
+      currentFormData.status === "CLOSE" &&
+      !currentFormData.response.trim()
+    ) {
+      openResponseModal(
+        "error",
+        "Validation Error",
+        "Please provide a response before closing the ticket.",
+      );
+      return;
+    }
+
+    mutation.mutate(currentFormData);
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    if (
+      currentFormData.response !== (ticket?.response || "") ||
+      currentFormData.status !== ticket?.status
+    ) {
+      openResponseModal(
+        "info",
+        "Unsaved Changes",
+        "You have unsaved changes. Are you sure you want to leave?",
+        () => {
+          setFormData({
+            status: (ticket?.status as TicketStatus) || "OPEN",
+            response: ticket?.response || "",
+          });
+          onClose();
+        },
+        "Leave",
+      );
+    } else {
+      onClose();
+    }
+  };
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "OPEN":
+        return "bg-blue-100 text-blue-800";
+      case "IN_PROGRESS":
+        return "bg-yellow-100 text-yellow-800";
+      case "CLOSE":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto z-10"
-        >
-          {/* Success Overlay */}
-          <AnimatePresence>
-            {showSuccess && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-white rounded-2xl flex items-center justify-center z-20"
-              >
-                <div className="text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", duration: 0.5 }}
-                  >
-                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                  </motion.div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Ticket Updated!
-                  </h3>
-                  <p className="text-gray-600">Changes saved successfully.</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                Ticket Details
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                View and respond to support ticket
-              </p>
+    <>
+      {/* Main Modal */}
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Ticket Details"
+        size="lg"
+      >
+        {isLoading ? (
+          <div className="p-12 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-gray-600">Loading ticket details...</p>
             </div>
-            <button
-              onClick={onClose}
-              disabled={mutation.isPending}
-              className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-            >
-              <X className="w-6 h-6" />
-            </button>
           </div>
-
-          {/* Content */}
-          {isLoading ? (
-            <div className="p-12 flex items-center justify-center">
-              <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-            </div>
-          ) : ticket ? (
-            <div className="p-6 space-y-6">
-              {/* Ticket Info */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  {ticket.title}
-                </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {ticket.merchantName && (
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <User className="w-4 h-4 text-blue-600" />
-                      <span>{ticket.merchantName}</span>
-                    </div>
-                  )}
-                  {ticket.merchantEmail && (
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Mail className="w-4 h-4 text-blue-600" />
-                      <span>{ticket.merchantEmail}</span>
-                    </div>
-                  )}
+        ) : ticket ? (
+          <div className="space-y-6">
+            {/* Ticket Info */}
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                {ticket.title}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                {ticket.merchantName && (
                   <div className="flex items-center gap-2 text-gray-700">
-                    <Calendar className="w-4 h-4 text-blue-600" />
-                    <span>
-                      {new Date(ticket.createdAt).toLocaleDateString()}
-                    </span>
+                    <User className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium">Merchant:</span>
+                    <span>{ticket.merchantName}</span>
                   </div>
+                )}
+                {ticket.merchantEmail && (
                   <div className="flex items-center gap-2 text-gray-700">
-                    <MessageSquare className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium">Status: {ticket.status}</span>
+                    <Mail className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium">Email:</span>
+                    <span>{ticket.merchantEmail}</span>
                   </div>
+                )}
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">Created:</span>
+                  <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <MessageSquare className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">Status:</span>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      ticket.status,
+                    )}`}
+                  >
+                    {ticket.status.replace("_", " ")}
+                  </span>
                 </div>
               </div>
+            </div>
 
-              {/* Query */}
+            {/* Query */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Query Description
+              </label>
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-gray-800 whitespace-pre-wrap">
+                  {ticket.merchantQuery}
+                </p>
+              </div>
+            </div>
+
+            {/* Update Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Status Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Query Description
+                  Update Status
                 </label>
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-gray-800 whitespace-pre-wrap">
-                    {ticket.merchantQuery}
-                  </p>
-                </div>
+                <select
+                  value={currentFormData.status}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      status: e.target.value as TicketStatus,
+                    }))
+                  }
+                  disabled={mutation.isPending}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 transition-colors"
+                >
+                  <option value="OPEN">Open</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="CLOSE">Close</option>
+                </select>
               </div>
 
-              {/* Update Form */}
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Status Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Update Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        status: e.target.value as TicketStatus,
-                      }))
-                    }
-                    disabled={mutation.isPending}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                  >
-                    <option value="OPEN">Open</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="CLOSE">Close</option>
-                  </select>
-                </div>
+              {/* Response */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Response
+                  {currentFormData.status === "CLOSE" && (
+                    <span className="text-red-500 ml-1">*</span>
+                  )}
+                </label>
+                <textarea
+                  value={currentFormData.response}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      response: e.target.value,
+                    }))
+                  }
+                  disabled={mutation.isPending}
+                  rows={6}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none disabled:bg-gray-50 transition-colors"
+                  placeholder="Enter your response to the merchant..."
+                  required={currentFormData.status === "CLOSE"}
+                />
+                {currentFormData.status === "CLOSE" && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    A response is required when closing a ticket.
+                  </p>
+                )}
+              </div>
 
-                {/* Response */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Response
-                  </label>
-                  <textarea
-                    value={formData.response}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        response: e.target.value,
-                      }))
-                    }
-                    disabled={mutation.isPending}
-                    rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50"
-                    placeholder="Enter your response to the merchant..."
-                  />
-                </div>
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={mutation.isPending}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="gradient"
+                  isLoading={mutation.isPending}
+                  disabled={mutation.isPending}
+                  className="flex-1"
+                >
+                  Update Ticket
+                </Button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <div className="p-12 text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <X className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Ticket Not Found
+            </h3>
+            <p className="text-sm text-gray-500">
+              The requested ticket could not be found.
+            </p>
+            <div className="mt-6">
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={mutation.isPending}
-                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={mutation.isPending}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {mutation.isPending ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      "Update Ticket"
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <div className="p-12 text-center text-gray-500">
-              Ticket not found
-            </div>
-          )}
-        </motion.div>
-      </div>
-    </AnimatePresence>
+      {/* Response Modal */}
+      <Modal
+        isOpen={responseModal.isOpen}
+        onClose={closeResponseModal}
+        title={responseModal.title}
+        size="md"
+      >
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+            {responseModal.type === "success" ? (
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            ) : responseModal.type === "error" ? (
+              <X className="h-6 w-6 text-red-600" />
+            ) : (
+              <MessageSquare className="h-6 w-6 text-blue-600" />
+            )}
+          </div>
+
+          <div className="mt-4">
+            <p className="text-sm text-gray-500 whitespace-pre-line">
+              {responseModal.message}
+            </p>
+          </div>
+
+          <div className="mt-6 flex gap-3 justify-center">
+            {responseModal.type === "info" && (
+              <Button
+                variant="outline"
+                onClick={closeResponseModal}
+                className="px-4"
+              >
+                Cancel
+              </Button>
+            )}
+            <Button
+              variant={responseModal.type === "error" ? "danger" : "gradient"}
+              onClick={() => {
+                if (responseModal.onConfirm) {
+                  responseModal.onConfirm();
+                }
+                closeResponseModal();
+              }}
+              className="px-6"
+            >
+              {responseModal.confirmText}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 };

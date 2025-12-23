@@ -246,7 +246,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       label: "Gift Cards",
       icon: <Gift className="w-5 h-5" />,
       path: "/merchant/gift-cards",
-      badge: 3,
     },
     {
       id: "orders",

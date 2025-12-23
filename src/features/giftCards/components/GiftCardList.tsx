@@ -15,8 +15,10 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
-
+import type { AxiosError } from "axios";
 import { Button } from "../../../shared/components/ui/Button";
 import { Modal } from "../../../shared/components/ui/Modal";
 import { Spinner } from "../../../shared/components/ui/Spinner";
@@ -40,7 +42,11 @@ type ViewMode = "grid" | "list";
 type SortOption = "newest" | "oldest" | "price-high" | "price-low" | "expiry";
 type FilterOption = "all" | "active" | "inactive" | "expiring";
 
-// Helper function to decode JWT token
+interface ModalMessage {
+  type: "success" | "error";
+  message: string;
+}
+
 const decodeToken = (token: string) => {
   try {
     const base64Url = token.split(".")[1];
@@ -58,7 +64,6 @@ const decodeToken = (token: string) => {
   }
 };
 
-// Helper function to get user verification status from token
 const getUserVerificationStatus = () => {
   const token = localStorage.getItem("accessToken");
   if (!token) return { isVerified: false, profileStatus: "UNVERIFIED" };
@@ -82,29 +87,25 @@ export const EnhancedGiftCardList: React.FC = () => {
   const createModal = useModal();
   const editModal = useModal();
   const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
+  const [modalMessage, setModalMessage] = useState<ModalMessage | null>(null);
 
-  // UI State
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Memoize giftCards to prevent dependency issues
   const giftCards = useMemo(
     () => data?.data.giftCards || [],
     [data?.data.giftCards],
   );
   const canCreateMore = (data?.data.remaining || 0) > 0;
 
-  // Get profile verification status from localStorage token
   const { isVerified, profileStatus } = getUserVerificationStatus();
   const isProfileVerified = isVerified && profileStatus === "VERIFIED";
 
-  // Get current time once per render to avoid impure calls in useMemo
   const [currentTime] = useState(() => Date.now());
 
-  // Statistics
   const stats = useMemo(() => {
     const total = giftCards.length;
     const active = giftCards.filter((card) => card.isActive).length;
@@ -123,11 +124,9 @@ export const EnhancedGiftCardList: React.FC = () => {
     return { total, active, totalValue, expiringSoon };
   }, [giftCards, currentTime]);
 
-  // Filtered and sorted cards
   const processedCards = useMemo(() => {
     let filtered = giftCards;
 
-    // Apply search
     if (searchQuery) {
       filtered = filtered.filter(
         (card) =>
@@ -137,7 +136,6 @@ export const EnhancedGiftCardList: React.FC = () => {
       );
     }
 
-    // Apply filter
     if (filterBy !== "all") {
       filtered = filtered.filter((card) => {
         if (filterBy === "active") return card.isActive;
@@ -153,7 +151,6 @@ export const EnhancedGiftCardList: React.FC = () => {
       });
     }
 
-    // Apply sort
     const sorted = [...filtered].sort((a, b) => {
       if (sortBy === "newest")
         return (
@@ -177,32 +174,67 @@ export const EnhancedGiftCardList: React.FC = () => {
     return sorted;
   }, [giftCards, searchQuery, filterBy, sortBy, currentTime]);
 
-  // Handlers
   const handleCreate = (formData: CreateGiftCardData) => {
     createMutation.mutate(formData, {
-      onSuccess: () => {
-        createModal.close();
+      onSuccess: (response) => {
+        setModalMessage({
+          type: "success",
+          message: response?.message || "Gift card created successfully!",
+        });
+
+        setTimeout(() => {
+          createModal.close();
+          setModalMessage(null);
+        }, 2000);
+      },
+
+      onError: (error: AxiosError<{ message?: string }>) => {
+        setModalMessage({
+          type: "error",
+          message:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to create gift card. Please try again.",
+        });
       },
     });
   };
 
   const handleEdit = (giftCard: GiftCard) => {
     setSelectedCard(giftCard);
+    setModalMessage(null);
     editModal.open();
   };
-
   const handleUpdate = (formData: UpdateGiftCardData) => {
-    if (selectedCard) {
-      updateMutation.mutate(
-        { id: selectedCard.id, data: formData },
-        {
-          onSuccess: () => {
+    if (!selectedCard) return;
+
+    updateMutation.mutate(
+      { id: selectedCard.id, data: formData },
+      {
+        onSuccess: (response) => {
+          setModalMessage({
+            type: "success",
+            message: response?.message || "Gift card updated successfully!",
+          });
+
+          setTimeout(() => {
             editModal.close();
             setSelectedCard(null);
-          },
+            setModalMessage(null);
+          }, 2000);
         },
-      );
-    }
+
+        onError: (error: AxiosError<{ message?: string }>) => {
+          setModalMessage({
+            type: "error",
+            message:
+              error.response?.data?.message ||
+              error.message ||
+              "Failed to update gift card. Please try again.",
+          });
+        },
+      },
+    );
   };
 
   const handleDelete = (id: string) => {
@@ -249,6 +281,17 @@ export const EnhancedGiftCardList: React.FC = () => {
     a.click();
   };
 
+  const handleModalClose = () => {
+    createModal.close();
+    setModalMessage(null);
+  };
+
+  const handleEditModalClose = () => {
+    editModal.close();
+    setSelectedCard(null);
+    setModalMessage(null);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -259,16 +302,26 @@ export const EnhancedGiftCardList: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gift Cards</h1>
-          <p className="text-gray-600 mt-1">
-            Create and manage your gift cards
-          </p>
-        </div>
+        {!isVerified && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start gap-3"
+          >
+            <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold text-yellow-900 mb-1">
+                Account Verification Required
+              </h3>
+              <p className="text-sm text-yellow-800">
+                Please verify your account to create orders. Check your email
+                for verification instructions.
+              </p>
+            </div>
+          </motion.div>
+        )}
 
-        {/* Profile Verification Status */}
         <div
           className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
             isProfileVerified
@@ -290,13 +343,11 @@ export const EnhancedGiftCardList: React.FC = () => {
         </div>
       </div>
 
-      {/* Statistics Cards */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        {/* Total Cards */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -312,7 +363,6 @@ export const EnhancedGiftCardList: React.FC = () => {
           <p className="text-sm text-gray-600">Total Gift Cards</p>
         </div>
 
-        {/* Active Cards */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -331,7 +381,6 @@ export const EnhancedGiftCardList: React.FC = () => {
           <p className="text-sm text-gray-600">Active Cards</p>
         </div>
 
-        {/* Total Value */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -344,7 +393,6 @@ export const EnhancedGiftCardList: React.FC = () => {
           <p className="text-sm text-gray-600">Total Value</p>
         </div>
 
-        {/* Expiring Soon */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -358,7 +406,6 @@ export const EnhancedGiftCardList: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Controls Bar */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -366,7 +413,6 @@ export const EnhancedGiftCardList: React.FC = () => {
         className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
       >
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Search */}
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -380,9 +426,7 @@ export const EnhancedGiftCardList: React.FC = () => {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 flex-wrap">
-            {/* Filter Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
@@ -395,7 +439,6 @@ export const EnhancedGiftCardList: React.FC = () => {
               Filters
             </button>
 
-            {/* View Mode Toggle */}
             <div className="flex border border-gray-300 rounded-lg overflow-hidden">
               <button
                 onClick={() => setViewMode("grid")}
@@ -421,7 +464,6 @@ export const EnhancedGiftCardList: React.FC = () => {
               </button>
             </div>
 
-            {/* Refresh */}
             <button
               onClick={() => refetch()}
               className="p-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -430,7 +472,6 @@ export const EnhancedGiftCardList: React.FC = () => {
               <RefreshCw className="w-5 h-5" />
             </button>
 
-            {/* Export */}
             <button
               onClick={handleExport}
               disabled={giftCards.length === 0}
@@ -441,7 +482,6 @@ export const EnhancedGiftCardList: React.FC = () => {
               Export
             </button>
 
-            {/* Create Button - Disabled if profile not verified */}
             <Button
               onClick={createModal.open}
               disabled={!canCreateMore || !isProfileVerified}
@@ -461,7 +501,6 @@ export const EnhancedGiftCardList: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters Panel */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
@@ -471,7 +510,6 @@ export const EnhancedGiftCardList: React.FC = () => {
               className="mt-6 pt-6 border-t border-gray-200"
             >
               <div className="flex flex-wrap gap-6">
-                {/* Filter By Status */}
                 <div className="flex-1 min-w-[250px]">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Status
@@ -490,7 +528,6 @@ export const EnhancedGiftCardList: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Sort By */}
                 <div className="flex-1 min-w-[250px]">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Sort By
@@ -508,7 +545,6 @@ export const EnhancedGiftCardList: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Clear Filters */}
                 {(searchQuery || filterBy !== "all" || sortBy !== "newest") && (
                   <div className="flex items-end">
                     <button
@@ -529,41 +565,6 @@ export const EnhancedGiftCardList: React.FC = () => {
         </AnimatePresence>
       </motion.div>
 
-      {/* Profile Verification Warning */}
-      {!isProfileVerified && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-red-50 border border-red-200 rounded-xl p-6"
-        >
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="w-6 h-6 text-red-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-red-900 mb-2">
-                Profile Verification Required
-              </h3>
-              <p className="text-red-700 mb-3">
-                You need to verify your merchant profile before you can create
-                gift cards. Please complete your profile verification to unlock
-                this feature.
-              </p>
-              <Button
-                variant="outline"
-                className="border-red-300 text-red-700 hover:bg-red-100"
-                onClick={() => {
-                  window.location.href = "/merchant/dashboard";
-                }}
-              >
-                Go to Profile Verification
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Results Info */}
       {(searchQuery || filterBy !== "all" || sortBy !== "newest") && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -577,7 +578,6 @@ export const EnhancedGiftCardList: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Gift Cards Display */}
       {processedCards.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -648,22 +648,43 @@ export const EnhancedGiftCardList: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Create Modal */}
       <Modal
         isOpen={createModal.isOpen}
-        onClose={createModal.close}
+        onClose={handleModalClose}
         title="Create Gift Card"
         size="xl"
       >
         {isProfileVerified ? (
           <div className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-700">
-                <strong>Note:</strong> Gift cards will use your saved color
-                scheme ({cardSettings?.primaryColor} to{" "}
-                {cardSettings?.secondaryColor})
-              </p>
-            </div>
+            {modalMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex items-start gap-3 p-4 rounded-lg border ${
+                  modalMessage.type === "success"
+                    ? "bg-green-50 border-green-200"
+                    : "bg-red-50 border-red-200"
+                }`}
+              >
+                {modalMessage.type === "success" ? (
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-medium ${
+                      modalMessage.type === "success"
+                        ? "text-green-900"
+                        : "text-red-900"
+                    }`}
+                  >
+                    {modalMessage.message}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
             <GiftCardForm
               onSubmit={handleCreate}
               isLoading={createMutation.isPending}
@@ -684,7 +705,7 @@ export const EnhancedGiftCardList: React.FC = () => {
             </p>
             <Button
               onClick={() => {
-                createModal.close();
+                handleModalClose();
                 window.location.href = "/merchant/profile";
               }}
             >
@@ -694,18 +715,43 @@ export const EnhancedGiftCardList: React.FC = () => {
         )}
       </Modal>
 
-      {/* Edit Modal */}
       <Modal
         isOpen={editModal.isOpen}
-        onClose={() => {
-          editModal.close();
-          setSelectedCard(null);
-        }}
+        onClose={handleEditModalClose}
         title="Edit Gift Card"
         size="xl"
       >
         {selectedCard && (
           <div className="space-y-6">
+            {modalMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex items-start gap-3 p-4 rounded-lg border ${
+                  modalMessage.type === "success"
+                    ? "bg-green-50 border-green-200"
+                    : "bg-red-50 border-red-200"
+                }`}
+              >
+                {modalMessage.type === "success" ? (
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                )}
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-medium ${
+                      modalMessage.type === "success"
+                        ? "text-green-900"
+                        : "text-red-900"
+                    }`}
+                  >
+                    {modalMessage.message}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <p className="text-sm text-gray-700">
                 <strong>ID:</strong> {selectedCard.id}

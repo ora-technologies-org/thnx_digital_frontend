@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, ShoppingBag, Search, X } from "lucide-react";
+import { Plus, ShoppingBag, Search, X, AlertCircle } from "lucide-react";
 import { DashboardLayout } from "../../shared/components/layout/DashboardLayout";
 import { Button } from "../../shared/components/ui/Button";
 import { CreateOrderModal } from "../../features/orders/components/CreateOrderModal";
@@ -30,24 +30,35 @@ interface Order {
 }
 
 /**
+ * Helper function to decode JWT token
+ */
+const decodeToken = (token: string) => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return null;
+  }
+};
+
+/**
  * OrdersPage Component
  * Main page for displaying and managing gift card orders
  * Features: Order listing, search, filtering, stats display, and order creation
  */
 export const OrdersPage: React.FC = () => {
-  /** Controls visibility of create order modal */
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  /** Controls visibility of order detail modal */
   const [showDetailModal, setShowDetailModal] = useState(false);
-
-  /** Stores the currently selected order for detail view */
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-
-  /** Search query for filtering orders by customer name, phone, or QR code */
   const [searchQuery, setSearchQuery] = useState("");
-
-  /** Status filter for filtering orders by their current status */
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   /** Mutation hook for creating new orders */
@@ -56,6 +67,19 @@ export const OrdersPage: React.FC = () => {
   /** Query hook for fetching orders data in descending order */
   const { data: ordersData, isLoading, error } = useOrders("desc");
 
+  /**
+   * Check user verification status on component mount
+   */
+  const [isVerified, setIsVerified] = useState<boolean>(() => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) return false;
+
+    const decoded = decodeToken(accessToken);
+    return typeof decoded?.isVerified === "boolean"
+      ? decoded.isVerified
+      : false;
+  });
+  console.log("hello", setIsVerified);
   /**
    * Handles the submission of create order form
    */
@@ -83,6 +107,15 @@ export const OrdersPage: React.FC = () => {
   const handleCloseDetailModal = () => {
     setShowDetailModal(false);
     setSelectedOrder(null);
+  };
+
+  /**
+   * Handles create order button click
+   */
+  const handleCreateOrderClick = () => {
+    if (isVerified) {
+      setShowCreateModal(true);
+    }
   };
 
   // ============================================================================
@@ -189,15 +222,48 @@ export const OrdersPage: React.FC = () => {
             </div>
 
             {/* Right side: Create order button */}
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-              size="lg"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Create Order
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <Button
+                onClick={handleCreateOrderClick}
+                className={`${
+                  isVerified
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+                size="lg"
+                disabled={!isVerified}
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Create Order
+              </Button>
+              {!isVerified && (
+                <div className="flex items-center gap-1 text-sm text-red-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>Account verification required</span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Verification Warning Banner */}
+          {!isVerified && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-yellow-900 mb-1">
+                  Account Verification Required
+                </h3>
+                <p className="text-sm text-yellow-800">
+                  Please verify your account to create orders. Check your email
+                  for verification instructions.
+                </p>
+              </div>
+            </motion.div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             {/* Total Orders Card */}
@@ -377,19 +443,22 @@ export const OrdersPage: React.FC = () => {
                 Ready to Create Orders
               </h3>
               <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                Click the "Create Order" button above to start creating gift
-                card orders for your customers
+                {isVerified
+                  ? 'Click the "Create Order" button above to start creating gift card orders for your customers'
+                  : "Please verify your account to start creating gift card orders"}
               </p>
 
               {/* Call to action button */}
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 hover:bg-blue-700"
-                size="lg"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Create Your First Order
-              </Button>
+              {isVerified && (
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  size="lg"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Create Your First Order
+                </Button>
+              )}
             </motion.div>
           )}
 
@@ -501,10 +570,10 @@ export const OrdersPage: React.FC = () => {
                       <td className="px-6 py-4">
                         <Button
                           onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click from firing
+                            e.stopPropagation();
                             handleViewDetails(order);
                           }}
-                          variant="outline"
+                          variant="gradient"
                           size="sm"
                         >
                           View Details

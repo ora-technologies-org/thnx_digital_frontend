@@ -1,5 +1,12 @@
-// src/pages/admin/AllMerchantsPage.tsx - ENHANCED ALL MERCHANTS PAGE! 👥✨
-import React, { useState, useMemo } from "react";
+// src/pages/admin/AllMerchantsPage.tsx
+
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -44,15 +51,20 @@ import DocumentPreviewCard from "@/shared/components/modals/DocumentPreviewCard"
 type FilterStatus = "all" | "verified" | "pending" | "rejected" | "incomplete";
 type SortBy = "date" | "name" | "status";
 
-// Merchant Details Modal Component - ENHANCED UI
+// Merchant Details Modal Component - FIXED: No useEffect for state sync
 const MerchantDetailsModal: React.FC<{
   merchant: MerchantUser | null;
   isOpen: boolean;
   onClose: () => void;
   onEdit: (merchant: MerchantUser) => void;
 }> = ({ merchant, isOpen, onClose, onEdit }) => {
-  if (!merchant || !isOpen) return null;
+  // Use the merchant prop directly instead of local state
+  // This avoids the need for useEffect to sync state
+  const currentMerchant = merchant;
 
+  if (!currentMerchant || !isOpen) return null;
+
+  // Format date string to readable format
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -63,6 +75,7 @@ const MerchantDetailsModal: React.FC<{
     });
   };
 
+  // Get CSS classes for status badge based on merchant status
   const getStatusColor = (status: string) => {
     switch (status) {
       case "VERIFIED":
@@ -78,6 +91,7 @@ const MerchantDetailsModal: React.FC<{
     }
   };
 
+  // Get icon component for status badge
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "VERIFIED":
@@ -93,7 +107,7 @@ const MerchantDetailsModal: React.FC<{
     }
   };
 
-  const isVerified = merchant.profileStatus === "VERIFIED";
+  const isVerified = currentMerchant.profileStatus === "VERIFIED";
 
   return (
     <motion.div
@@ -121,10 +135,10 @@ const MerchantDetailsModal: React.FC<{
                 transition={{ type: "spring", delay: 0.1 }}
                 className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 border-4 border-white"
               >
-                {merchant.logo ? (
+                {currentMerchant.logo ? (
                   <img
-                    src={merchant.logo}
-                    alt={merchant.businessName}
+                    src={currentMerchant.logo}
+                    alt={currentMerchant.businessName}
                     className="w-full h-full object-cover rounded-xl"
                   />
                 ) : (
@@ -133,16 +147,16 @@ const MerchantDetailsModal: React.FC<{
               </motion.div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {merchant.businessName}
+                  {currentMerchant.businessName}
                 </h2>
                 <div className="flex items-center gap-2 mt-3 flex-wrap">
                   <span
-                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border flex items-center gap-1.5 ${getStatusColor(merchant.profileStatus)} shadow-sm`}
+                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border flex items-center gap-1.5 ${getStatusColor(currentMerchant.profileStatus)} shadow-sm`}
                   >
-                    {getStatusIcon(merchant.profileStatus)}
-                    {merchant.profileStatus.replace("_", " ")}
+                    {getStatusIcon(currentMerchant.profileStatus)}
+                    {currentMerchant.profileStatus.replace("_", " ")}
                   </span>
-                  {merchant.isVerified && (
+                  {currentMerchant.isVerified && (
                     <span className="px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-sm">
                       <Shield className="w-3.5 h-3.5" />
                       Verified Merchant
@@ -150,15 +164,15 @@ const MerchantDetailsModal: React.FC<{
                   )}
                   <span
                     className={`px-3 py-1.5 rounded-full text-sm font-semibold shadow-sm ${
-                      merchant.user.isActive
+                      currentMerchant.user.isActive
                         ? "bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-800 border border-emerald-200"
                         : "bg-gradient-to-r from-rose-100 to-rose-50 text-rose-800 border border-rose-200"
                     }`}
                   >
                     <div
-                      className={`w-2 h-2 rounded-full mr-1.5 ${merchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+                      className={`w-2 h-2 rounded-full mr-1.5 ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
                     />
-                    {merchant.user.isActive
+                    {currentMerchant.user.isActive
                       ? "Active Account"
                       : "Inactive Account"}
                   </span>
@@ -202,7 +216,7 @@ const MerchantDetailsModal: React.FC<{
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => onEdit(merchant)}
+                        onClick={() => onEdit(currentMerchant)}
                         className="px-4 py-2 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-600 rounded-xl transition-all flex items-center gap-2 text-sm font-semibold border border-blue-200"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -216,7 +230,7 @@ const MerchantDetailsModal: React.FC<{
                         Business Name
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.businessName}
+                        {currentMerchant.businessName}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-blue-50/50 to-blue-100/30 rounded-xl border border-blue-100">
@@ -224,7 +238,8 @@ const MerchantDetailsModal: React.FC<{
                         Registration Number
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.businessRegistrationNumber || "Not provided"}
+                        {currentMerchant.businessRegistrationNumber ||
+                          "Not provided"}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-amber-50/50 to-amber-100/30 rounded-xl border border-amber-100">
@@ -232,7 +247,7 @@ const MerchantDetailsModal: React.FC<{
                         Tax ID
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.taxId || "Not provided"}
+                        {currentMerchant.taxId || "Not provided"}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-amber-50/50 to-amber-100/30 rounded-xl border border-amber-100">
@@ -240,7 +255,7 @@ const MerchantDetailsModal: React.FC<{
                         Business Type
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.businessType || "Not specified"}
+                        {currentMerchant.businessType || "Not specified"}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-purple-50/50 to-purple-100/30 rounded-xl border border-purple-100">
@@ -248,7 +263,7 @@ const MerchantDetailsModal: React.FC<{
                         Category
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.businessCategory || "Not specified"}
+                        {currentMerchant.businessCategory || "Not specified"}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-purple-50/50 to-purple-100/30 rounded-xl border border-purple-100">
@@ -256,11 +271,11 @@ const MerchantDetailsModal: React.FC<{
                         Gift Card Limit
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.giftCardLimit || 10}
+                        {currentMerchant.giftCardLimit || 10}
                       </p>
                     </div>
                   </div>
-                  {merchant.description && (
+                  {currentMerchant.description && (
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <div className="flex items-center gap-2 mb-3">
                         <FileText className="w-4 h-4 text-gray-500" />
@@ -270,7 +285,7 @@ const MerchantDetailsModal: React.FC<{
                       </div>
                       <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-200">
                         <p className="text-gray-700 leading-relaxed">
-                          {merchant.description}
+                          {currentMerchant.description}
                         </p>
                       </div>
                     </div>
@@ -304,7 +319,8 @@ const MerchantDetailsModal: React.FC<{
                             Business Email
                           </p>
                           <p className="font-medium text-gray-900 truncate">
-                            {merchant.businessEmail || merchant.user.email}
+                            {currentMerchant.businessEmail ||
+                              currentMerchant.user.email}
                           </p>
                         </div>
                       </div>
@@ -315,8 +331,8 @@ const MerchantDetailsModal: React.FC<{
                             Business Phone
                           </p>
                           <p className="font-medium text-gray-900">
-                            {merchant.businessPhone ||
-                              merchant.user.phone ||
+                            {currentMerchant.businessPhone ||
+                              currentMerchant.user.phone ||
                               "Not provided"}
                           </p>
                         </div>
@@ -328,7 +344,7 @@ const MerchantDetailsModal: React.FC<{
                             Website
                           </p>
                           <p className="font-medium text-gray-900 truncate">
-                            {merchant.website || "Not provided"}
+                            {currentMerchant.website || "Not provided"}
                           </p>
                         </div>
                       </div>
@@ -361,7 +377,7 @@ const MerchantDetailsModal: React.FC<{
                               Address
                             </p>
                             <p className="font-medium text-gray-900">
-                              {merchant.address || "Not provided"}
+                              {currentMerchant.address || "Not provided"}
                             </p>
                           </div>
                         </div>
@@ -371,7 +387,7 @@ const MerchantDetailsModal: React.FC<{
                               City
                             </p>
                             <p className="font-medium text-gray-900">
-                              {merchant.city || "—"}
+                              {currentMerchant.city || "—"}
                             </p>
                           </div>
                           <div>
@@ -379,7 +395,7 @@ const MerchantDetailsModal: React.FC<{
                               State
                             </p>
                             <p className="font-medium text-gray-900">
-                              {merchant.state || "—"}
+                              {currentMerchant.state || "—"}
                             </p>
                           </div>
                           <div>
@@ -387,7 +403,7 @@ const MerchantDetailsModal: React.FC<{
                               Zip Code
                             </p>
                             <p className="font-medium text-gray-900">
-                              {merchant.zipCode || "—"}
+                              {currentMerchant.zipCode || "—"}
                             </p>
                           </div>
                           <div>
@@ -395,7 +411,7 @@ const MerchantDetailsModal: React.FC<{
                               Country
                             </p>
                             <p className="font-medium text-gray-900">
-                              {merchant.country || "—"}
+                              {currentMerchant.country || "—"}
                             </p>
                           </div>
                         </div>
@@ -437,7 +453,7 @@ const MerchantDetailsModal: React.FC<{
                         Bank Name
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.bankName || "Not provided"}
+                        {currentMerchant.bankName || "Not provided"}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-amber-50/50 to-amber-100/30 rounded-xl border border-amber-100">
@@ -445,7 +461,7 @@ const MerchantDetailsModal: React.FC<{
                         Account Number
                       </p>
                       <p className="font-bold text-gray-900 text-lg tracking-wider">
-                        {merchant.accountNumber || "Not provided"}
+                        {currentMerchant.accountNumber || "Not provided"}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-yellow-50/50 to-yellow-100/30 rounded-xl border border-yellow-100">
@@ -453,7 +469,7 @@ const MerchantDetailsModal: React.FC<{
                         Account Holder
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.accountHolderName || "Not provided"}
+                        {currentMerchant.accountHolderName || "Not provided"}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-yellow-50/50 to-yellow-100/30 rounded-xl border border-yellow-100">
@@ -461,16 +477,16 @@ const MerchantDetailsModal: React.FC<{
                         IFSC Code
                       </p>
                       <p className="font-bold text-gray-900">
-                        {merchant.ifscCode || "Not provided"}
+                        {currentMerchant.ifscCode || "Not provided"}
                       </p>
                     </div>
-                    {merchant.swiftCode && (
+                    {currentMerchant.swiftCode && (
                       <div className="p-3.5 bg-gradient-to-r from-yellow-50/50 to-yellow-100/30 rounded-xl border border-yellow-100 md:col-span-2">
                         <p className="text-xs text-yellow-600 font-semibold mb-1.5">
                           SWIFT Code
                         </p>
                         <p className="font-bold text-gray-900">
-                          {merchant.swiftCode}
+                          {currentMerchant.swiftCode}
                         </p>
                       </div>
                     )}
@@ -513,7 +529,7 @@ const MerchantDetailsModal: React.FC<{
                         Full Name
                       </p>
                       <p className="font-bold text-gray-900 text-lg">
-                        {merchant.user.name}
+                        {currentMerchant.user.name}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-indigo-50/50 to-purple-100/30 rounded-xl border border-indigo-100">
@@ -521,7 +537,7 @@ const MerchantDetailsModal: React.FC<{
                         Email Address
                       </p>
                       <p className="font-medium text-gray-900 truncate">
-                        {merchant.user.email}
+                        {currentMerchant.user.email}
                       </p>
                     </div>
                     <div className="p-3.5 bg-gradient-to-r from-indigo-50/50 to-purple-100/30 rounded-xl border border-indigo-100">
@@ -529,7 +545,7 @@ const MerchantDetailsModal: React.FC<{
                         Phone Number
                       </p>
                       <p className="font-medium text-gray-900">
-                        {merchant.user.phone || "Not provided"}
+                        {currentMerchant.user.phone || "Not provided"}
                       </p>
                     </div>
                     <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-200">
@@ -539,10 +555,12 @@ const MerchantDetailsModal: React.FC<{
                         </p>
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full ${merchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+                            className={`w-2 h-2 rounded-full ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
                           />
                           <span className="font-bold text-gray-900">
-                            {merchant.user.isActive ? "Active" : "Inactive"}
+                            {currentMerchant.user.isActive
+                              ? "Active"
+                              : "Inactive"}
                           </span>
                         </div>
                       </div>
@@ -554,14 +572,13 @@ const MerchantDetailsModal: React.FC<{
                       </p>
                       <p className="font-medium text-gray-900 flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        {formatDate(merchant.user.createdAt)}
+                        {formatDate(currentMerchant.user.createdAt)}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Documents Card */}
               {/* Documents Card */}
               <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
                 <CardContent className="p-6">
@@ -580,10 +597,10 @@ const MerchantDetailsModal: React.FC<{
                     <div className="text-xs font-semibold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
                       {
                         [
-                          merchant.registrationDocument,
-                          merchant.taxDocument,
-                          merchant.identityDocument,
-                          ...(merchant.additionalDocuments || []),
+                          currentMerchant.registrationDocument,
+                          currentMerchant.taxDocument,
+                          currentMerchant.identityDocument,
+                          ...(currentMerchant.additionalDocuments || []),
                         ].filter(Boolean).length
                       }{" "}
                       files
@@ -593,12 +610,15 @@ const MerchantDetailsModal: React.FC<{
                     {[
                       {
                         label: "Registration Document",
-                        url: merchant.registrationDocument,
+                        url: currentMerchant.registrationDocument,
                       },
-                      { label: "Tax Document", url: merchant.taxDocument },
+                      {
+                        label: "Tax Document",
+                        url: currentMerchant.taxDocument,
+                      },
                       {
                         label: "Identity Document",
-                        url: merchant.identityDocument,
+                        url: currentMerchant.identityDocument,
                       },
                     ].map((doc, index) => (
                       <DocumentPreviewCard
@@ -640,11 +660,11 @@ const MerchantDetailsModal: React.FC<{
                           Profile Created
                         </p>
                         <p className="text-sm text-gray-600 mt-0.5">
-                          {formatDate(merchant.createdAt)}
+                          {formatDate(currentMerchant.createdAt)}
                         </p>
                       </div>
                     </div>
-                    {merchant.verifiedAt && (
+                    {currentMerchant.verifiedAt && (
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0">
                           <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
@@ -657,17 +677,17 @@ const MerchantDetailsModal: React.FC<{
                             Verified Account
                           </p>
                           <p className="text-sm text-gray-600 mt-0.5">
-                            {formatDate(merchant.verifiedAt)}
+                            {formatDate(currentMerchant.verifiedAt)}
                           </p>
-                          {merchant.verificationNotes && (
+                          {currentMerchant.verificationNotes && (
                             <p className="text-xs text-emerald-700 bg-emerald-50 p-2 rounded-lg mt-2 border border-emerald-200">
-                              {merchant.verificationNotes}
+                              {currentMerchant.verificationNotes}
                             </p>
                           )}
                         </div>
                       </div>
                     )}
-                    {merchant.rejectedAt && (
+                    {currentMerchant.rejectedAt && (
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0">
                           <div className="w-8 h-8 bg-gradient-to-br from-rose-500 to-red-600 rounded-full flex items-center justify-center">
@@ -679,11 +699,11 @@ const MerchantDetailsModal: React.FC<{
                             Rejected Account
                           </p>
                           <p className="text-sm text-gray-600 mt-0.5">
-                            {formatDate(merchant.rejectedAt)}
+                            {formatDate(currentMerchant.rejectedAt)}
                           </p>
-                          {merchant.rejectionReason && (
+                          {currentMerchant.rejectionReason && (
                             <p className="text-xs text-rose-700 bg-rose-50 p-2 rounded-lg mt-2 border border-rose-200">
-                              {merchant.rejectionReason}
+                              {currentMerchant.rejectionReason}
                             </p>
                           )}
                         </div>
@@ -702,7 +722,9 @@ const MerchantDetailsModal: React.FC<{
             <TrendingUp className="w-4 h-4 text-gray-400" />
             <p className="text-sm text-gray-600">
               Merchant ID:{" "}
-              <span className="font-semibold text-gray-900">{merchant.id}</span>
+              <span className="font-semibold text-gray-900">
+                {currentMerchant.id}
+              </span>
             </p>
           </div>
           <div className="flex gap-3">
@@ -721,7 +743,7 @@ const MerchantDetailsModal: React.FC<{
                   boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.3)",
                 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onEdit(merchant)}
+                onClick={() => onEdit(currentMerchant)}
                 className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/25 transition-all duration-200 flex items-center gap-2"
               >
                 <Edit2 className="w-4.5 h-4.5" />
@@ -757,56 +779,78 @@ export const AllMerchantsPage: React.FC = () => {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleViewDetails = (merchant: MerchantUser) => {
-    setSelectedMerchant(merchant);
-    setIsModalOpen(true);
-  };
+  // Use a ref to track the latest merchants data
+  const merchantsRef = useRef(merchants);
 
-  const handleEdit = (merchant: MerchantUser) => {
-    // Only allow editing for verified merchants
-    if (merchant.profileStatus !== "VERIFIED") {
-      alert("Only verified merchants can be edited!");
-      return;
+  // Update ref when merchants data changes
+  useEffect(() => {
+    merchantsRef.current = merchants;
+  }, [merchants]);
+
+  // FIXED: Handle view details with auto-refresh capability
+  const handleViewDetails = useCallback((merchant: MerchantUser) => {
+    // Get the latest merchant data from the ref
+    const latestMerchants = merchantsRef.current;
+    if (latestMerchants) {
+      // Find the latest version of this merchant
+      const latestMerchant = latestMerchants.find((m) => m.id === merchant.id);
+      setSelectedMerchant(latestMerchant || merchant);
+    } else {
+      setSelectedMerchant(merchant);
     }
+    setIsModalOpen(true);
+  }, []);
 
-    // Map merchant data to form structure
-    const formData = {
-      email: merchant.user.email || "",
-      password: "", // Leave empty, user will need to update if needed
-      name: merchant.user.name || "",
-      phone: merchant.user.phone || "",
-      businessName: merchant.businessName || "",
-      businessRegistrationNumber: merchant.businessRegistrationNumber || "",
-      taxId: merchant.taxId || "",
-      businessType: merchant.businessType || "",
-      businessCategory: merchant.businessCategory || "",
-      address: merchant.address || "",
-      city: merchant.city || "",
-      state: merchant.state || "",
-      zipCode: merchant.zipCode || "",
-      country: merchant.country || "",
-      businessPhone: merchant.businessPhone || "",
-      businessEmail: merchant.businessEmail || "",
-      website: merchant.website || "",
-      description: merchant.description || "",
-      bankName: merchant.bankName || "",
-      accountNumber: merchant.accountNumber || "",
-      accountHolderName: merchant.accountHolderName || "",
-      ifscCode: merchant.ifscCode || "",
-      swiftCode: merchant.swiftCode || "",
-      registrationDocument: merchant.registrationDocument || undefined,
-      taxDocument: merchant.taxDocument || undefined,
-      identityDocument: merchant.identityDocument || undefined,
-      additionalDocuments: merchant.additionalDocuments || undefined,
-    };
+  // Handle edit merchant - navigates to edit page with merchant data
+  const handleEdit = useCallback(
+    (merchant: MerchantUser) => {
+      // Only allow editing for verified merchants
+      if (merchant.profileStatus !== "VERIFIED") {
+        alert("Only verified merchants can be edited!");
+        return;
+      }
 
-    // Populate the Redux store with merchant data
-    dispatch(updateFormData(formData));
+      // Map merchant data to form structure
+      const formData = {
+        email: merchant.user.email || "",
+        password: "", // Leave empty, user will need to update if needed
+        name: merchant.user.name || "",
+        phone: merchant.user.phone || "",
+        businessName: merchant.businessName || "",
+        businessRegistrationNumber: merchant.businessRegistrationNumber || "",
+        taxId: merchant.taxId || "",
+        businessType: merchant.businessType || "",
+        businessCategory: merchant.businessCategory || "",
+        address: merchant.address || "",
+        city: merchant.city || "",
+        state: merchant.state || "",
+        zipCode: merchant.zipCode || "",
+        country: merchant.country || "",
+        businessPhone: merchant.businessPhone || "",
+        businessEmail: merchant.businessEmail || "",
+        website: merchant.website || "",
+        description: merchant.description || "",
+        bankName: merchant.bankName || "",
+        accountNumber: merchant.accountNumber || "",
+        accountHolderName: merchant.accountHolderName || "",
+        ifscCode: merchant.ifscCode || "",
+        swiftCode: merchant.swiftCode || "",
+        registrationDocument: merchant.registrationDocument || undefined,
+        taxDocument: merchant.taxDocument || undefined,
+        identityDocument: merchant.identityDocument || undefined,
+        additionalDocuments: merchant.additionalDocuments || undefined,
+      };
 
-    // Navigate to create merchant page (which will now show prefilled data)
-    navigate(`/admin/merchants/edit/${merchant.id}`);
-  };
+      // Populate the Redux store with merchant data
+      dispatch(updateFormData(formData));
 
+      // Navigate to create merchant page (which will now show prefilled data)
+      navigate(`/admin/merchants/edit/${merchant.id}`);
+    },
+    [dispatch, navigate],
+  );
+
+  // Filter and sort merchants based on search, status, and sort criteria
   const filteredAndSortedMerchants = useMemo(() => {
     if (!merchants) return [];
 
@@ -862,7 +906,7 @@ export const AllMerchantsPage: React.FC = () => {
     return sorted;
   }, [merchants, searchQuery, filterStatus, sortBy]);
 
-  // Stats
+  // Calculate statistics for display
   const stats = useMemo(() => {
     if (!merchants)
       return { total: 0, verified: 0, pending: 0, rejected: 0, incomplete: 0 };
@@ -878,6 +922,7 @@ export const AllMerchantsPage: React.FC = () => {
     };
   }, [merchants]);
 
+  // Loading state
   if (isLoading) {
     return (
       <AdminLayout>
@@ -901,12 +946,12 @@ export const AllMerchantsPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="pb-8">
-        {/* Merchant Details Modal */}
+        {/* Merchant Details Modal - Now uses prop directly without local state */}
         <MerchantDetailsModal
           merchant={selectedMerchant}
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onEdit={handleEdit} // Add this prop
+          onEdit={handleEdit}
         />
 
         {/* Header */}

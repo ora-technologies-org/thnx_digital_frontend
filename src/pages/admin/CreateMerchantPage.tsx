@@ -1,4 +1,7 @@
-import React, { useEffect } from "react";
+// src/pages/admin/CreateMerchantPage.tsx - FIXED VERSION 🔧
+// Fixed: TypeScript any types, improved error handling, added comments
+
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   User,
@@ -10,7 +13,6 @@ import {
   MapPin,
   Globe,
   Tag,
-  CheckCircle,
   AlertCircle,
   ArrowLeft,
   Sparkles,
@@ -31,6 +33,17 @@ import {
   useUpdateMerchant,
 } from "@/features/admin/hooks/useMerchantMutations";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
+
+// Import the components
+import { Button } from "@/shared/components/ui/Button";
+import { Modal } from "@/shared/components/ui/Modal";
+
+// Define proper API error response interface
+interface ApiErrorResponse {
+  message?: string;
+  errors?: Record<string, string | string[]> | string;
+  [key: string]: unknown;
+}
 
 // Merchant form data interface
 interface CreateMerchantForm {
@@ -62,6 +75,26 @@ interface CreateMerchantForm {
   taxDocument?: File | string;
   identityDocument?: File | string;
   additionalDocuments?: File[] | string[];
+}
+
+// API Response Interface
+interface ApiResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+    };
+    merchant?: {
+      id: string;
+      businessName: string;
+      businessEmail: string;
+      [key: string]: unknown;
+    };
+  };
 }
 
 // Business type options
@@ -348,6 +381,23 @@ const SelectField: React.FC<SelectFieldProps> = ({
   );
 };
 
+// Modal Response Interface
+interface ResponseModalData {
+  isOpen: boolean;
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+  details?: {
+    merchantId?: string;
+    email?: string;
+    name?: string;
+    businessName?: string;
+    [key: string]: unknown;
+  };
+  onConfirm?: () => void;
+  confirmText?: string;
+}
+
 // Main CreateMerchantPage component
 export const CreateMerchantPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -362,6 +412,15 @@ export const CreateMerchantPage: React.FC = () => {
   const { mutate: updateMerchant, isPending: isUpdating } = useUpdateMerchant();
 
   const isPending = isCreating || isUpdating;
+
+  // State for response modal
+  const [responseModal, setResponseModal] = useState<ResponseModalData>({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+    confirmText: "OK",
+  });
 
   // Log to verify edit mode detection
   useEffect(() => {
@@ -380,7 +439,134 @@ export const CreateMerchantPage: React.FC = () => {
     };
   }, [dispatch]);
 
-  // Handle form submission
+  /**
+   * Formats the API response message for display in the modal
+   * @param response - The API response object
+   * @returns Formatted message string
+   */
+  const formatResponseMessage = (response: ApiResponse): string => {
+    let message = response.message;
+
+    if (response.data?.user) {
+      const user = response.data.user;
+      message += `\n\nMerchant Details:`;
+      message += `\n• Name: ${user.name}`;
+      message += `\n• Email: ${user.email}`;
+      message += `\n• ID: ${user.id}`;
+      message += `\n• Role: ${user.role}`;
+    }
+
+    if (response.data?.merchant) {
+      const merchant = response.data.merchant;
+      message += `\n\nBusiness Details:`;
+      message += `\n• Business Name: ${merchant.businessName || "N/A"}`;
+      message += `\n• Business Email: ${merchant.businessEmail || "N/A"}`;
+      if (merchant.id) {
+        message += `\n• Merchant ID: ${merchant.id}`;
+      }
+    }
+
+    return message;
+  };
+
+  /**
+   * Extracts error message from API error response
+   * @param error - The error object from API call
+   * @returns Object containing title, message, and details
+   */
+  const extractErrorMessage = (
+    error: unknown,
+  ): { title: string; message: string; details?: Record<string, unknown> } => {
+    const defaultError = {
+      title: "Operation Failed",
+      message: "An unexpected error occurred. Please try again.",
+    };
+
+    // Check if error has response data (Axios error)
+    if (typeof error === "object" && error !== null) {
+      const apiError = error as { response?: { data?: ApiErrorResponse } };
+
+      if (apiError.response?.data) {
+        const errorData = apiError.response.data;
+        let errorMessage = errorData.message || defaultError.message;
+        const errorDetails: Record<string, unknown> = {};
+
+        // Handle validation errors
+        if (errorData.errors) {
+          if (typeof errorData.errors === "object") {
+            // Format object validation errors
+            const formattedErrors = Object.entries(errorData.errors)
+              .map(([field, messages]) => {
+                if (Array.isArray(messages)) {
+                  return `${field}: ${messages.join(", ")}`;
+                }
+                return `${field}: ${messages}`;
+              })
+              .join("\n");
+            errorMessage += `\n\nValidation Errors:\n${formattedErrors}`;
+            errorDetails.validationErrors = errorData.errors;
+          } else if (typeof errorData.errors === "string") {
+            errorMessage += `\n\n${errorData.errors}`;
+          }
+        }
+
+        return {
+          title: "Operation Failed",
+          message: errorMessage,
+          details:
+            Object.keys(errorDetails).length > 0 ? errorDetails : undefined,
+        };
+      }
+
+      // Handle non-Axios errors
+      if (error instanceof Error) {
+        return {
+          title: "Error",
+          message: error.message || defaultError.message,
+        };
+      }
+    }
+
+    return defaultError;
+  };
+
+  /**
+   * Opens the response modal with dynamic data
+   * @param type - Modal type (success, error, info)
+   * @param title - Modal title
+   * @param message - Modal message
+   * @param details - Additional details to display
+   * @param onConfirm - Callback function when confirm is clicked
+   * @param confirmText - Text for confirm button (default: "OK")
+   */
+  const openResponseModal = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+    details?: ResponseModalData["details"],
+    onConfirm?: () => void,
+    confirmText: string = "OK",
+  ) => {
+    setResponseModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      details,
+      onConfirm,
+      confirmText,
+    });
+  };
+
+  // Close response modal
+  const closeResponseModal = () => {
+    setResponseModal((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  /**
+   * Handles form submission
+   * @param e - Form event
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(clearErrors());
@@ -409,7 +595,12 @@ export const CreateMerchantPage: React.FC = () => {
     }
 
     if (Object.keys(validationErrors).length > 0) {
-      alert("Please fix the validation errors");
+      const errorMessages = Object.values(validationErrors).join("\n");
+      openResponseModal(
+        "error",
+        "Validation Error",
+        `Please fix the following errors:\n\n${errorMessages}`,
+      );
       return;
     }
 
@@ -418,17 +609,50 @@ export const CreateMerchantPage: React.FC = () => {
       updateMerchant(
         { merchantId: id!, formData },
         {
-          onSuccess: () => {
-            dispatch(resetForm());
-            navigate("/admin/merchants");
+          onSuccess: (response: ApiResponse) => {
+            openResponseModal(
+              "success",
+              "Merchant Updated Successfully",
+              formatResponseMessage(response),
+              {
+                merchantId: response.data?.user?.id,
+                email: response.data?.user?.email,
+                name: response.data?.user?.name,
+              },
+              () => {
+                dispatch(resetForm());
+                navigate("/admin/merchants");
+              },
+            );
+          },
+          onError: (error: unknown) => {
+            const { title, message, details } = extractErrorMessage(error);
+            openResponseModal("error", title, message, details);
           },
         },
       );
     } else {
       createMerchant(formData, {
-        onSuccess: () => {
-          dispatch(resetForm());
-          navigate("/admin/merchants");
+        onSuccess: (response: ApiResponse) => {
+          openResponseModal(
+            "success",
+            "Merchant Created Successfully",
+            formatResponseMessage(response),
+            {
+              merchantId: response.data?.user?.id,
+              email: response.data?.user?.email,
+              name: response.data?.user?.name,
+              businessName: formData.businessName,
+            },
+            () => {
+              dispatch(resetForm());
+              navigate("/admin/merchants");
+            },
+          );
+        },
+        onError: (error: unknown) => {
+          const { title, message, details } = extractErrorMessage(error);
+          openResponseModal("error", title, message, details);
         },
       });
     }
@@ -436,7 +660,26 @@ export const CreateMerchantPage: React.FC = () => {
 
   // Navigate back to merchants list
   const handleBack = () => {
-    navigate("/admin/merchants");
+    // Check if there are unsaved changes
+    const hasUnsavedChanges = Object.keys(formData).some(
+      (key) => formData[key as keyof CreateMerchantForm],
+    );
+
+    if (hasUnsavedChanges) {
+      openResponseModal(
+        "info",
+        "Unsaved Changes",
+        "You have unsaved changes. Are you sure you want to leave?",
+        undefined,
+        () => {
+          dispatch(resetForm());
+          navigate("/admin/merchants");
+        },
+        "Leave",
+      );
+    } else {
+      navigate("/admin/merchants");
+    }
   };
 
   return (
@@ -449,17 +692,22 @@ export const CreateMerchantPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <button
+            <Button
+              variant="ghost"
               onClick={handleBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+              className="flex items-center gap-2 mb-4"
             >
               <ArrowLeft className="w-5 h-5" />
               Back to Merchants
-            </button>
+            </Button>
 
             <div className="flex items-center gap-3">
               <div
-                className={`w-12 h-12 bg-gradient-to-br ${isEditMode ? "from-green-500 to-emerald-600" : "from-blue-500 to-purple-600"} rounded-2xl flex items-center justify-center`}
+                className={`w-12 h-12 bg-gradient-to-br ${
+                  isEditMode
+                    ? "from-green-500 to-emerald-600"
+                    : "from-blue-500 to-purple-600"
+                } rounded-2xl flex items-center justify-center`}
               >
                 {isEditMode ? (
                   <Edit2 className="w-6 h-6 text-white" />
@@ -843,45 +1091,26 @@ export const CreateMerchantPage: React.FC = () => {
 
                 {/* Submit buttons section */}
                 <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
-                  <motion.button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="lg"
                     onClick={handleBack}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                    className="px-6"
                   >
                     Cancel
-                  </motion.button>
+                  </Button>
 
-                  <motion.button
+                  <Button
                     type="submit"
+                    variant={isEditMode ? "gradient" : "gradient"}
+                    size="lg"
+                    isLoading={isPending}
                     disabled={isPending}
-                    whileHover={{ scale: isPending ? 1 : 1.02 }}
-                    whileTap={{ scale: isPending ? 1 : 0.98 }}
-                    className={`flex-1 px-6 py-3 ${isEditMode ? "bg-gradient-to-r from-green-500 to-emerald-600" : "bg-gradient-to-r from-blue-500 to-purple-600"} text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                      isPending
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:shadow-lg"
-                    }`}
+                    className="flex-1"
                   >
-                    {isPending ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {isEditMode
-                          ? "Updating Merchant..."
-                          : "Creating Merchant..."}
-                      </>
-                    ) : (
-                      <>
-                        {isEditMode ? (
-                          <Edit2 className="w-5 h-5" />
-                        ) : (
-                          <CheckCircle className="w-5 h-5" />
-                        )}
-                        {isEditMode ? "Update Merchant" : "Create Merchant"}
-                      </>
-                    )}
-                  </motion.button>
+                    {isEditMode ? "Update Merchant" : "Create Merchant"}
+                  </Button>
                 </div>
               </Card>
             </form>
@@ -895,11 +1124,17 @@ export const CreateMerchantPage: React.FC = () => {
             className="mt-6"
           >
             <Card
-              className={`p-6 bg-gradient-to-br ${isEditMode ? "from-green-50 to-emerald-50 border-2 border-green-200" : "from-blue-50 to-purple-50 border-2 border-blue-200"}`}
+              className={`p-6 bg-gradient-to-br ${
+                isEditMode
+                  ? "from-green-50 to-emerald-50 border-2 border-green-200"
+                  : "from-blue-50 to-purple-50 border-2 border-blue-200"
+              }`}
             >
               <div className="flex items-start gap-4">
                 <div
-                  className={`w-10 h-10 ${isEditMode ? "bg-green-500" : "bg-blue-500"} rounded-full flex items-center justify-center flex-shrink-0`}
+                  className={`w-10 h-10 ${
+                    isEditMode ? "bg-green-500" : "bg-blue-500"
+                  } rounded-full flex items-center justify-center flex-shrink-0`}
                 >
                   <AlertCircle className="w-5 h-5 text-white" />
                 </div>
@@ -953,6 +1188,34 @@ export const CreateMerchantPage: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Response Modal */}
+      <Modal
+        isOpen={responseModal.isOpen}
+        onClose={closeResponseModal}
+        title={responseModal.title}
+        type={responseModal.type}
+        showActions={true}
+        onConfirm={() => {
+          responseModal.onConfirm?.();
+          closeResponseModal();
+        }}
+        confirmText={responseModal.confirmText || "OK"}
+        size="md"
+      >
+        <div className="text-center py-4">
+          <p className="text-gray-700 text-lg font-medium mb-2 whitespace-pre-line">
+            {responseModal.message}
+          </p>
+          {responseModal.type === "success" && (
+            <p className="text-gray-500 text-sm mt-4">
+              Your changes have been saved successfully.
+            </p>
+          )}
+        </div>
+      </Modal>
     </AdminLayout>
   );
 };
+
+export default CreateMerchantPage;

@@ -36,9 +36,7 @@ class ProfileService {
 
   async getProfile(): Promise<AdminProfile> {
     try {
-      const response = await api.get<ProfileResponse>(
-        `${this.baseUrl}/profile`,
-      );
+      const response = await api.get<ProfileResponse>(`${baseUrl}/me`);
       return response.data.data;
     } catch (error: unknown) {
       const err = error as AxiosError<ErrorResponse>;

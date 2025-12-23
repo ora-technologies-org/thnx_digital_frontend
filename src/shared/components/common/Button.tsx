@@ -1,20 +1,14 @@
 import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?:
-    | "primary"
-    | "secondary"
-    | "danger"
-    | "outline"
-    | "ghost"
-    | "gradient";
+  variant?: "primary" | "secondary" | "danger" | "outline" | "ghost";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
   children: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
-  variant = "gradient",
+  variant = "primary",
   size = "md",
   isLoading = false,
   disabled,
@@ -23,18 +17,14 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const baseStyles =
-    "inline-flex items-center justify-center font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2";
+    "inline-flex items-center justify-center font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variants = {
-    primary: "bg-primary text-white hover:bg-primary-dark focus:ring-primary",
-    secondary:
-      "bg-secondary text-white hover:bg-secondary-dark focus:ring-secondary",
-    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
-    outline:
-      "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-primary",
-    ghost: "text-gray-700 hover:bg-gray-100 focus:ring-gray-300",
-    gradient:
-      "bg-gradient-to-r from-primary to-purple-600 text-white hover:from-primary-dark hover:to-purple-700 focus:ring-primary",
+    primary: "bg-primary text-white hover:bg-primary-dark",
+    secondary: "bg-secondary text-white hover:bg-secondary-dark",
+    danger: "bg-red-600 text-white hover:bg-red-700",
+    outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
+    ghost: "text-gray-700 hover:bg-gray-100",
   };
 
   const sizes = {

@@ -20,6 +20,7 @@ import { AdminLayout } from "../../shared/components/layout/AdminLayout";
 import { Button } from "../../shared/components/ui/Button";
 import { Card, CardContent } from "../../shared/components/ui/Card";
 import { Spinner } from "../../shared/components/ui/Spinner";
+import { Modal } from "../../shared/components/ui/Modal";
 
 import {
   usePendingMerchants,
@@ -28,6 +29,62 @@ import {
 } from "../../features/admin/hooks/useAdmin";
 import type { MerchantUser } from "../../features/admin/api/admin.api";
 import DocumentPreviewCard from "@/shared/components/modals/DocumentPreviewCard";
+
+// ============================================================
+// SUCCESS/ERROR MODAL COMPONENT
+// ============================================================
+interface ResponseModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  type: "success" | "error";
+  title: string;
+  message: string;
+}
+
+const ResponseModal: React.FC<ResponseModalProps> = ({
+  isOpen,
+  onClose,
+  type,
+  title,
+  message,
+}) => {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="sm">
+      <div className="text-center py-6">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+          className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${
+            type === "success"
+              ? "bg-gradient-to-br from-emerald-100 to-teal-200"
+              : "bg-gradient-to-br from-red-100 to-rose-200"
+          }`}
+        >
+          {type === "success" ? (
+            <CheckCircle className="w-10 h-10 text-emerald-600" />
+          ) : (
+            <XCircle className="w-10 h-10 text-red-600" />
+          )}
+        </motion.div>
+
+        <h3 className="text-2xl font-bold text-gray-900 mb-3">{title}</h3>
+        <p className="text-gray-600 text-lg mb-6">{message}</p>
+
+        <Button
+          onClick={onClose}
+          className={`w-full ${
+            type === "success"
+              ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              : "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700"
+          }`}
+        >
+          Close
+        </Button>
+      </div>
+    </Modal>
+  );
+};
 
 // ============================================================
 // MERCHANT LIST ITEM COMPONENT
@@ -44,8 +101,6 @@ const MerchantListItem: React.FC<MerchantListItemProps> = ({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("CLICKED: Merchant ID:", merchant.id);
-    console.log("CLICKED: Business Name:", merchant.businessName);
     onClick(merchant);
   };
 
@@ -115,19 +170,14 @@ interface DetailModalProps {
   isRejecting: boolean;
 }
 
-// Helper function to get document URL
 const getDocumentUrl = (documentPath: string | null): string | null => {
   if (!documentPath) return null;
-
-  // If it's already a full URL, return as is
   if (
     documentPath.startsWith("http://") ||
     documentPath.startsWith("https://")
   ) {
     return documentPath;
   }
-
-  // Otherwise, prepend your backend API URL
   const API_URL = import.meta.env.VITE_DOMAIN;
   const cleanPath = documentPath.startsWith("/")
     ? documentPath
@@ -148,10 +198,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
 
-  // Prepare documents array from the merchant data
   const documents = React.useMemo(() => {
     const docs = [];
-
     if (merchant.registrationDocument) {
       docs.push({
         type: "Business Registration Document",
@@ -159,7 +207,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
         fieldName: "registrationDocument",
       });
     }
-
     if (merchant.taxDocument) {
       docs.push({
         type: "Tax Document",
@@ -167,7 +214,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
         fieldName: "taxDocument",
       });
     }
-
     if (merchant.identityDocument) {
       docs.push({
         type: "Identity Document",
@@ -175,7 +221,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
         fieldName: "identityDocument",
       });
     }
-
     if (
       merchant.additionalDocuments &&
       merchant.additionalDocuments.length > 0
@@ -188,11 +233,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
         });
       });
     }
-
     return docs;
   }, [merchant]);
 
-  // ✅ FIXED: Use merchant.id instead of merchant.userId
   const handleApprove = async () => {
     await onApprove(merchant.id, notes || "All documents verified. Approved.");
     if (!isApproving) {
@@ -201,7 +244,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
     }
   };
 
-  // ✅ FIXED: Use merchant.id instead of merchant.userId
   const handleReject = async () => {
     if (!rejectionReason.trim()) {
       alert("Please provide a rejection reason");
@@ -264,7 +306,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
             {/* Modal Content */}
             <div className="p-8">
               <div className="gap-8">
-                {/* Left Column - Business Details */}
+                {/* Business Details */}
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -330,7 +372,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                       <Calendar className="w-5 h-5" />
                       Application Details
                     </h3>
-                    <div className="space-y-3 ">
+                    <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Application Date</span>
                         <span className="font-medium">
@@ -355,7 +397,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* Right Column - Documents & Actions */}
+                {/* Documents & Actions */}
                 <div className="space-y-6 mt-8">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -393,7 +435,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                     />
                   </div>
 
-                  {/* Rejection Form (Conditional) */}
+                  {/* Rejection Form */}
                   {showRejectForm && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
@@ -504,7 +546,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
   );
 };
 
-// Add ChevronRight icon component
 const ChevronRight: React.FC<{ className?: string }> = ({ className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -535,26 +576,46 @@ export const PendingMerchantsPage: React.FC = () => {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Response modal state
+  const [responseModal, setResponseModal] = useState({
+    isOpen: false,
+    type: "success" as "success" | "error",
+    title: "",
+    message: "",
+  });
+
   const handleMerchantClick = (merchant: MerchantUser) => {
-    console.log("Merchant clicked:", merchant.id);
-    console.log("Opening modal for:", merchant.businessName);
     setSelectedMerchant(merchant);
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedMerchant(null);
-  };
-
   const handleApprove = async (merchantId: string, notes: string) => {
     try {
-      await approveMutation.mutateAsync({
+      const response = await approveMutation.mutateAsync({
         merchantId,
         notes,
       });
-    } catch (error) {
-      console.error("Failed to approve merchant:", error);
+
+      setResponseModal({
+        isOpen: true,
+        type: "success",
+        title: "Merchant Approved! 🎉",
+        message: response.message,
+      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : (err as { response?: { data?: { message?: string } } })?.response
+              ?.data?.message ||
+            "Failed to approve merchant. Please try again.";
+
+      setResponseModal({
+        isOpen: true,
+        type: "error",
+        title: "Approval Failed",
+        message,
+      });
     }
   };
 
@@ -564,14 +625,37 @@ export const PendingMerchantsPage: React.FC = () => {
     notes: string,
   ) => {
     try {
-      await rejectMutation.mutateAsync({
+      const response = await rejectMutation.mutateAsync({
         merchantId,
         reason,
         notes,
       });
-    } catch (error) {
-      console.error("Failed to reject merchant:", error);
+
+      setResponseModal({
+        isOpen: true,
+        type: "success",
+        title: "Application Rejected",
+        message:
+          response?.message || "The merchant application has been rejected.",
+      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : (err as { response?: { data?: { message?: string } } })?.response
+              ?.data?.message || "Failed to reject merchant. Please try again.";
+
+      setResponseModal({
+        isOpen: true,
+        type: "error",
+        title: "Rejection Failed",
+        message,
+      });
     }
+  };
+
+  const closeResponseModal = () => {
+    setResponseModal({ ...responseModal, isOpen: false });
   };
 
   if (isLoading) {
@@ -686,6 +770,15 @@ export const PendingMerchantsPage: React.FC = () => {
             isRejecting={rejectMutation.isPending}
           />
         )}
+
+        {/* Response Modal */}
+        <ResponseModal
+          isOpen={responseModal.isOpen}
+          onClose={closeResponseModal}
+          type={responseModal.type}
+          title={responseModal.title}
+          message={responseModal.message}
+        />
       </div>
     </AdminLayout>
   );

@@ -21,10 +21,10 @@ export const GiftCardListItem: React.FC<GiftCardListItemProps> = ({
   onDuplicate,
 }) => {
   const cardSettings = settings || {
-    primaryColor: "#F54927",
-    secondaryColor: "#46368A",
-    gradientDirection: "TOP_RIGHT",
-    fontFamily: "Inter",
+    primaryColor: "",
+    secondaryColor: "",
+    gradientDirection: "",
+    fontFamily: "",
   };
 
   return (
