@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { usePendingMerchants } from "../../../features/admin/hooks/useAdmin";
 
+import NotificationBell from "../notifications/NotificationBell";
+
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
@@ -422,6 +424,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   </motion.span>
                 )}
               </motion.button>
+              <NotificationBell />
 
               {/* User Profile */}
               <motion.button

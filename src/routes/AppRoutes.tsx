@@ -37,6 +37,9 @@ import { SupportTicketPage } from "@/pages/merchant/SupportTicket";
 import { AdminSupportTicketPage } from "@/pages/admin/SupportTicket";
 import ContactUsPage from "@/pages/admin/ContactUsPage";
 import { ChangePasswordPage } from "@/pages/merchant/ChangePasswordPage";
+// import AdminSettingPage from "@/pages/admin/SettingPage";
+// import NotificationsPage from '../pages/NotificationsPage';
+import NotificationsPage from "@/pages/merchant/NotificationsPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -66,6 +69,24 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/merchant/complete-profile"
         element={<CompleteProfilePage />}
+      />
+
+      <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/notifications"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
       />
 
       {/* Admin Routes */}
