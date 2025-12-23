@@ -1,12 +1,17 @@
-// src/features/auth/hooks/useAuth.ts
+// src/features/auth/hooks/useAuth.ts - FIXED VERSION
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { setCredentials, logout as logoutAction } from "../slices/authSlice";
+import {
+  setCredentials,
+  logout as logoutAction,
+  setError,
+} from "../slices/authSlice";
 import { authService } from "../services/authService";
 import { LoginCredentials, RegisterData } from "../types/auth.types";
 import { AxiosError } from "axios";
+
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -14,22 +19,17 @@ export const useAuth = () => {
   const { user, isAuthenticated, isLoading, error } = useAppSelector(
     (state) => state.auth,
   );
-  interface LoginErrorResponse {
+
+  interface ErrorResponse {
     message: string;
   }
+
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
       console.log("🎉 Login successful, full response:", data);
-      console.log("📦 Response structure check:", {
-        hasData: !!data.data,
-        hasUser: !!data.data?.user,
-        hasTokens: !!data.data?.tokens,
-        userRole: data.data?.user?.role,
-      });
 
-      // ✅ Dispatch credentials to Redux
       dispatch(
         setCredentials({
           user: data.data.user,
@@ -39,8 +39,6 @@ export const useAuth = () => {
       );
 
       console.log("✅ Credentials dispatched to Redux");
-      console.log("📊 User role:", data.data.user.role);
-
       toast.success("Login successful!");
 
       if (data.data.user.isFirstTime === true) {
@@ -48,7 +46,7 @@ export const useAuth = () => {
         navigate("/change-password", { replace: true });
         return;
       }
-      // ✅ Navigate immediately - ProtectedRoute will handle the check
+
       const targetRoute =
         data.data.user.role === "MERCHANT"
           ? "/merchant/dashboard"
@@ -59,18 +57,13 @@ export const useAuth = () => {
       console.log("🚀 Navigating to:", targetRoute);
       navigate(targetRoute, { replace: true });
     },
-    onError: (error: AxiosError<LoginErrorResponse>) => {
+    onError: (error: AxiosError<ErrorResponse>) => {
       console.error("❌ Login failed:", error);
-      console.error("📋 Error details:", {
-        status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
-      });
-
       const message =
         error.response?.data?.message ||
         "Login failed. Please check your credentials.";
 
+      dispatch(setError(message));
       toast.error(message);
     },
   });
@@ -79,15 +72,8 @@ export const useAuth = () => {
   const googleLoginMutation = useMutation({
     mutationFn: authService.googleLogin,
     onSuccess: (data) => {
-      console.log("🎉 Google login successful, full response:", data);
-      console.log("📦 Response structure check:", {
-        hasData: !!data.data,
-        hasUser: !!data.data?.user,
-        hasTokens: !!data.data?.tokens,
-        userRole: data.data?.user?.role,
-      });
+      console.log("🎉 Google login successful");
 
-      // ✅ Dispatch credentials to Redux
       dispatch(
         setCredentials({
           user: data.data.user,
@@ -96,12 +82,58 @@ export const useAuth = () => {
         }),
       );
 
-      console.log("✅ Google credentials dispatched to Redux");
-      console.log("📊 User role:", data.data.user.role);
-
       toast.success("Logged in with Google successfully!");
 
-      // ✅ Navigate based on user role
+      const targetRoute =
+        data.data.user.role === "MERCHANT"
+          ? "/merchant/dashboard"
+          : data.data.user.role === "ADMIN"
+            ? "/admin/dashboard"
+            : "/";
+
+      navigate(targetRoute, { replace: true });
+    },
+    onError: (error: AxiosError<ErrorResponse>) => {
+      console.error("❌ Google login failed:", error);
+      const message =
+        error.response?.data?.message ||
+        "Google login failed. Please try again.";
+
+      dispatch(setError(message));
+      toast.error(message);
+    },
+  });
+
+  // Register mutation - FIXED VERSION
+  const registerMutation = useMutation({
+    mutationFn: authService.register,
+    onSuccess: (data) => {
+      console.log("🎉 Registration successful, response:", data);
+
+      // Check if response has the expected structure
+      if (!data.data?.user || !data.data?.tokens) {
+        console.error("❌ Invalid registration response structure:", data);
+        const errorMsg = "Registration response is missing required data";
+        dispatch(setError(errorMsg));
+        toast.error(errorMsg);
+        return;
+      }
+
+      // Dispatch credentials to Redux
+      dispatch(
+        setCredentials({
+          user: data.data.user,
+          accessToken: data.data.tokens.accessToken,
+          refreshToken: data.data.tokens.refreshToken,
+        }),
+      );
+
+      console.log("✅ Registration credentials dispatched to Redux");
+      console.log("👤 User role:", data.data.user.role);
+
+      toast.success(data.message || "Registration successful!");
+
+      // Navigate based on user role
       const targetRoute =
         data.data.user.role === "MERCHANT"
           ? "/merchant/dashboard"
@@ -112,41 +144,20 @@ export const useAuth = () => {
       console.log("🚀 Navigating to:", targetRoute);
       navigate(targetRoute, { replace: true });
     },
-    onError: (error: AxiosError<{ message?: string }>) => {
-      console.error("❌ Google login failed:", error);
+    onError: (error: AxiosError<ErrorResponse>) => {
+      console.error("❌ Registration failed:", error);
       console.error("📋 Error details:", {
         status: error.response?.status,
-        message: error.response?.data?.message,
+        statusText: error.response?.statusText,
         data: error.response?.data,
       });
 
       const message =
         error.response?.data?.message ||
-        "Google login failed. Please try again.";
+        error.message ||
+        "Registration failed. Please try again.";
 
-      toast.error(message);
-    },
-  });
-
-  // Register mutation
-  const registerMutation = useMutation({
-    mutationFn: authService.register,
-    onSuccess: (data) => {
-      dispatch(
-        setCredentials({
-          user: data.data.user,
-          accessToken: data.data.tokens.accessToken,
-          refreshToken: data.data.tokens.refreshToken,
-        }),
-      );
-      toast.success(data.message || "Registration successful!");
-      navigate("/merchant/dashboard", { replace: true });
-    },
-    onError: (error: AxiosError<{ message?: string }>) => {
-      console.error("❌ Registration failed:", error);
-
-      const message = error.response?.data?.message || "Registration failed";
-
+      dispatch(setError(message));
       toast.error(message);
     },
   });
@@ -181,8 +192,24 @@ export const useAuth = () => {
     googleLoginMutation.mutate(credential);
   };
 
-  const register = (data: RegisterData) => {
-    registerMutation.mutate(data);
+  const register = async (data: RegisterData) => {
+    console.log("📝 Registration initiated with data:", {
+      ...data,
+      password: "***hidden***",
+    });
+
+    // Clean the data - remove empty phone if it exists
+    const cleanData = {
+      ...data,
+      ...(data.phone && data.phone.trim() !== "" ? { phone: data.phone } : {}),
+    };
+
+    console.log("📤 Sending to backend:", {
+      ...cleanData,
+      password: "***hidden***",
+    });
+
+    registerMutation.mutate(cleanData);
   };
 
   const logout = () => {

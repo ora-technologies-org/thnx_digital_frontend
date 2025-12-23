@@ -1,5 +1,5 @@
 // src/shared/utils/api.ts
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 // Extend config type to include _retry flag
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -7,9 +7,9 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 }
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -34,7 +34,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 // Request interceptor - Add token to requests
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -42,7 +42,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor - Handle token refresh
@@ -77,22 +77,23 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        
+        const refreshToken = localStorage.getItem("refreshToken");
+
         if (!refreshToken) {
-          throw new Error('No refresh token');
+          throw new Error("No refresh token");
         }
 
         // Use a separate axios instance to avoid interceptor loop
         const response = await axios.post(
           `${api.defaults.baseURL}/auth/refresh`,
-          { refreshToken }
+          { refreshToken },
         );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data.tokens;
+        const { accessToken, refreshToken: newRefreshToken } =
+          response.data.data.tokens;
 
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", newRefreshToken);
 
         // Process queued requests with new token
         processQueue(null, accessToken);
@@ -104,14 +105,16 @@ api.interceptors.response.use(
         processQueue(refreshError as Error, null);
 
         // Clear tokens and redirect to login
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
 
         // Only redirect if not already on auth pages
-        const authPaths = ['/login', '/register', '/forgot-password'];
-        if (!authPaths.some(path => window.location.pathname.startsWith(path))) {
-          window.location.href = '/login';
+        const authPaths = ["/login", "/register", "/forgot-password"];
+        if (
+          !authPaths.some((path) => window.location.pathname.startsWith(path))
+        ) {
+          window.location.href = "/login";
         }
 
         return Promise.reject(refreshError);
@@ -121,7 +124,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

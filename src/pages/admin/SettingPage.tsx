@@ -516,7 +516,7 @@ export const AdminSettingPage: React.FC = () => {
                     className="max-w-lg space-y-4 md:space-y-6"
                   >
                     {/* Email (read-only) */}
-                    <div>
+                    {/* <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Email
                       </label>
@@ -541,7 +541,7 @@ export const AdminSettingPage: React.FC = () => {
                           </svg>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
 
                     {/* Name */}
                     <div>
@@ -588,7 +588,7 @@ export const AdminSettingPage: React.FC = () => {
                           value={profileData.phone}
                           onChange={handleProfileInputChange}
                           onBlur={() => handleBlur("phone")}
-                          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                          className={`w-full px-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
                             profileErrors.phone && touched.phone
                               ? "border-red-500 ring-1 ring-red-500"
                               : "border-gray-300"

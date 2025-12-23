@@ -55,7 +55,7 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const dispatch = useAppDispatch();
   const { isLoading, isAuthenticated, user } = useAppSelector(
-    (state) => state.auth
+    (state) => state.auth,
   );
 
   useEffect(() => {
@@ -108,16 +108,17 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
             user,
             accessToken,
             refreshToken,
-          })
+          }),
         );
 
         console.log("✅ Auth initialization complete!");
-      } catch (error: any) {
+      } catch (error) {
         console.error("❌ Auth initialization failed:", {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-          stack: error.stack,
+          message: error instanceof Error ? error.message : "Unknown error",
+          status: (error as { response?: { status?: number } }).response
+            ?.status,
+          data: (error as { response?: { data?: unknown } }).response?.data,
+          stack: error instanceof Error ? error.stack : undefined,
         });
 
         console.log("🧹 Clearing invalid tokens from localStorage...");
@@ -134,6 +135,8 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
     };
 
     initAuth();
+    // Only run once on mount, not when auth state changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   // Add logging when loading state changes
@@ -150,9 +153,11 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
   if (isLoading) {
     console.log("⏳ Showing loading screen...");
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Spinner size="lg" />
-        <p className="ml-3 text-gray-600">Checking authentication...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Spinner size="lg" />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
