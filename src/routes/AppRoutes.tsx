@@ -37,45 +37,118 @@ import { SupportTicketPage } from "@/pages/merchant/SupportTicket";
 import { AdminSupportTicketPage } from "@/pages/admin/SupportTicket";
 import ContactUsPage from "@/pages/admin/ContactUsPage";
 import { ChangePasswordPage } from "@/pages/merchant/ChangePasswordPage";
-// import AdminSettingPage from "@/pages/admin/SettingPage";
-// import NotificationsPage from '../pages/NotificationsPage';
 import NotificationsPage from "@/pages/merchant/NotificationsPage";
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Public Routes - No authentication required */}
       <Route path={ROUTES.HOME} element={<HomePage />} />
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.BROWSE} element={<BrowsePage />} />
       <Route path={ROUTES.PURCHASE} element={<PurchasePage />} />
-      <Route path={ROUTES.CHANGE} element={<ChangePasswordPage />} />
-      {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
-      <Route path="/merchant/dashboard" element={<DashboardPage />} />
 
-      <Route path="/merchant/support" element={<SupportTicketPage />} />
+      {/* Password Reset Routes - Public */}
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-otp" element={<VerifyOtpPage />} />
-      {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
-      <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
-      <Route path="/merchant/orders" element={<OrdersPage />} />
-      <Route path="/merchant/scan" element={<ScanPage />} />
-      <Route path="/merchant/analytics" element={<AnalyticsPage />} />
-      <Route path="/merchant/payouts" element={<PayoutsPage />} />
-      <Route path="/merchant/redemptions" element={<RedemptionsPage />} />
-      <Route path="/merchant/settings" element={<SettingsPage />} />
+
+      {/* Merchant Routes - ALL PROTECTED */}
       <Route
-        path="/merchant/complete-profile"
-        element={<CompleteProfilePage />}
+        path="/merchant/dashboard"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <DashboardPage />
+          </ProtectedRoute>
+        }
       />
 
       <Route
-        path="/admin/notifications"
+        path="/merchant/support"
         element={
-          <ProtectedRoute requiredRole="ADMIN">
-            <NotificationsPage />
+          <ProtectedRoute requiredRole="MERCHANT">
+            <SupportTicketPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/gift-cards"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <GiftCardsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/orders"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <OrdersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/merchant/scan/:qrCode"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <ScanPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/scan"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <ScanPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/analytics"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <AnalyticsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/payouts"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <PayoutsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/redemptions"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <RedemptionsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/settings"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/complete-profile"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <CompleteProfilePage />
           </ProtectedRoute>
         }
       />
@@ -89,7 +162,16 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Admin Routes */}
+      <Route
+        path={ROUTES.CHANGE}
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <ChangePasswordPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin Routes - ALL PROTECTED */}
       <Route
         path="/admin/dashboard"
         element={
@@ -99,7 +181,15 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      <Route path="/admin/create-merchant" element={<CreateMerchantPage />} />
+      <Route
+        path="/admin/create-merchant"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <CreateMerchantPage />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/admin/merchants/edit/:id"
         element={
@@ -108,14 +198,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      {/* <Route
-        path="/admin"
-        element={
-          <ProtectedRoute requiredRole="ADMIN">
-            <AdminDashboardPage />
-          </ProtectedRoute>
-        }
-      /> */}
+
       <Route
         path="/admin/pending"
         element={
@@ -124,6 +207,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/giftcards"
         element={
@@ -132,6 +216,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/revenue"
         element={
@@ -140,6 +225,7 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/admin/analytics"
         element={
@@ -193,10 +279,24 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Default Redirects */}
       <Route
         path="/merchant"
         element={<Navigate to="/merchant/dashboard" replace />}
+      />
+      <Route
+        path="/admin"
+        element={<Navigate to="/admin/dashboard" replace />}
       />
       <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
     </Routes>

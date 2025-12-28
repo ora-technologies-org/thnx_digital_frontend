@@ -1,52 +1,7 @@
-// // src/features/auth/components/AuthInitializer.tsx
-// import { useEffect } from 'react';
-// import { useAppDispatch } from '../../../app/hooks';
-// import { setUser, logout, setLoading } from '../slices/authSlice';
-// import { authService } from '../services/authService';
-
-// export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-//   const dispatch = useAppDispatch();
-
-//   useEffect(() => {
-//     const initAuth = async () => {
-//       console.log('🔄 AuthInitializer: Starting authentication check...');
-
-//       const accessToken = localStorage.getItem('accessToken');
-//       console.log('🔑 Access token exists:', !!accessToken);
-
-//       if (!accessToken) {
-//         console.log('❌ No access token found, user not authenticated');
-//         dispatch(logout());
-//         return;
-//       }
-
-//       try {
-//         console.log('📡 Fetching current user from backend...');
-//         dispatch(setLoading(true));
-
-//         const user = await authService.getCurrentUser();
-
-//         console.log('✅ User fetched successfully:', user);
-//         dispatch(setUser(user));
-
-//       } catch (error: any) {
-//         console.error('❌ Auth initialization failed:', error);
-//         console.log('Token might be expired or invalid, logging out...');
-//         dispatch(logout());
-//       }
-//     };
-
-//     initAuth();
-//   }, [dispatch]);
-
-//   return <>{children}</>;
-// };
-
-// src/features/auth/components/AuthInitializer.tsx
-// src/features/auth/components/AuthInitializer.tsx
+// src/features/auth/components/AuthInitializer.tsx - OPTIMIZED VERSION
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { setCredentials, setLoading } from "../slices/authSlice";
+import { setCredentials, setLoading, logout } from "../slices/authSlice";
 import { authService } from "../services/authService";
 import { Spinner } from "../../../shared/components/ui/Spinner";
 
@@ -54,55 +9,76 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const dispatch = useAppDispatch();
-  const { isLoading, isAuthenticated, user } = useAppSelector(
-    (state) => state.auth,
-  );
+  const { isLoading } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     const initAuth = async () => {
       console.log("🔄 AuthInitializer: Starting authentication check...");
-      console.log("📊 Initial Redux State:", {
-        isLoading,
-        isAuthenticated,
-        hasUser: !!user,
-      });
 
       const accessToken = localStorage.getItem("accessToken");
       const refreshToken = localStorage.getItem("refreshToken");
+      const cachedUserStr = localStorage.getItem("user");
 
-      console.log("🔑 Tokens in localStorage:", {
+      console.log("🔑 Found in localStorage:", {
         hasAccessToken: !!accessToken,
         hasRefreshToken: !!refreshToken,
-        accessTokenPreview: accessToken
-          ? accessToken.substring(0, 20) + "..."
-          : "null",
+        hasCachedUser: !!cachedUserStr,
       });
 
+      // No tokens = not authenticated
       if (!accessToken || !refreshToken) {
         console.log("❌ No tokens found, user not authenticated");
         dispatch(setLoading(false));
         return;
       }
 
+      // ✅ OPTIMIZATION: If we have cached user data, restore immediately
+      if (cachedUserStr) {
+        try {
+          const cachedUser = JSON.parse(cachedUserStr);
+
+          console.log("⚡ Fast restore from localStorage:", {
+            id: cachedUser.id,
+            email: cachedUser.email,
+            role: cachedUser.role,
+          });
+
+          dispatch(
+            setCredentials({
+              user: cachedUser,
+              accessToken,
+              refreshToken,
+            }),
+          );
+
+          console.log("✅ Session restored instantly from cache!");
+
+          // Optional: Validate token in background (don't await)
+          authService.getCurrentUser().catch((error) => {
+            console.warn("⚠️ Background token validation failed:", error);
+            console.log("🧹 Token expired, logging out...");
+            dispatch(logout());
+          });
+
+          return;
+        } catch (error) {
+          console.error("❌ Failed to parse cached user:", error);
+          // Continue to API call below
+        }
+      }
+
+      // No cached user - fetch from API (e.g., first login)
       try {
-        console.log("📡 Calling authService.getCurrentUser()...");
+        console.log("📡 No cached user, fetching from API...");
 
         const user = await authService.getCurrentUser();
 
-        console.log("✅ User fetched successfully:", {
+        console.log("✅ User fetched from API:", {
           id: user.id,
           email: user.email,
           role: user.role,
-          businessName: user.businessName,
         });
 
-        console.log("💾 Dispatching setCredentials with:", {
-          hasUser: !!user,
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-        });
-
-        // ✅ IMPORTANT: Restore tokens to Redux state along with user
         dispatch(
           setCredentials({
             user,
@@ -113,45 +89,23 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
 
         console.log("✅ Auth initialization complete!");
       } catch (error) {
-        console.error("❌ Auth initialization failed:", {
-          message: error instanceof Error ? error.message : "Unknown error",
-          status: (error as { response?: { status?: number } }).response
-            ?.status,
-          data: (error as { response?: { data?: unknown } }).response?.data,
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-
-        console.log("🧹 Clearing invalid tokens from localStorage...");
+        console.error("❌ Auth initialization failed:", error);
+        console.log("🧹 Clearing invalid tokens...");
 
         // Clear invalid tokens
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
 
-        // Stop loading so user can access public routes
         dispatch(setLoading(false));
-
-        console.log("⚠️ User will need to login again");
       }
     };
 
     initAuth();
-    // Only run once on mount, not when auth state changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
-  // Add logging when loading state changes
-  useEffect(() => {
-    console.log("🔄 Auth State Changed:", {
-      isLoading,
-      isAuthenticated,
-      hasUser: !!user,
-      userRole: user?.role,
-    });
-  }, [isLoading, isAuthenticated, user]);
-
-  // ✅ Show loading screen while checking authentication
+  // Show loading screen while checking authentication
   if (isLoading) {
-    console.log("⏳ Showing loading screen...");
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -162,6 +116,5 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
     );
   }
 
-  console.log("✅ Auth initialized, rendering children");
   return <>{children}</>;
 };

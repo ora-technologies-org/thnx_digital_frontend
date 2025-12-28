@@ -4,7 +4,6 @@ import {
   Search,
   Eye,
   Filter,
-  Loader2,
   AlertCircle,
   CheckCircle2,
   Clock,
@@ -17,6 +16,7 @@ import {
   fetchSupportTickets,
   SupportTicket,
 } from "@/features/admin/services/adminTicketService";
+import { Spinner } from "@/shared/components/ui/Spinner";
 
 /**
  * AdminSupportTicketPage Component
@@ -35,7 +35,9 @@ export const AdminSupportTicketPage: React.FC = () => {
     queryFn: () => fetchSupportTickets({ search: searchTerm, order }),
   });
 
-  const tickets: SupportTicket[] = data?.data || [];
+  const tickets: SupportTicket[] = Array.isArray(data?.data?.data)
+    ? data.data.data
+    : [];
 
   // Handle search form submission
   const handleSearch = (e: React.FormEvent) => {
@@ -157,8 +159,7 @@ export const AdminSupportTicketPage: React.FC = () => {
           {isLoading ? (
             <Card className="p-8 sm:p-12">
               <div className="flex flex-col items-center justify-center text-gray-500">
-                <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 animate-spin mb-4" />
-                <p className="text-sm sm:text-base">Loading tickets...</p>
+                <Spinner size="lg" />
               </div>
             </Card>
           ) : error ? (

@@ -2,7 +2,6 @@
 import React, { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAppSelector } from "../../../app/hooks";
-import { Spinner } from "../../../shared/components/ui/Spinner";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,41 +14,58 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const location = useLocation();
   const { user, isAuthenticated, isLoading } = useAppSelector(
-    (state) => state.auth
+    (state) => state.auth,
   );
 
+  // 🔍 DEBUG: Log every render
   useEffect(() => {
-    console.log("🛡️ ProtectedRoute check:", {
-      path: location.pathname,
+    console.log("🛡️ ProtectedRoute - Current State:", {
+      pathname: location.pathname,
+      search: location.search,
+      fullPath: location.pathname + location.search,
       isLoading,
       isAuthenticated,
       userRole: user?.role,
       requiredRole,
       hasToken: !!localStorage.getItem("accessToken"),
     });
-  }, [isLoading, isAuthenticated, user, requiredRole, location.pathname]);
+  }, [location, isLoading, isAuthenticated, user, requiredRole]);
 
   // Show loading spinner during auth initialization
   if (isLoading) {
     console.log("⏳ ProtectedRoute: Still checking authentication...");
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Spinner size="lg" />
-        <p className="ml-3 text-gray-600">Checking authentication...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
       </div>
     );
   }
 
-  // Not authenticated - redirect to login
+  // Not authenticated - redirect to login WITH LOCATION STATE
   if (!isAuthenticated || !user) {
     console.log("❌ ProtectedRoute: Not authenticated, redirecting to /login");
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    console.log("💾 Saving location state:", {
+      pathname: location.pathname,
+      search: location.search,
+      fullLocation: location,
+    });
+
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }} // 👈 THIS IS CRITICAL
+        replace
+      />
+    );
   }
 
   // Check role if required
   if (requiredRole && user.role !== requiredRole) {
     console.log(
-      `❌ ProtectedRoute: Role mismatch. Required: ${requiredRole}, User: ${user.role}`
+      `❌ ProtectedRoute: Role mismatch. Required: ${requiredRole}, User: ${user.role}`,
     );
 
     // Redirect based on actual role

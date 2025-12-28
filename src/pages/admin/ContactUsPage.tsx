@@ -1,17 +1,9 @@
-import {
-  Mail,
-  Phone,
-  MessageSquare,
-  Calendar,
-  User,
-  Loader2,
-  AlertCircle,
-  X,
-} from "lucide-react";
+import { Mail, Phone, MessageSquare, Calendar, User, X } from "lucide-react";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { useContactMessages } from "@/features/admin/hooks/useAdmin";
 import { ContactMessage } from "@/features/admin/services/contactusService";
 import { useState } from "react";
+import { Spinner } from "@/shared/components/ui/Spinner";
 
 export default function ContactUsPage() {
   const { data: messages = [], isLoading, error } = useContactMessages();
@@ -20,10 +12,7 @@ export default function ContactUsPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600"></p>
-          </div>
+          <Spinner size="lg" />
         </div>
       </AdminLayout>
     );
@@ -33,7 +22,8 @@ export default function ContactUsPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
+          <Spinner size="lg" />
+          {/* <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-red-800 text-center mb-2">
               Error Loading Messages
@@ -41,7 +31,7 @@ export default function ContactUsPage() {
             <p className="text-red-600 text-center">
               {error instanceof Error ? error.message : "An error occurred"}
             </p>
-          </div>
+          </div> */}
         </div>
       </AdminLayout>
     );

@@ -46,6 +46,7 @@ import { useDispatch } from "react-redux";
 import { updateFormData } from "@/features/admin/slices/MerchantCreateSlice";
 import { AppDispatch } from "@/app/store";
 import DocumentPreviewCard from "@/shared/components/modals/DocumentPreviewCard";
+import { Spinner } from "@/shared/components/ui/Spinner";
 
 // Types for filters
 type FilterStatus = "all" | "verified" | "pending" | "rejected" | "incomplete";
@@ -169,9 +170,9 @@ const MerchantDetailsModal: React.FC<{
                         : "bg-gradient-to-r from-rose-100 to-rose-50 text-rose-800 border border-rose-200"
                     }`}
                   >
-                    <div
+                    {/* <div
                       className={`w-2 h-2 rounded-full mr-1.5 ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
-                    />
+                    /> */}
                     {currentMerchant.user.isActive
                       ? "Active Account"
                       : "Inactive Account"}
@@ -555,7 +556,7 @@ const MerchantDetailsModal: React.FC<{
                         </p>
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+                            className={`w-1 h-1 rounded-full ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
                           />
                           <span className="font-bold text-gray-900">
                             {currentMerchant.user.isActive
@@ -927,17 +928,7 @@ export const AllMerchantsPage: React.FC = () => {
     return (
       <AdminLayout>
         <div className="flex flex-col justify-center items-center h-[80vh]">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full mb-4"
-          />
-          <p className="text-lg text-gray-600 font-medium">
-            Loading merchants...
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Please wait while we fetch your data
-          </p>
+          <Spinner size="lg" />
         </div>
       </AdminLayout>
     );

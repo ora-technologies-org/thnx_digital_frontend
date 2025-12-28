@@ -588,7 +588,10 @@ export const PendingMerchantsPage: React.FC = () => {
     setSelectedMerchant(merchant);
     setIsModalOpen(true);
   };
-
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMerchant(null);
+  };
   const handleApprove = async (merchantId: string, notes: string) => {
     try {
       const response = await approveMutation.mutateAsync({
@@ -663,7 +666,7 @@ export const PendingMerchantsPage: React.FC = () => {
       <AdminLayout>
         <div className="flex flex-col justify-center items-center h-64">
           <Spinner size="lg" />
-          <p className="mt-4 text-gray-600">Loading pending merchants...</p>
+          <p className="mt-4 text-gray-600"></p>
         </div>
       </AdminLayout>
     );

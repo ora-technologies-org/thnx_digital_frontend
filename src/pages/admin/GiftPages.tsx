@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { merchantService } from "@/features/admin/services/merchantService";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
+import { GiftCardDisplay } from "@/features/giftCards/components/GiftCardDisplay";
 
 // Custom useDebounce hook
 const useDebounce = (value, delay = 500) => {
@@ -53,8 +54,8 @@ const ErrorMessage = ({ message, onRetry }) => (
   </motion.div>
 );
 
-// Gift Card Modal - Made responsive
-const GiftCardModal = ({ isOpen, onClose, card }) => {
+// Gift Card Modal - Enhanced with settings
+const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
   if (!card) return null;
 
   const expiryDate = new Date(card.expiryDate);
@@ -62,6 +63,14 @@ const GiftCardModal = ({ isOpen, onClose, card }) => {
   const daysUntilExpiry = Math.ceil(
     (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
+
+  // Use settings if provided, otherwise use default colors
+  const cardSettings = settings || {
+    primaryColor: "#F54927",
+    secondaryColor: "#46368A",
+    gradientDirection: "TOP_RIGHT",
+    fontFamily: "Inter",
+  };
 
   return (
     <AnimatePresence>
@@ -98,8 +107,13 @@ const GiftCardModal = ({ isOpen, onClose, card }) => {
 
             {/* Content */}
             <div className="p-4 sm:p-6 space-y-6">
-              {/* Price Card */}
-              <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl p-4 sm:p-6 text-white">
+              {/* Price Card with gradient */}
+              <div
+                className="rounded-xl p-4 sm:p-6 text-white"
+                style={{
+                  background: `linear-gradient(to bottom right, ${cardSettings.primaryColor}, ${cardSettings.secondaryColor})`,
+                }}
+              >
                 <div className="flex items-center gap-2 mb-2">
                   <Tag className="w-5 h-5" />
                   <span className="text-sm font-medium opacity-90">Price</span>
@@ -169,6 +183,32 @@ const GiftCardModal = ({ isOpen, onClose, card }) => {
                   </p>
                 </div>
               )}
+
+              {/* Card Color Settings */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="text-sm font-medium text-gray-600 mb-3">
+                  Card Design
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-8 rounded border border-gray-300"
+                      style={{ backgroundColor: cardSettings.primaryColor }}
+                    />
+                    <span className="text-xs text-gray-600">Primary</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-8 rounded border border-gray-300"
+                      style={{ backgroundColor: cardSettings.secondaryColor }}
+                    />
+                    <span className="text-xs text-gray-600">Secondary</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Font: {cardSettings.fontFamily}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Footer */}
@@ -266,65 +306,6 @@ const MerchantCard = ({ merchant, onClick }) => {
   );
 };
 
-// Gift Card Component - Made responsive
-const GiftCardItem = ({ card, onClick }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -5, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
-      onClick={onClick}
-      className="bg-white rounded-xl p-4 sm:p-6 cursor-pointer border border-gray-200 hover:border-purple-300 transition-all"
-    >
-      {/* Title */}
-      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
-        {card.title || "Untitled Card"}
-      </h3>
-
-      {/* Description */}
-      {card.description && (
-        <p className="text-xs sm:text-sm text-gray-600 mb-4 line-clamp-2">
-          {card.description}
-        </p>
-      )}
-
-      {/* Price */}
-      <div className="flex items-baseline gap-2 mb-4">
-        <span className="text-2xl sm:text-3xl font-bold text-gray-900">
-          ₹{parseFloat(card.price || "0").toLocaleString()}
-        </span>
-      </div>
-
-      {/* Expiry */}
-      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 mb-4">
-        <Calendar className="w-4 h-4" />
-        <span>
-          Expires:{" "}
-          {card.expiryDate
-            ? new Date(card.expiryDate).toLocaleDateString()
-            : "No date"}
-        </span>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-            card.isActive
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
-          }`}
-        >
-          {card.isActive ? "Available" : "Sold Out"}
-        </span>
-        <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all whitespace-nowrap">
-          View Details
-        </button>
-      </div>
-    </motion.div>
-  );
-};
-
 // Merchants Page - Made responsive
 const MerchantsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -333,7 +314,6 @@ const MerchantsPage = () => {
 
   const {
     data: merchants,
-
     error,
     refetch,
   } = useQuery({
@@ -455,15 +435,14 @@ const MerchantsPage = () => {
   );
 };
 
-// Merchant Gift Cards Page - Made responsive
+// Merchant Gift Cards Page - Made responsive with GiftCardDisplay
 const MerchantGiftCardsPage = ({ merchant, onBack }) => {
   const [selectedCard, setSelectedCard] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [priceFilter, setPriceFilter] = useState("all");
 
   const {
-    data: cards,
-
+    data: cardsData,
     error,
     refetch,
   } = useQuery({
@@ -471,6 +450,10 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
     queryFn: () => merchantService.MerchantGiftCard(merchant.userId),
     enabled: !!merchant.userId,
   });
+
+  // Extract cards and settings from the API response
+  const cards = cardsData?.giftCards || [];
+  const settings = cardsData?.setting || null;
 
   const filterCards = (cards) => {
     if (priceFilter === "all") return cards;
@@ -567,14 +550,18 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
         </div>
       </div>
 
-      {/* Cards Grid */}
+      {/* Cards Grid with GiftCardDisplay */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredCards.length > 0 ? (
           filteredCards.map((card) => (
-            <GiftCardItem
+            <GiftCardDisplay
               key={card.id}
-              card={card}
-              onClick={() => handleCardClick(card)}
+              giftCard={card}
+              settings={settings}
+              onEdit={() => handleCardClick(card)}
+              showActions={false}
+              clickable={true}
+              className="w-full"
             />
           ))
         ) : (
@@ -594,6 +581,7 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         card={selectedCard}
+        settings={settings}
       />
     </div>
   );

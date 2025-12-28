@@ -445,26 +445,7 @@ export const CreateMerchantPage: React.FC = () => {
    * @returns Formatted message string
    */
   const formatResponseMessage = (response: ApiResponse): string => {
-    let message = response.message;
-
-    if (response.data?.user) {
-      const user = response.data.user;
-      message += `\n\nMerchant Details:`;
-      message += `\n• Name: ${user.name}`;
-      message += `\n• Email: ${user.email}`;
-      message += `\n• ID: ${user.id}`;
-      message += `\n• Role: ${user.role}`;
-    }
-
-    if (response.data?.merchant) {
-      const merchant = response.data.merchant;
-      message += `\n\nBusiness Details:`;
-      message += `\n• Business Name: ${merchant.businessName || "N/A"}`;
-      message += `\n• Business Email: ${merchant.businessEmail || "N/A"}`;
-      if (merchant.id) {
-        message += `\n• Merchant ID: ${merchant.id}`;
-      }
-    }
+    const message = response.message;
 
     return message;
   };

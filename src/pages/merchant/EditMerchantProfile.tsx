@@ -1,49 +1,69 @@
 // src/features/merchant/components/EditMerchantProfile.tsx
 import useAuthMe, { UserData } from "@/features/merchant/hooks/useAuthMe";
 import useUpdateProfile from "@/features/merchant/hooks/UseUpdateProfile";
-import { useState } from "react";
+import { Spinner } from "@/shared/components/ui/Spinner";
+import { Button } from "@/shared/components/ui/Button";
+import { Modal } from "@/shared/components/ui/Modal";
+import { useState, useMemo } from "react";
 
 export const EditMerchantProfile = () => {
-  // Initialize formData directly from userData, avoiding useEffect
-  const { data: userData, isLoading, error } = useAuthMe();
+  const { data: userData, isLoading, error, refetch } = useAuthMe();
 
-  const [formData, setFormData] = useState<UserData>(() => ({
-    name: userData?.name || "",
-    phone: userData?.phone || "",
-    bio: userData?.bio || "",
-  }));
+  // Track user edits separately from the base data
+  const [formEdits, setFormEdits] = useState<Partial<UserData>>({});
 
   const [errors, setErrors] = useState<Partial<UserData>>({});
+
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalType, setModalType] = useState<
+    "success" | "error" | "info" | "warning"
+  >("info");
+  const [isLoadingModal, setIsLoadingModal] = useState(false);
 
   // Update profile mutation
   const updateProfileMutation = useUpdateProfile();
 
-  // Update formData when userData changes (without useEffect)
-  // This approach is more efficient and avoids the ESLint warning
-  const currentFormData = userData
-    ? {
-        name: formData.name || userData.name,
-        phone: formData.phone || userData.phone,
-        bio: formData.bio || userData.bio,
-      }
-    : formData;
+  // Derive formData from userData and formEdits - no useEffect needed!
+  const formData = useMemo<UserData>(
+    () => ({
+      name: formEdits.name ?? userData?.name ?? "",
+      phone: formEdits.phone ?? userData?.phone ?? "",
+      bio: formEdits.bio ?? userData?.bio ?? "",
+    }),
+    [formEdits, userData],
+  );
+
+  // Show modal helper function
+  const showResponseModal = (
+    title: string,
+    message: string,
+    type: "success" | "error" | "info" | "warning" = "info",
+  ) => {
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalType(type);
+    setShowModal(true);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Partial<UserData> = {};
 
-    if (!currentFormData.name.trim()) {
+    if (!formData.name.trim()) {
       newErrors.name = "Name is required";
     }
 
-    if (!currentFormData.phone.trim()) {
+    if (!formData.phone.trim()) {
       newErrors.phone = "Phone is required";
-    } else if (!/^\d{10}$/.test(currentFormData.phone)) {
+    } else if (!/^\d{10}$/.test(formData.phone)) {
       newErrors.phone = "Phone must be 10 digits";
     }
 
-    if (!currentFormData.bio.trim()) {
+    if (!formData.bio.trim()) {
       newErrors.bio = "Bio is required";
-    } else if (currentFormData.bio.length > 500) {
+    } else if (formData.bio.length > 500) {
       newErrors.bio = "Bio must be less than 500 characters";
     }
 
@@ -55,19 +75,37 @@ export const EditMerchantProfile = () => {
     e.preventDefault();
 
     if (validateForm()) {
-      updateProfileMutation.mutate(currentFormData, {
+      setIsLoadingModal(true);
+      updateProfileMutation.mutate(formData, {
         onSuccess: () => {
-          alert("Profile updated successfully!");
+          setIsLoadingModal(false);
+          showResponseModal(
+            "Success!",
+            "Your profile has been updated successfully.",
+            "success",
+          );
+          // Clear form edits after successful save so form shows fresh userData
+          setFormEdits({});
+          // Refetch the user data to get updated information
+          refetch();
         },
         onError: (error: unknown) => {
+          setIsLoadingModal(false);
           const errorMessage =
             error instanceof Error
               ? error.message
               : (error as { response?: { data?: { message?: string } } })
                   ?.response?.data?.message || "Failed to update profile";
-          alert(errorMessage);
+
+          showResponseModal("Update Failed", errorMessage, "error");
         },
       });
+    } else {
+      showResponseModal(
+        "Validation Error",
+        "Please fix the errors in the form before submitting.",
+        "warning",
+      );
     }
   };
 
@@ -75,7 +113,7 @@ export const EditMerchantProfile = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormEdits((prev) => ({ ...prev, [name]: value }));
 
     // Clear error for this field
     if (errors[name as keyof UserData]) {
@@ -83,15 +121,15 @@ export const EditMerchantProfile = () => {
     }
   };
 
+  const handleModalClose = () => {
+    setShowModal(false);
+    // If it was a success modal, we could do additional cleanup or navigation here
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-sm sm:text-base text-gray-600">
-            Loading profile...
-          </p>
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <Spinner />
       </div>
     );
   }
@@ -102,138 +140,147 @@ export const EditMerchantProfile = () => {
         <h3 className="text-red-800 font-semibold mb-2 text-sm sm:text-base">
           Error Loading Profile
         </h3>
-        <p className="text-red-600 text-sm">
+        <p className="text-red-600 text-sm mb-4">
           {error instanceof Error
             ? error.message
             : "Failed to load profile data"}
         </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      {/* Name Field */}
-      <div>
-        <label
-          htmlFor="name"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Name <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          id="name"
-          name="name"
-          value={currentFormData.name}
-          onChange={handleChange}
-          className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm sm:text-base ${
-            errors.name ? "border-red-500 bg-red-50" : "border-gray-300"
-          }`}
-          placeholder="Enter your name"
-        />
-        {errors.name && (
-          <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.name}</p>
-        )}
-      </div>
-
-      {/* Phone Field */}
-      <div>
-        <label
-          htmlFor="phone"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Phone <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="tel"
-          id="phone"
-          name="phone"
-          value={currentFormData.phone}
-          onChange={handleChange}
-          className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm sm:text-base ${
-            errors.phone ? "border-red-500 bg-red-50" : "border-gray-300"
-          }`}
-          placeholder="Enter your phone number"
-          maxLength={10}
-        />
-        {errors.phone && (
-          <p className="mt-1 text-xs sm:text-sm text-red-600">{errors.phone}</p>
-        )}
-      </div>
-
-      {/* Bio Field */}
-      <div>
-        <label
-          htmlFor="bio"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Bio <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          id="bio"
-          name="bio"
-          value={currentFormData.bio}
-          onChange={handleChange}
-          rows={4}
-          className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none text-sm sm:text-base ${
-            errors.bio ? "border-red-500 bg-red-50" : "border-gray-300"
-          }`}
-          placeholder="Tell us about yourself"
-          maxLength={500}
-        />
-        <div className="flex justify-between mt-1">
-          {errors.bio ? (
-            <p className="text-xs sm:text-sm text-red-600">{errors.bio}</p>
-          ) : (
-            <span className="text-xs sm:text-sm text-gray-500">
-              {currentFormData.bio.length}/500 characters
-            </span>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Name Field */}
+        <div>
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm sm:text-base ${
+              errors.name ? "border-red-500 bg-red-50" : "border-gray-300"
+            }`}
+            placeholder="Enter your name"
+          />
+          {errors.name && (
+            <p className="mt-1 text-xs sm:text-sm text-red-600">
+              {errors.name}
+            </p>
           )}
         </div>
-      </div>
 
-      {/* Submit Button */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2">
-        <button
-          type="submit"
-          disabled={updateProfileMutation.isPending}
-          className={`w-full sm:flex-1 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg font-medium text-white transition text-sm sm:text-base ${
-            updateProfileMutation.isPending
-              ? "bg-blue-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
-          }`}
-        >
-          {updateProfileMutation.isPending ? (
-            <span className="flex items-center justify-center">
-              <svg
-                className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Updating...
-            </span>
-          ) : (
-            "Update Profile"
+        {/* Phone Field */}
+        <div>
+          <label
+            htmlFor="phone"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Phone <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleChange}
+            className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-sm sm:text-base ${
+              errors.phone ? "border-red-500 bg-red-50" : "border-gray-300"
+            }`}
+            placeholder="Enter your phone number"
+            maxLength={10}
+          />
+          {errors.phone && (
+            <p className="mt-1 text-xs sm:text-sm text-red-600">
+              {errors.phone}
+            </p>
           )}
-        </button>
-      </div>
-    </form>
+        </div>
+
+        {/* Bio Field */}
+        <div>
+          <label
+            htmlFor="bio"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Bio <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id="bio"
+            name="bio"
+            value={formData.bio}
+            onChange={handleChange}
+            rows={4}
+            className={`w-full px-3 sm:px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none text-sm sm:text-base ${
+              errors.bio ? "border-red-500 bg-red-50" : "border-gray-300"
+            }`}
+            placeholder="Tell us about yourself"
+            maxLength={500}
+          />
+          <div className="flex justify-between mt-1">
+            {errors.bio ? (
+              <p className="text-xs sm:text-sm text-red-600">{errors.bio}</p>
+            ) : (
+              <span className="text-xs sm:text-sm text-gray-500">
+                {formData.bio.length}/500 characters
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
+          <Button
+            type="submit"
+            variant="gradient"
+            size="lg"
+            isLoading={updateProfileMutation.isPending || isLoadingModal}
+            className="flex-1"
+          >
+            {updateProfileMutation.isPending || isLoadingModal
+              ? "Updating..."
+              : "Update Profile"}
+          </Button>
+        </div>
+      </form>
+
+      {/* Response Modal */}
+      <Modal
+        isOpen={showModal}
+        onClose={handleModalClose}
+        title={modalTitle}
+        size="sm"
+        type={modalType}
+        showActions={true}
+        onConfirm={handleModalClose}
+        confirmText="OK"
+      >
+        <div className="text-center">
+          <p className="text-gray-700 mb-2">{modalMessage}</p>
+          {modalType === "success" && (
+            <p className="text-sm text-gray-500 mt-4">
+              Your changes have been saved successfully.
+            </p>
+          )}
+          {modalType === "error" && (
+            <p className="text-sm text-gray-500 mt-4">
+              Please try again or contact support if the problem persists.
+            </p>
+          )}
+        </div>
+      </Modal>
+    </>
   );
 };
 

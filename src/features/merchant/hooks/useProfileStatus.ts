@@ -1,4 +1,4 @@
-// src/features/merchant/hooks/useProfileStatus.ts - COMPLETE STATUS FLOW
+// src/features/merchant/hooks/useProfileStatus.ts - FIXED DATA EXTRACTION
 import { useState, useEffect } from "react";
 import api from "../../../shared/utils/api";
 
@@ -19,6 +19,11 @@ const mapBackendStatus = (
   isVerified: boolean,
   hasRequiredFields: boolean,
 ): ProfileStatus => {
+  // If already verified, return approved regardless of other fields
+  if (isVerified) {
+    return "approved";
+  }
+
   // If no status set yet, check if profile has required fields
   if (!backendStatus) {
     return hasRequiredFields ? "pending" : "incomplete";
@@ -55,8 +60,15 @@ export const useProfileStatus = () => {
       // Get current user data (which includes merchantProfile)
       const response = await api.get("/auth/me");
 
-      const userData =
-        response.data.data?.user || response.data.user || response.data;
+      console.log("API Response:", response.data);
+
+      // FIXED: Correct data extraction based on actual API response structure
+      // The response structure is: { success, message, data: { ...userData... } }
+      const userData = response.data.data || response.data;
+
+      console.log("User Data:", userData);
+      console.log("Merchant Profile:", userData.merchantProfile);
+
       const merchantProfile = userData.merchantProfile;
 
       if (!merchantProfile) {
@@ -81,6 +93,10 @@ export const useProfileStatus = () => {
         merchantProfile.businessEmail
       );
 
+      console.log("Has Required Fields:", hasRequiredFields);
+      console.log("Is Verified:", merchantProfile.isVerified);
+      console.log("Profile Status:", merchantProfile.profileStatus);
+
       // Map the backend status to our frontend status
       const mappedStatus = mapBackendStatus(
         merchantProfile.profileStatus,
@@ -88,19 +104,25 @@ export const useProfileStatus = () => {
         hasRequiredFields,
       );
 
-      // Determine if profile can be edited
-      // Can edit when: incomplete, or rejected
-      // Cannot edit when: pending (under review), or approved
-      const canEdit = mappedStatus !== "approved";
+      console.log("Mapped Status:", mappedStatus);
 
-      setProfileStatus({
+      // Determine if profile can be edited
+      // Can edit ONLY when: pending (make changes while under review) OR rejected (fix and resubmit)
+      // Cannot edit when: incomplete (use "Complete Profile Now" button) or approved (verified already)
+      const canEdit = mappedStatus === "pending" || mappedStatus === "rejected";
+
+      const finalProfileStatus = {
         status: mappedStatus,
         isProfileComplete: hasRequiredFields,
         isVerified: merchantProfile.isVerified || false,
         canCreateGiftCards: merchantProfile.isVerified || false,
         canEdit: canEdit,
         rejectionReason: merchantProfile.rejectionReason || undefined,
-      });
+      };
+
+      console.log("Final Profile Status:", finalProfileStatus);
+
+      setProfileStatus(finalProfileStatus);
     } catch (error) {
       console.error("Error fetching profile status:", error);
       // Default to incomplete if error

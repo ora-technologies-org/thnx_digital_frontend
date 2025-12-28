@@ -2,9 +2,42 @@ import axios from "axios";
 import { CreateMerchantForm } from "../slices/MerchantCreateSlice";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const getAuthToken = () => {
   return localStorage.getItem("accessToken");
 };
+
+// Define TypeScript interfaces
+export interface GiftCard {
+  id: string;
+  merchantId: string;
+  cardNumber: string;
+  balance: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  // Add other gift card properties as needed
+}
+
+export interface Merchant {
+  merchantId: string;
+  email: string;
+  name: string;
+  businessName: string;
+  phone?: string;
+  website?: string;
+  logo?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Add other merchant properties as needed
+}
+
+export interface MerchantSetting {
+  merchantId: string;
+  // Add setting properties based on your API response
+  [key: string]: unknown;
+}
+
 export interface CreateMerchantResponse {
   success: boolean;
   data: {
@@ -42,13 +75,17 @@ export const merchantService = {
         "Content-Type": "application/json",
       },
     });
+
     if (!response.ok) throw new Error("Failed to fetch merchants");
+
     const data = await response.json();
     return data.data.merchants;
   },
 
   // Get merchant gift cards
-  MerchantGiftCard: async (userId: string): Promise<GiftCard[]> => {
+  MerchantGiftCard: async (
+    userId: string,
+  ): Promise<{ giftCards: GiftCard[]; setting: MerchantSetting }> => {
     const token = getAuthToken();
     const response = await fetch(`${API_BASE_URL}merchants/cards/${userId}`, {
       headers: {
@@ -56,9 +93,11 @@ export const merchantService = {
         "Content-Type": "application/json",
       },
     });
+
     if (!response.ok) throw new Error("Failed to fetch gift cards");
+
     const data = await response.json();
-    return data.data;
+    return data.data; // This returns {giftCards: [], setting: {}}
   },
 
   // Get merchant by ID
@@ -70,7 +109,9 @@ export const merchantService = {
         "Content-Type": "application/json",
       },
     });
+
     if (!response.ok) throw new Error("Failed to fetch merchant");
+
     const data = await response.json();
     return data.data.merchant;
   },
@@ -84,7 +125,9 @@ export const merchantService = {
         "Content-Type": "application/json",
       },
     });
+
     if (!response.ok) throw new Error("Failed to fetch gift card details");
+
     const data = await response.json();
     return data.data;
   },
@@ -111,7 +154,7 @@ export const merchantService = {
     });
 
     try {
-      const response = await axios.post<CreateMerchantResponse>(
+      const response = await axios.post(
         `${API_BASE_URL}merchants/`,
         multiPartData,
         {
@@ -167,7 +210,7 @@ export const merchantService = {
     });
 
     try {
-      const response = await axios.put<UpdateMerchantResponse>(
+      const response = await axios.put(
         `${API_BASE_URL}merchants/${merchantId}`,
         multiPartData,
         {

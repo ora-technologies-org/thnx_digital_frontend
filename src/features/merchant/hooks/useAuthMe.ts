@@ -4,36 +4,35 @@ import api from "@/shared/utils/api";
 
 interface AuthMeResponse {
   success: boolean;
+  message: string;
   data: {
-    user: {
+    id: string;
+    email: string;
+    name: string;
+    phone: string;
+    role: string;
+    avatar: string | null;
+    bio: string;
+    emailVerified: boolean;
+    isActive: boolean;
+    createdAt: string;
+    lastLogin: string;
+    merchantProfile?: {
       id: string;
-      email: string;
-      name: string;
-      phone: string;
-      role: string;
-      avatar: string | null;
-      bio: string;
-      emailVerified: boolean;
-      isActive: boolean;
-      createdAt: string;
-      lastLogin: string;
-      merchantProfile?: {
-        id: string;
-        businessName: string;
-        profileStatus: string;
-        isVerified: boolean;
-        verifiedAt: string;
-        rejectionReason: string | null;
-        rejectedAt: string | null;
-        address: string;
-        city: string;
-        country: string;
-        businessPhone: string;
-        businessEmail: string;
-        website: string | null;
-        logo: string | null;
-        description: string | null;
-      };
+      businessName: string;
+      profileStatus: string;
+      isVerified: boolean;
+      verifiedAt: string;
+      rejectionReason: string | null;
+      rejectedAt: string | null;
+      address: string;
+      city: string;
+      country: string;
+      businessPhone: string;
+      businessEmail: string;
+      website: string | null;
+      logo: string | null;
+      description: string | null;
     };
   };
 }
@@ -49,7 +48,7 @@ export const useAuthMe = () => {
     queryKey: ["auth-me"],
     queryFn: async (): Promise<UserData> => {
       const response = await api.get<AuthMeResponse>("/auth/me");
-      const user = response.data.data.user;
+      const user = response.data.data;
 
       return {
         name: user.name || "",

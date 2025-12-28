@@ -1,6 +1,5 @@
-// src/features/auth/hooks/useAuth.ts - FIXED VERSION
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import {
@@ -15,6 +14,7 @@ import { AxiosError } from "axios";
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation(); // 👈 Add this
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading, error } = useAppSelector(
     (state) => state.auth,
@@ -41,12 +41,32 @@ export const useAuth = () => {
       console.log("✅ Credentials dispatched to Redux");
       toast.success("Login successful!");
 
+      // 🎯 CHECK IF THIS IS A FIRST-TIME USER
       if (data.data.user.isFirstTime === true) {
         console.log("🔐 First time user - redirecting to change password");
         navigate("/change-password", { replace: true });
         return;
       }
 
+      // 🎯 NEW: Check if there's a saved location from ProtectedRoute
+      const savedLocation = location.state?.from;
+
+      console.log("🔍 Checking for saved location:", {
+        hasSavedLocation: !!savedLocation,
+        savedPath: savedLocation?.pathname,
+        savedSearch: savedLocation?.search,
+      });
+
+      if (savedLocation?.pathname && savedLocation.pathname !== "/login") {
+        // User was redirected from a protected route - go back there
+        const redirectPath =
+          savedLocation.pathname + (savedLocation.search || "");
+        console.log("↩️ Redirecting back to saved location:", redirectPath);
+        navigate(redirectPath, { replace: true });
+        return; // 👈 Important: return early
+      }
+
+      // Default navigation based on role
       const targetRoute =
         data.data.user.role === "MERCHANT"
           ? "/merchant/dashboard"
@@ -54,7 +74,7 @@ export const useAuth = () => {
             ? "/admin/dashboard"
             : "/";
 
-      console.log("🚀 Navigating to:", targetRoute);
+      console.log("🏠 No saved location, navigating to default:", targetRoute);
       navigate(targetRoute, { replace: true });
     },
     onError: (error: AxiosError<ErrorResponse>) => {
@@ -84,6 +104,20 @@ export const useAuth = () => {
 
       toast.success("Logged in with Google successfully!");
 
+      // 🎯 NEW: Check for saved location for Google login too
+      const savedLocation = location.state?.from;
+
+      if (savedLocation?.pathname && savedLocation.pathname !== "/login") {
+        const redirectPath =
+          savedLocation.pathname + (savedLocation.search || "");
+        console.log(
+          "↩️ Google login - redirecting to saved location:",
+          redirectPath,
+        );
+        navigate(redirectPath, { replace: true });
+        return;
+      }
+
       const targetRoute =
         data.data.user.role === "MERCHANT"
           ? "/merchant/dashboard"
@@ -110,7 +144,6 @@ export const useAuth = () => {
     onSuccess: (data) => {
       console.log("🎉 Registration successful, response:", data);
 
-      // Check if response has the expected structure
       if (!data.data?.user || !data.data?.tokens) {
         console.error("❌ Invalid registration response structure:", data);
         const errorMsg = "Registration response is missing required data";
@@ -119,7 +152,6 @@ export const useAuth = () => {
         return;
       }
 
-      // Dispatch credentials to Redux
       dispatch(
         setCredentials({
           user: data.data.user,
@@ -129,11 +161,8 @@ export const useAuth = () => {
       );
 
       console.log("✅ Registration credentials dispatched to Redux");
-      console.log("👤 User role:", data.data.user.role);
-
       toast.success(data.message || "Registration successful!");
 
-      // Navigate based on user role
       const targetRoute =
         data.data.user.role === "MERCHANT"
           ? "/merchant/dashboard"
@@ -146,12 +175,6 @@ export const useAuth = () => {
     },
     onError: (error: AxiosError<ErrorResponse>) => {
       console.error("❌ Registration failed:", error);
-      console.error("📋 Error details:", {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
-
       const message =
         error.response?.data?.message ||
         error.message ||
@@ -175,7 +198,6 @@ export const useAuth = () => {
       navigate("/login", { replace: true });
     },
     onError: () => {
-      // Even if API call fails, clear local state
       dispatch(logoutAction());
       queryClient.clear();
       navigate("/login", { replace: true });
@@ -193,22 +215,11 @@ export const useAuth = () => {
   };
 
   const register = async (data: RegisterData) => {
-    console.log("📝 Registration initiated with data:", {
-      ...data,
-      password: "***hidden***",
-    });
-
-    // Clean the data - remove empty phone if it exists
+    console.log("📝 Registration initiated");
     const cleanData = {
       ...data,
       ...(data.phone && data.phone.trim() !== "" ? { phone: data.phone } : {}),
     };
-
-    console.log("📤 Sending to backend:", {
-      ...cleanData,
-      password: "***hidden***",
-    });
-
     registerMutation.mutate(cleanData);
   };
 
