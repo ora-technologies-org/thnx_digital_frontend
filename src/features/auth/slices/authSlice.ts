@@ -1,6 +1,6 @@
 // src/features/auth/slices/authSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { User } from '../types/auth.types';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { User } from "../types/auth.types";
 
 interface AuthState {
   user: User | null;
@@ -21,7 +21,7 @@ const initialState: AuthState = {
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     setCredentials: (
@@ -30,7 +30,7 @@ const authSlice = createSlice({
         user: User;
         accessToken: string;
         refreshToken: string;
-      }>
+      }>,
     ) => {
       state.user = action.payload.user;
       state.accessToken = action.payload.accessToken;
@@ -39,11 +39,12 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
 
-      // Save to localStorage
-      localStorage.setItem('accessToken', action.payload.accessToken);
-      localStorage.setItem('refreshToken', action.payload.refreshToken);
+      // ✅ Save EVERYTHING to localStorage (including user)
+      localStorage.setItem("accessToken", action.payload.accessToken);
+      localStorage.setItem("refreshToken", action.payload.refreshToken);
+      localStorage.setItem("user", JSON.stringify(action.payload.user));
 
-      console.log('✅ setCredentials: Tokens saved to localStorage');
+      console.log("✅ setCredentials: Tokens AND user saved to localStorage");
     },
 
     setUser: (state, action: PayloadAction<User>) => {
@@ -52,7 +53,10 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
 
-      console.log('✅ setUser: User set in Redux');
+      // ✅ Also save user to localStorage when updating
+      localStorage.setItem("user", JSON.stringify(action.payload));
+
+      console.log("✅ setUser: User updated in Redux and localStorage");
     },
 
     logout: (state) => {
@@ -63,11 +67,12 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.error = null;
 
-      // Clear localStorage
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      // ✅ Clear ALL auth data from localStorage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
 
-      console.log('🚪 logout: Tokens removed from localStorage');
+      console.log("🚪 logout: All auth data removed from localStorage");
     },
 
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -81,6 +86,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, setUser, logout, setLoading, setError } = authSlice.actions;
-export default authSlice.reducer;
+export const { setCredentials, setUser, logout, setLoading, setError } =
+  authSlice.actions;
 
+export default authSlice.reducer;
