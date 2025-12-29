@@ -18,17 +18,31 @@ import { DashboardLayout } from "../../shared/components/layout/DashboardLayout"
 import { ProfileIncompleteAlert } from "../../shared/components/alerts/ProfileIncompleteAlert";
 import { CompleteProfileModal } from "../../shared/components/modals/CompleteProfileModal";
 import { useProfileStatus } from "../../features/merchant/hooks/useProfileStatus";
+
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
+import { useDashboardStats } from "@/features/merchant/hooks/useDahboard";
 
 export const DashboardPage: React.FC = () => {
+  // Hook to get profile status and permissions
   const { status, canCreateGiftCards, canEdit, rejectionReason, isLoading } =
     useProfileStatus();
+
+  // Hook to get dashboard statistics (only fetches if verified)
+  const {
+    stats,
+    isLoading: statsLoading,
+    error: statsError,
+    refresh: refreshStats,
+  } = useDashboardStats();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [modalAction, setModalAction] = useState("");
   const [showIncompleteAlert, setShowIncompleteAlert] = useState(true);
 
-  // Handle action attempts (create gift card, etc.)
+  /**
+   * Handle protected actions that require profile completion/verification
+   * Shows modal if profile is not complete, otherwise executes callback
+   */
   const handleProtectedAction = (action: string, callback?: () => void) => {
     if (!canCreateGiftCards) {
       setModalAction(action);
@@ -38,11 +52,34 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  // Navigate to profile edit page
+  /**
+   * Navigate to profile edit page
+   */
   const handleEditProfile = () => {
     window.location.href = "/merchant/complete-profile";
   };
 
+  /**
+   * Format currency value with proper formatting
+   * @param value - String or number to format as currency
+   * @returns Formatted currency string (e.g., "₹1,01,377")
+   */
+  const formatCurrency = (value: string | number): string => {
+    const numValue = typeof value === "string" ? parseFloat(value) : value;
+    if (isNaN(numValue)) return "₹0";
+    return `₹${numValue.toLocaleString("en-IN")}`;
+  };
+
+  /**
+   * Format number with proper formatting
+   * @param value - Number to format
+   * @returns Formatted number string (e.g., "1,234")
+   */
+  const formatNumber = (value: number): string => {
+    return value.toLocaleString("en-IN");
+  };
+
+  // Show loading spinner while fetching profile status
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -120,7 +157,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Alerts */}
+        {/* Alerts Section */}
         {status === "incomplete" && showIncompleteAlert && (
           <ProfileIncompleteAlert
             onDismiss={() => setShowIncompleteAlert(false)}
@@ -205,54 +242,100 @@ export const DashboardPage: React.FC = () => {
           variants={staggerContainer}
           className="space-y-6"
         >
-          {/* Stats Overview */}
+          {/* Stats Overview - Dynamic Data */}
           <motion.div variants={fadeInUp}>
             <h2 className="text-xl font-bold text-gray-900 mb-4">Overview</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Sales Card */}
               <Card className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-gray-600">Total Sales</p>
                   <TrendingUp className="w-5 h-5 text-green-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? "₹0" : "---"}
+                  {canCreateGiftCards
+                    ? statsLoading
+                      ? "..."
+                      : stats
+                        ? formatCurrency(stats.totalSales)
+                        : "₹0"
+                    : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </Card>
 
+              {/* Active Gift Cards Card */}
               <Card className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-gray-600">Gift Cards</p>
                   <Gift className="w-5 h-5 text-blue-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? "0" : "---"}
+                  {canCreateGiftCards
+                    ? statsLoading
+                      ? "..."
+                      : stats
+                        ? formatNumber(stats.activeGiftCards)
+                        : "0"
+                    : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Active cards</p>
               </Card>
 
+              {/* Redemptions Card */}
               <Card className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-gray-600">Redemptions</p>
                   <ShoppingBag className="w-5 h-5 text-purple-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? "0" : "---"}
+                  {canCreateGiftCards
+                    ? statsLoading
+                      ? "..."
+                      : stats
+                        ? formatNumber(stats.redemptions)
+                        : "0"
+                    : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </Card>
 
+              {/* Revenue Card */}
               <Card className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-gray-600">Revenue</p>
                   <DollarSign className="w-5 h-5 text-green-600" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {canCreateGiftCards ? "₹0" : "---"}
+                  {canCreateGiftCards
+                    ? statsLoading
+                      ? "..."
+                      : stats
+                        ? formatCurrency(stats.revenue)
+                        : "₹0"
+                    : "---"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </Card>
             </div>
+
+            {/* Error Message (if stats failed to load) */}
+            {canCreateGiftCards && statsError && !statsLoading && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <p className="text-sm text-red-700">
+                    Failed to load dashboard statistics. {statsError}
+                  </p>
+                </div>
+                <button
+                  onClick={refreshStats}
+                  className="text-sm text-red-600 hover:text-red-700 font-medium"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
           </motion.div>
 
           {/* Quick Actions */}

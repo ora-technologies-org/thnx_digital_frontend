@@ -10,6 +10,8 @@ import {
   Calendar,
   Tag,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { merchantService } from "@/features/admin/services/merchantService";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
@@ -30,6 +32,80 @@ const useDebounce = (value, delay = 500) => {
   }, [value, delay]);
 
   return debouncedValue;
+};
+
+// Pagination Component
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  const getPageNumbers = () => {
+    const pages = [];
+    const showPages = 5;
+
+    if (totalPages <= showPages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        pages.push(currentPage - 1);
+        pages.push(currentPage);
+        pages.push(currentPage + 1);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-8">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="p-2 rounded-lg border-2 border-gray-200 hover:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+
+      {getPageNumbers().map((page, index) =>
+        page === "..." ? (
+          <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-400">
+            ...
+          </span>
+        ) : (
+          <button
+            key={page}
+            onClick={() => onPageChange(page)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              currentPage === page
+                ? "bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg"
+                : "border-2 border-gray-200 hover:border-purple-500 text-gray-700"
+            }`}
+          >
+            {page}
+          </button>
+        ),
+      )}
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="p-2 rounded-lg border-2 border-gray-200 hover:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+    </div>
+  );
 };
 
 // Error Message
@@ -54,7 +130,7 @@ const ErrorMessage = ({ message, onRetry }) => (
   </motion.div>
 );
 
-// Gift Card Modal - Enhanced with settings
+// Gift Card Modal
 const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
   if (!card) return null;
 
@@ -64,7 +140,6 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
     (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  // Use settings if provided, otherwise use default colors
   const cardSettings = settings || {
     primaryColor: "#F54927",
     secondaryColor: "#46368A",
@@ -89,7 +164,6 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
           >
-            {/* Header */}
             <div className="flex justify-between items-start p-4 sm:p-6 border-b border-gray-200">
               <div className="pr-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -105,9 +179,7 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
               </button>
             </div>
 
-            {/* Content */}
             <div className="p-4 sm:p-6 space-y-6">
-              {/* Price Card with gradient */}
               <div
                 className="rounded-xl p-4 sm:p-6 text-white"
                 style={{
@@ -123,9 +195,7 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
                 </div>
               </div>
 
-              {/* Details Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Expiry Date */}
                 <div className="bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center gap-2 text-gray-600 mb-2">
                     <Calendar className="w-4 h-4" />
@@ -152,7 +222,6 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
                   </div>
                 </div>
 
-                {/* Status */}
                 <div className="bg-gray-50 rounded-xl p-4">
                   <div className="flex items-center gap-2 text-gray-600 mb-2">
                     <ShoppingBag className="w-4 h-4" />
@@ -172,7 +241,6 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
                 </div>
               </div>
 
-              {/* Description */}
               {card.description && (
                 <div className="bg-gray-50 rounded-xl p-4">
                   <div className="text-sm font-medium text-gray-600 mb-2">
@@ -183,35 +251,8 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
                   </p>
                 </div>
               )}
-
-              {/* Card Color Settings */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <div className="text-sm font-medium text-gray-600 mb-3">
-                  Card Design
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-8 h-8 rounded border border-gray-300"
-                      style={{ backgroundColor: cardSettings.primaryColor }}
-                    />
-                    <span className="text-xs text-gray-600">Primary</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-8 h-8 rounded border border-gray-300"
-                      style={{ backgroundColor: cardSettings.secondaryColor }}
-                    />
-                    <span className="text-xs text-gray-600">Secondary</span>
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    Font: {cardSettings.fontFamily}
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end gap-3 p-4 sm:p-6 border-t border-gray-200">
               <button
                 onClick={onClose}
@@ -227,7 +268,7 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
   );
 };
 
-// Merchant Card Component - Made responsive
+// Merchant Card Component
 const MerchantCard = ({ merchant, onClick }) => {
   const displayName =
     merchant.businessName || merchant.user?.name || "Unnamed Merchant";
@@ -241,7 +282,6 @@ const MerchantCard = ({ merchant, onClick }) => {
       onClick={onClick}
       className="bg-white rounded-xl p-4 sm:p-6 cursor-pointer border border-gray-200 hover:border-purple-300 transition-all"
     >
-      {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4 mb-4">
         <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg flex-shrink-0">
           {initial}
@@ -260,7 +300,6 @@ const MerchantCard = ({ merchant, onClick }) => {
         </div>
       </div>
 
-      {/* Details */}
       <div className="space-y-2 mb-4">
         <p className="text-xs sm:text-sm text-gray-600 truncate">
           {merchant.businessEmail || merchant.user?.email || "No email"}
@@ -277,7 +316,6 @@ const MerchantCard = ({ merchant, onClick }) => {
         )}
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <span
           className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -306,11 +344,15 @@ const MerchantCard = ({ merchant, onClick }) => {
   );
 };
 
-// Merchants Page - Made responsive
+// Merchants Page
+// Merchants Page - Fixed Version
 const MerchantsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
   const [selectedMerchant, setSelectedMerchant] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [previousSearch, setPreviousSearch] = useState("");
+  const itemsPerPage = 9;
 
   const {
     data: merchants,
@@ -345,6 +387,25 @@ const MerchantsPage = () => {
     );
   });
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredMerchants.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentMerchants = filteredMerchants.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes - using render-time logic instead of effect
+  if (debouncedSearch !== previousSearch) {
+    setPreviousSearch(debouncedSearch);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   if (error)
     return (
       <ErrorMessage message="Failed to load merchants" onRetry={refetch} />
@@ -361,7 +422,6 @@ const MerchantsPage = () => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div className="flex items-center gap-3 sm:gap-4">
           <motion.div
@@ -382,7 +442,6 @@ const MerchantsPage = () => {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="relative w-full sm:w-64 lg:w-80">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           <input
@@ -395,7 +454,6 @@ const MerchantsPage = () => {
         </div>
       </div>
 
-      {/* Results Count */}
       {debouncedSearch && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -408,10 +466,15 @@ const MerchantsPage = () => {
         </motion.div>
       )}
 
-      {/* Merchants Grid */}
+      {/* Pagination Info */}
+      <div className="mb-4 text-xs sm:text-sm text-gray-600">
+        Showing {startIndex + 1}-{Math.min(endIndex, filteredMerchants.length)}{" "}
+        of {filteredMerchants.length} merchants
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {filteredMerchants.length > 0 ? (
-          filteredMerchants.map((merchant) => (
+        {currentMerchants.length > 0 ? (
+          currentMerchants.map((merchant) => (
             <MerchantCard
               key={merchant.id}
               merchant={merchant}
@@ -431,11 +494,20 @@ const MerchantsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      )}
     </div>
   );
 };
 
-// Merchant Gift Cards Page - Made responsive with GiftCardDisplay
+// Merchant Gift Cards Page
 const MerchantGiftCardsPage = ({ merchant, onBack }) => {
   const [selectedCard, setSelectedCard] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -451,7 +523,6 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
     enabled: !!merchant.userId,
   });
 
-  // Extract cards and settings from the API response
   const cards = cardsData?.giftCards || [];
   const settings = cardsData?.setting || null;
 
@@ -487,7 +558,6 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Back Button */}
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium mb-4 sm:mb-6 transition-colors text-sm sm:text-base"
@@ -496,7 +566,6 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
         Back to Merchants
       </button>
 
-      {/* Merchant Info */}
       <div className="bg-white rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex-1">
@@ -525,7 +594,6 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
@@ -550,7 +618,6 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
         </div>
       </div>
 
-      {/* Cards Grid with GiftCardDisplay */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredCards.length > 0 ? (
           filteredCards.map((card) => (
@@ -576,7 +643,6 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
         )}
       </div>
 
-      {/* Modal */}
       <GiftCardModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

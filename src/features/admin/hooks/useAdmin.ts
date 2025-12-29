@@ -7,6 +7,7 @@ import {
   MerchantUser,
 } from "../api/admin.api";
 import { ContactMessage, contactUsService } from "../services/contactusService";
+import api from "../../../shared/utils/api";
 
 // ==================== QUERY KEYS - EXPORTED FOR USE IN OTHER FILES ====================
 export const adminQueryKeys = {
@@ -14,6 +15,8 @@ export const adminQueryKeys = {
   merchants: () => [...adminQueryKeys.all, "merchants"] as const,
   pendingMerchants: () => [...adminQueryKeys.all, "pending-merchants"] as const,
   merchant: (id: string) => [...adminQueryKeys.merchants(), id] as const,
+  dashboard: (timeRange: string) =>
+    [...adminQueryKeys.all, "dashboard", timeRange] as const,
 };
 
 // IMPORTANT: These query keys MUST be used consistently across all hooks:
@@ -22,22 +25,33 @@ export const adminQueryKeys = {
 // - Any other file that deals with merchant data
 
 // ==================== GET ALL MERCHANTS ====================
-export const useAllMerchants = () => {
+export const useAllMerchants = (params: {
+  page: number;
+  limit: number;
+  status?: string;
+  search?: string;
+  sortBy?: string;
+  order?: string;
+}) => {
   return useQuery({
-    queryKey: adminQueryKeys.merchants(),
-    queryFn: adminApi.getAllMerchants,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchOnMount: true, // Refetch when component mounts
+    queryKey: ["merchants", params], // ✅ Include ALL params in query key
+    queryFn: () => adminApi.getAllMerchants(params),
+    staleTime: 30000,
   });
 };
 
 // ==================== GET PENDING MERCHANTS ====================
-export const usePendingMerchants = () => {
+export const usePendingMerchants = (params: {
+  page: number;
+  limit: number;
+  search?: string;
+  sortBy?: string;
+  order?: string;
+}) => {
   return useQuery({
-    queryKey: adminQueryKeys.pendingMerchants(),
-    queryFn: adminApi.getPendingMerchants,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    queryKey: ["pending-merchants", params], // ✅ Include params in key!
+    queryFn: () => adminApi.getPendingMerchants(params),
+    staleTime: 1000 * 60 * 2,
     refetchOnWindowFocus: true,
     refetchOnMount: true,
   });
@@ -270,6 +284,7 @@ export const usePermanentlyDeleteMerchant = () => {
   };
 };
 
+// ==================== CONTACT MESSAGES ====================
 export const CONTACT_MESSAGES_QUERY_KEY = ["contact-messages"];
 export function useContactMessages() {
   return useQuery<ContactMessage[], Error>({
@@ -279,3 +294,81 @@ export function useContactMessages() {
     refetchOnWindowFocus: true,
   });
 }
+
+// ==================== DASHBOARD DATA TYPES ====================
+export interface DashboardData {
+  timeRange: string;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  overview: {
+    totalMerchants: number;
+    totalRevenue: {
+      value: number;
+      percentageChange: number;
+    };
+    giftCardsSold: {
+      value: number;
+      percentageChange: number;
+    };
+    totalOrders: {
+      value: number;
+      percentageChange: number;
+    };
+  };
+  verificationStatus: {
+    pending: number;
+    verified: number;
+    rejected: number;
+    activeCustomers: {
+      value: number;
+      percentageChange: number;
+    };
+  };
+  salesAnalytics: {
+    monthlyRevenueTrends: Array<{
+      month: string;
+      revenue: number;
+    }>;
+    currentMonthRevenue: number;
+    previousMonthRevenue: number;
+    percentageChange: number;
+  };
+  merchantGrowth: {
+    trends: Array<{
+      month: string;
+      count: number;
+    }>;
+    currentMonthMerchants: number;
+    previousMonthMerchants: number;
+    percentageChange: number;
+  };
+  giftCardStatus: Array<{
+    status: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
+export interface DashboardResponse {
+  success: boolean;
+  message: string;
+  data: DashboardData;
+}
+
+// ==================== DASHBOARD DATA HOOK ====================
+export const useDashboardData = (timeRange: string) => {
+  return useQuery<DashboardResponse>({
+    queryKey: adminQueryKeys.dashboard(timeRange),
+    queryFn: async () => {
+      const response = await api.get<DashboardResponse>(
+        `/admin/dashboard?timeRange=${timeRange}`,
+      );
+      return response.data;
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+  });
+};

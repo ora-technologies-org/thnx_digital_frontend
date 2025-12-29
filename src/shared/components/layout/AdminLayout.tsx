@@ -1,4 +1,4 @@
-// src/shared/components/layout/AdminLayout.tsx - STUNNING ADMIN SIDEBAR WITH DYNAMIC BADGE! 🎯✨
+// src/shared/components/layout/AdminLayout.tsx - FIXED LOGOUT & OPTIMIZED
 
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -21,7 +21,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import { usePendingMerchants } from "../../../features/admin/hooks/useAdmin";
-
 import NotificationBell from "../notifications/NotificationBell";
 
 interface AdminLayoutProps {
@@ -53,9 +52,8 @@ const getNavigation = (pendingCount: number) => [
     href: "/admin/pending",
     icon: Users,
     gradient: "from-orange-500 to-orange-600",
-    badge: pendingCount > 0 ? pendingCount : undefined, // Dynamic badge
+    badge: pendingCount > 0 ? pendingCount : undefined,
   },
-
   {
     name: "Gift Cards",
     href: "/admin/giftcards",
@@ -107,12 +105,40 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   // Get navigation with dynamic badge
   const navigation = getNavigation(pendingCount);
 
+  // FIXED LOGOUT FUNCTION
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    navigate("/login");
+    try {
+      console.log("Initiating logout...");
+
+      // Clear all localStorage items
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+
+      // Optional: Clear all localStorage (use with caution)
+      // localStorage.clear();
+
+      console.log("localStorage cleared successfully");
+
+      // Close mobile menu if open
+      setIsMobileMenuOpen(false);
+
+      // Navigate to login with replace to prevent back button issues
+      navigate("/login", { replace: true });
+
+      // Fallback: Force redirect if navigate doesn't work
+      setTimeout(() => {
+        if (window.location.pathname !== "/login") {
+          console.log("Fallback redirect triggered");
+          window.location.href = "/login";
+        }
+      }, 100);
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force redirect on error
+      window.location.href = "/login";
+    }
   };
 
   return (

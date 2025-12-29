@@ -1,4 +1,4 @@
-// src/features/admin/api/admin.api.ts - ADMIN API! 🔌
+// src/features/admin/api/admin.api.ts - FIXED PAGINATION API! 🔌📄
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 
@@ -40,6 +40,7 @@ export interface MerchantUser {
   rejectedAt: string | null;
   description: string | null;
   logo: string | null;
+  giftCardLimit: number;
   createdAt: string;
   updatedAt: string;
   user: {
@@ -79,6 +80,35 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface StatusCounts {
+  PENDING_VERIFICATION: number;
+  VERIFIED: number;
+  REJECTED: number;
+  INCOMPLETE: number;
+}
+
+export interface GetMerchantsParams {
+  page?: number;
+  limit?: number;
+  status?: "VERIFIED" | "PENDING_VERIFICATION" | "REJECTED" | "INCOMPLETE";
+  search?: string;
+  sortBy?: "date" | "name" | "status";
+  order?: "asc" | "desc";
+}
+
+export interface MerchantsResponse {
+  merchants: MerchantUser[];
+  pagination: PaginationInfo;
+  statusCounts: StatusCounts;
+}
+
 export interface MerchantsListResponse {
   merchants: MerchantUser[];
   count: number;
@@ -112,24 +142,83 @@ const apiCall = async <T>(url: string, options?: RequestInit): Promise<T> => {
 };
 
 export const adminApi = {
-  // ==================== GET ALL MERCHANTS ====================
-  // GET /api/merchants
-  getAllMerchants: async (): Promise<MerchantUser[]> => {
-    const result = await apiCall<ApiResponse<MerchantsListResponse>>(
-      `${API_URL}merchants`,
+  // ==================== GET ALL MERCHANTS WITH PAGINATION ====================
+  // GET /api/merchants?page=1&limit=10&status=VERIFIED&search=...&sortBy=date&order=desc
+  getAllMerchants: async (
+    params: GetMerchantsParams = {},
+  ): Promise<MerchantsResponse> => {
+    const {
+      page = 1,
+      limit = 12,
+      status,
+      search,
+      sortBy = "date",
+      order = "desc",
+    } = params;
+
+    // Build query parameters
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      order,
+    });
+
+    if (status) {
+      queryParams.append("status", status);
+    }
+
+    if (search && search.trim()) {
+      queryParams.append("search", search.trim());
+    }
+
+    if (sortBy) {
+      queryParams.append("sortBy", sortBy);
+    }
+
+    const result = await apiCall<ApiResponse<MerchantsResponse>>(
+      `${API_URL}merchants?${queryParams.toString()}`,
     );
-    return result.data.merchants;
+
+    return result.data;
   },
 
   // ==================== GET PENDING MERCHANTS ====================
   // GET /api/merchants/pending
-  getPendingMerchants: async (): Promise<MerchantUser[]> => {
-    const result = await apiCall<ApiResponse<MerchantsListResponse>>(
-      `${API_URL}merchants/pending`,
-    );
-    return result.data.merchants;
-  },
+  // Add pagination params to getPendingMerchants
+  getPendingMerchants: async (
+    params: GetMerchantsParams = {},
+  ): Promise<MerchantsResponse> => {
+    const {
+      page = 1,
+      limit = 12,
+      search,
+      sortBy = "date",
+      order = "desc",
+    } = params;
 
+    // Build query parameters
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sortBy,
+      order,
+    });
+
+    if (search && search.trim()) {
+      queryParams.append("search", search.trim());
+    }
+
+    console.log(
+      "🚀 Pending Merchants API Call:",
+      `${API_URL}merchants/pending?${queryParams.toString()}`,
+    );
+
+    const result = await apiCall<ApiResponse<MerchantsResponse>>(
+      `${API_URL}merchants/pending?${queryParams.toString()}`,
+    );
+
+    return result.data;
+  },
   // ==================== CREATE MERCHANT ====================
   // POST /api/merchants
   createMerchant: async (
@@ -147,7 +236,6 @@ export const adminApi = {
 
   // ==================== APPROVE MERCHANT ====================
   // POST /api/merchants/:merchantId/verify
-
   approveMerchant: async (
     merchantId: string,
     notes?: string,
@@ -167,7 +255,6 @@ export const adminApi = {
 
   // ==================== REJECT MERCHANT ====================
   // POST /api/merchants/:merchantId/verify
-
   rejectMerchant: async (
     merchantId: string,
     reason: string,

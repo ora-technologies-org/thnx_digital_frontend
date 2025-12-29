@@ -22,6 +22,7 @@ import { useGiftCardSettings } from "@/features/merchant/hooks/useGiftCardSettin
 import type { RootState } from "@/app/store";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 
+// Font options for the gift card
 const FONT_OPTIONS = [
   { value: "Inter", label: "Inter" },
   { value: "Roboto", label: "Roboto" },
@@ -31,6 +32,7 @@ const FONT_OPTIONS = [
   { value: "Lato", label: "Lato" },
 ];
 
+// Predefined color palette combinations
 const COLOR_PALETTES = [
   { primary: "#F54927", secondary: "#46368A", name: "Sunset" },
   { primary: "#3B82F6", secondary: "#8B5CF6", name: "Ocean" },
@@ -42,6 +44,7 @@ const COLOR_PALETTES = [
   { primary: "#EF4444", secondary: "#F97316", name: "Crimson" },
 ];
 
+// Gradient direction options with corresponding CSS classes
 const GRADIENT_DIRECTIONS: {
   value: GradientDirection;
   label: string;
@@ -53,6 +56,7 @@ const GRADIENT_DIRECTIONS: {
   { value: "BOTTOM_LEFT", label: "Bottom Left", class: "to-bl" },
 ];
 
+// Preset color options for quick selection
 const PRESET_COLORS = [
   "#F54927",
   "#3B82F6",
@@ -86,6 +90,10 @@ interface ColorPickerModalProps {
   title: string;
 }
 
+/**
+ * Color Picker Modal Component
+ * Allows users to select colors using a color picker, hex input, or preset colors
+ */
 const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   isOpen,
   onClose,
@@ -95,6 +103,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
 }) => {
   const [tempColor, setTempColor] = useState(currentColor);
 
+  // Sync temporary color with current color when it changes
   useEffect(() => {
     setTempColor(currentColor);
   }, [currentColor]);
@@ -108,6 +117,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -116,6 +126,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
       />
 
+      {/* Modal Content */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -147,7 +158,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
           </p>
         </div>
 
-        {/* Color Picker */}
+        {/* Custom Color Picker */}
         <div className="mb-4 sm:mb-6">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">
             Custom Color
@@ -164,6 +175,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
               value={tempColor}
               onChange={(e) => {
                 const value = e.target.value;
+                // Only allow valid hex color format
                 if (value.match(/^#[0-9A-Fa-f]{0,6}$/)) {
                   setTempColor(value);
                 }
@@ -175,7 +187,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
           </div>
         </div>
 
-        {/* Preset Colors */}
+        {/* Preset Colors Grid */}
         <div className="mb-4 sm:mb-6">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">
             Preset Colors
@@ -199,7 +211,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Action Buttons */}
         <div className="flex gap-2 sm:gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
@@ -213,13 +225,19 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   );
 };
 
+/**
+ * Gift Card Builder Component
+ * Main component for designing and customizing gift cards
+ */
 export const GiftCardBuilder: React.FC = () => {
   const dispatch = useAppDispatch();
 
+  // Get gift card settings from Redux store
   const giftCardSettings = useAppSelector(
     (state: RootState) => state.giftCardSettings,
   );
 
+  // Memoize settings with default values
   const settings = useMemo(() => {
     return (
       giftCardSettings?.settings || {
@@ -233,10 +251,13 @@ export const GiftCardBuilder: React.FC = () => {
   }, [giftCardSettings?.settings]);
 
   const { saveSettings, isSaving, isExistingSettings } = useGiftCardSettings();
+
+  // Component state
   const [showFontDropdown, setShowFontDropdown] = useState(false);
   const [showPrimaryPicker, setShowPrimaryPicker] = useState(false);
   const [showSecondaryPicker, setShowSecondaryPicker] = useState(false);
 
+  // Handler functions
   const handleSaveSettings = () => {
     saveSettings({
       primaryColor: settings.primaryColor,
@@ -268,11 +289,13 @@ export const GiftCardBuilder: React.FC = () => {
 
   return (
     <>
+      {/* Card Builder Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl border border-gray-200"
       >
+        {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
             Design Your Gift Card
@@ -283,7 +306,7 @@ export const GiftCardBuilder: React.FC = () => {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 sm:gap-8">
-          {/* Controls */}
+          {/* Controls Section */}
           <div className="space-y-4 sm:space-y-6">
             {/* Color Palette Selection */}
             <div>
@@ -332,6 +355,7 @@ export const GiftCardBuilder: React.FC = () => {
 
             {/* Custom Color Pickers */}
             <div className="space-y-3 sm:space-y-4">
+              {/* Primary Color */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Primary Color
@@ -362,6 +386,7 @@ export const GiftCardBuilder: React.FC = () => {
                 </div>
               </div>
 
+              {/* Secondary Color */}
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                   Secondary Color
@@ -488,7 +513,7 @@ export const GiftCardBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Amounts */}
+            {/* Quick Amount Selection */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">
                 Quick Select
@@ -516,7 +541,7 @@ export const GiftCardBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Save Button */}
+            {/* Save Settings Button */}
             <Button
               onClick={handleSaveSettings}
               isLoading={isSaving}
@@ -534,7 +559,7 @@ export const GiftCardBuilder: React.FC = () => {
             </Button>
           </div>
 
-          {/* Preview */}
+          {/* Preview Section */}
           <div className="flex items-center justify-center py-8 lg:py-0">
             <motion.div
               key={`${settings.primaryColor}-${settings.secondaryColor}-${settings.gradientDirection}-${settings.amount}`}
@@ -544,7 +569,7 @@ export const GiftCardBuilder: React.FC = () => {
               className="relative w-full max-w-sm sm:max-w-md lg:max-w-sm aspect-[1.6/1]"
               style={{ transformStyle: "preserve-3d" }}
             >
-              {/* Card */}
+              {/* Gift Card */}
               <div
                 className="absolute inset-0 rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col justify-between text-white"
                 style={{
@@ -560,7 +585,7 @@ export const GiftCardBuilder: React.FC = () => {
                   fontFamily: settings.fontFamily,
                 }}
               >
-                {/* Glow effect */}
+                {/* Animated Glow Effect */}
                 <motion.div
                   className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-50 blur-xl"
                   style={{
@@ -577,7 +602,7 @@ export const GiftCardBuilder: React.FC = () => {
                   }}
                 />
 
-                {/* Content */}
+                {/* Card Header */}
                 <div className="relative z-10">
                   <div className="flex justify-between items-start">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
@@ -592,6 +617,7 @@ export const GiftCardBuilder: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Card Balance */}
                 <div className="relative z-10">
                   <p className="text-xs sm:text-sm opacity-80 mb-1">Balance</p>
                   <motion.p
@@ -604,13 +630,14 @@ export const GiftCardBuilder: React.FC = () => {
                   </motion.p>
                 </div>
 
+                {/* Card Footer */}
                 <div className="relative z-10">
                   <p className="text-[10px] sm:text-xs opacity-80">
                     Gift Card • Thnx Digital
                   </p>
                 </div>
 
-                {/* Shine effect */}
+                {/* Animated Shine Effect */}
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-xl sm:rounded-2xl"
                   animate={{

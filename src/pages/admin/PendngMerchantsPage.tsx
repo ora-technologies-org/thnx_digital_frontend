@@ -1,6 +1,6 @@
 // src/pages/admin/PendingMerchantsPage.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle,
@@ -15,6 +15,8 @@ import {
   MapPin,
   FileText,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { AdminLayout } from "../../shared/components/layout/AdminLayout";
 import { Button } from "../../shared/components/ui/Button";
@@ -143,13 +145,120 @@ const MerchantListItem: React.FC<MerchantListItemProps> = ({
                 <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
                   Pending
                 </span>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRightIcon className="w-5 h-5 text-gray-400" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </motion.div>
+  );
+};
+
+// ============================================================
+// PAGINATION COMPONENT
+// ============================================================
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems: number;
+}
+
+const Pagination: React.FC<PaginationProps> = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalItems,
+}) => {
+  const getPageNumbers = () => {
+    const pages = [];
+    const showEllipsis = totalPages > 7;
+
+    if (!showEllipsis) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("ellipsis");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("ellipsis");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+      <div className="text-sm text-gray-600">
+        Showing <span className="font-semibold">{totalItems}</span> pending
+        applications
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map((page, index) => {
+              if (page === "ellipsis") {
+                return (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="px-3 py-2 text-gray-400"
+                  >
+                    ...
+                  </span>
+                );
+              }
+
+              return (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  onClick={() => onPageChange(page as number)}
+                  className={`min-w-[40px] h-10 ${
+                    currentPage === page
+                      ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white"
+                      : "hover:bg-amber-50"
+                  }`}
+                >
+                  {page}
+                </Button>
+              );
+            })}
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -546,7 +655,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   );
 };
 
-const ChevronRight: React.FC<{ className?: string }> = ({ className }) => (
+const ChevronRightIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     className={className}
@@ -567,7 +676,41 @@ const ChevronRight: React.FC<{ className?: string }> = ({ className }) => (
 // MAIN PAGE COMPONENT
 // ============================================================
 export const PendingMerchantsPage: React.FC = () => {
-  const { data: merchants, isLoading } = usePendingMerchants();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(3);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  console.log("", setLimit);
+  console.log("", setSearchQuery);
+
+  // Pass pagination params to hook
+  const {
+    data: merchantsResponse,
+    isLoading,
+    refetch,
+  } = usePendingMerchants({
+    page,
+    limit,
+    search: debouncedSearch || undefined,
+    sortBy: "date",
+    order: "desc",
+  });
+
+  //  Extract data from response
+  const merchants = merchantsResponse?.merchants || [];
+  const pagination = merchantsResponse?.pagination;
+  const totalItems = pagination?.total || 0;
+  const totalPages = pagination?.totalPages || 1;
+
   const approveMutation = useApproveMerchant();
   const rejectMutation = useRejectMerchant();
 
@@ -588,10 +731,20 @@ export const PendingMerchantsPage: React.FC = () => {
     setSelectedMerchant(merchant);
     setIsModalOpen(true);
   };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedMerchant(null);
   };
+
+  //  Use setPage instead of setCurrentPage
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const handleApprove = async (merchantId: string, notes: string) => {
     try {
       const response = await approveMutation.mutateAsync({
@@ -605,6 +758,9 @@ export const PendingMerchantsPage: React.FC = () => {
         title: "Merchant Approved! 🎉",
         message: response.message,
       });
+
+      // Refetch to update the list
+      refetch();
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -641,6 +797,9 @@ export const PendingMerchantsPage: React.FC = () => {
         message:
           response?.message || "The merchant application has been rejected.",
       });
+
+      //  Refetch to update the list
+      refetch();
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -666,7 +825,7 @@ export const PendingMerchantsPage: React.FC = () => {
       <AdminLayout>
         <div className="flex flex-col justify-center items-center h-64">
           <Spinner size="lg" />
-          <p className="mt-4 text-gray-600"></p>
+          <p className="mt-4 text-gray-600">Loading pending merchants...</p>
         </div>
       </AdminLayout>
     );
@@ -709,7 +868,7 @@ export const PendingMerchantsPage: React.FC = () => {
           >
             <Sparkles className="w-5 h-5 text-amber-600" />
             <span className="text-2xl font-bold text-amber-900">
-              {merchants?.length || 0}
+              {totalItems}
             </span>
             <span className="text-gray-600 font-medium">
               Applications Waiting
@@ -717,17 +876,29 @@ export const PendingMerchantsPage: React.FC = () => {
           </motion.div>
         </motion.div>
 
-        {/* Merchants List */}
+        {/*  Use merchants directly, not currentMerchants */}
         {merchants && merchants.length > 0 ? (
-          <div className="space-y-4">
-            {merchants.map((merchant) => (
-              <MerchantListItem
-                key={merchant.id}
-                merchant={merchant}
-                onClick={handleMerchantClick}
+          <>
+            <div className="space-y-4">
+              {merchants.map((merchant) => (
+                <MerchantListItem
+                  key={merchant.id}
+                  merchant={merchant}
+                  onClick={handleMerchantClick}
+                />
+              ))}
+            </div>
+
+            {/* ✅ UPDATED: Use pagination from API response */}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                totalItems={totalItems}
               />
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

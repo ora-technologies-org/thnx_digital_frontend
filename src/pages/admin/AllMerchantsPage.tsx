@@ -34,6 +34,8 @@ import {
   Download,
   Send,
   TrendingUp,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { AdminLayout } from "../../shared/components/layout/AdminLayout";
 import { Card, CardContent } from "../../shared/components/ui/Card";
@@ -49,23 +51,25 @@ import DocumentPreviewCard from "@/shared/components/modals/DocumentPreviewCard"
 import { Spinner } from "@/shared/components/ui/Spinner";
 
 // Types for filters
-type FilterStatus = "all" | "verified" | "pending" | "rejected" | "incomplete";
+type FilterStatus =
+  | "all"
+  | "VERIFIED"
+  | "PENDING_VERIFICATION"
+  | "REJECTED"
+  | "INCOMPLETE";
 type SortBy = "date" | "name" | "status";
 
-// Merchant Details Modal Component - FIXED: No useEffect for state sync
+// ==================== FULL MERCHANT DETAILS MODAL - COMPLETE CODE ====================
 const MerchantDetailsModal: React.FC<{
   merchant: MerchantUser | null;
   isOpen: boolean;
   onClose: () => void;
   onEdit: (merchant: MerchantUser) => void;
 }> = ({ merchant, isOpen, onClose, onEdit }) => {
-  // Use the merchant prop directly instead of local state
-  // This avoids the need for useEffect to sync state
   const currentMerchant = merchant;
 
   if (!currentMerchant || !isOpen) return null;
 
-  // Format date string to readable format
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -76,7 +80,6 @@ const MerchantDetailsModal: React.FC<{
     });
   };
 
-  // Get CSS classes for status badge based on merchant status
   const getStatusColor = (status: string) => {
     switch (status) {
       case "VERIFIED":
@@ -92,7 +95,6 @@ const MerchantDetailsModal: React.FC<{
     }
   };
 
-  // Get icon component for status badge
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "VERIFIED":
@@ -170,9 +172,6 @@ const MerchantDetailsModal: React.FC<{
                         : "bg-gradient-to-r from-rose-100 to-rose-50 text-rose-800 border border-rose-200"
                     }`}
                   >
-                    {/* <div
-                      className={`w-2 h-2 rounded-full mr-1.5 ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
-                    /> */}
                     {currentMerchant.user.isActive
                       ? "Active Account"
                       : "Inactive Account"}
@@ -369,7 +368,7 @@ const MerchantDetailsModal: React.FC<{
                         </p>
                       </div>
                     </div>
-                    <div className="p-4 bg-gradient-to-r from-orange-50/50 to-red-100/30 rounded-xl border border-orange-100 h-full">
+                    <div className="p-4 bg-gradient-to-r from-orange-50/50 to-red-100/30 rounded-xl border border-orange-100">
                       <div className="space-y-3">
                         <div className="flex items-start gap-3">
                           <MapPin className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
@@ -556,7 +555,7 @@ const MerchantDetailsModal: React.FC<{
                         </p>
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-1 h-1 rounded-full ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+                            className={`w-2 h-2 rounded-full ${currentMerchant.user.isActive ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
                           />
                           <span className="font-bold text-gray-900">
                             {currentMerchant.user.isActive
@@ -763,15 +762,14 @@ const MerchantDetailsModal: React.FC<{
   );
 };
 
+// ==================== MAIN PAGE COMPONENT ====================
 export const AllMerchantsPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const {
-    data: merchants,
-    isLoading,
-    refetch,
-    isRefetching,
-  } = useAllMerchants();
+
+  // ==================== PAGINATION & FILTER STATE ====================
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(3);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [sortBy, setSortBy] = useState<SortBy>("date");
@@ -780,20 +778,68 @@ export const AllMerchantsPage: React.FC = () => {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Use a ref to track the latest merchants data
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // ==================== API CALL WITH PAGINATION & DEBUG ====================
+  const {
+    data: merchantsResponse,
+    isLoading,
+    refetch,
+    isRefetching,
+    error,
+  } = useAllMerchants({
+    page,
+    limit,
+    status: filterStatus === "all" ? undefined : filterStatus,
+    search: debouncedSearch || undefined,
+    sortBy,
+    order: "desc",
+  });
+
+  // DEBUG: Log pagination changes
+  useEffect(() => {
+    console.log("🔍 PAGINATION DEBUG:", {
+      page,
+      limit,
+      filterStatus,
+      searchQuery: debouncedSearch,
+      sortBy,
+    });
+  }, [page, limit, filterStatus, debouncedSearch, sortBy]);
+
+  useEffect(() => {
+    console.log("📦 API RESPONSE:", merchantsResponse);
+    console.log("👥 Merchants Count:", merchantsResponse?.merchants?.length);
+    console.log("📄 Pagination:", merchantsResponse?.pagination);
+  }, [merchantsResponse]);
+
+  // Extract data
+  const merchants = useMemo(() => {
+    return merchantsResponse?.merchants ?? [];
+  }, [merchantsResponse?.merchants]);
+  const pagination = merchantsResponse?.pagination;
+  const statusCounts = merchantsResponse?.statusCounts;
+
   const merchantsRef = useRef(merchants);
 
-  // Update ref when merchants data changes
   useEffect(() => {
     merchantsRef.current = merchants;
   }, [merchants]);
 
-  // FIXED: Handle view details with auto-refresh capability
+  // ==================== HANDLERS ====================
   const handleViewDetails = useCallback((merchant: MerchantUser) => {
-    // Get the latest merchant data from the ref
     const latestMerchants = merchantsRef.current;
     if (latestMerchants) {
-      // Find the latest version of this merchant
       const latestMerchant = latestMerchants.find((m) => m.id === merchant.id);
       setSelectedMerchant(latestMerchant || merchant);
     } else {
@@ -802,19 +848,16 @@ export const AllMerchantsPage: React.FC = () => {
     setIsModalOpen(true);
   }, []);
 
-  // Handle edit merchant - navigates to edit page with merchant data
   const handleEdit = useCallback(
     (merchant: MerchantUser) => {
-      // Only allow editing for verified merchants
       if (merchant.profileStatus !== "VERIFIED") {
         alert("Only verified merchants can be edited!");
         return;
       }
 
-      // Map merchant data to form structure
       const formData = {
         email: merchant.user.email || "",
-        password: "", // Leave empty, user will need to update if needed
+        password: "",
         name: merchant.user.name || "",
         phone: merchant.user.phone || "",
         businessName: merchant.businessName || "",
@@ -842,86 +885,39 @@ export const AllMerchantsPage: React.FC = () => {
         additionalDocuments: merchant.additionalDocuments || undefined,
       };
 
-      // Populate the Redux store with merchant data
       dispatch(updateFormData(formData));
-
-      // Navigate to create merchant page (which will now show prefilled data)
       navigate(`/admin/merchants/edit/${merchant.id}`);
     },
     [dispatch, navigate],
   );
 
-  // Filter and sort merchants based on search, status, and sort criteria
-  const filteredAndSortedMerchants = useMemo(() => {
-    if (!merchants) return [];
-
-    let filtered = merchants;
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (m) =>
-          m.businessName.toLowerCase().includes(query) ||
-          m.businessEmail?.toLowerCase().includes(query) ||
-          m.user.email.toLowerCase().includes(query) ||
-          m.city?.toLowerCase().includes(query) ||
-          m.user.name.toLowerCase().includes(query),
-      );
-    }
-
-    // Status filter
-    switch (filterStatus) {
-      case "verified":
-        filtered = filtered.filter((m) => m.profileStatus === "VERIFIED");
-        break;
-      case "pending":
-        filtered = filtered.filter(
-          (m) => m.profileStatus === "PENDING_VERIFICATION",
-        );
-        break;
-      case "rejected":
-        filtered = filtered.filter((m) => m.profileStatus === "REJECTED");
-        break;
-      case "incomplete":
-        filtered = filtered.filter((m) => m.profileStatus === "INCOMPLETE");
-        break;
-    }
-
-    // Sorting
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.businessName.localeCompare(b.businessName);
-        case "date":
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        case "status":
-          return a.profileStatus.localeCompare(b.profileStatus);
-        default:
-          return 0;
-      }
-    });
-
-    return sorted;
-  }, [merchants, searchQuery, filterStatus, sortBy]);
-
-  // Calculate statistics for display
   const stats = useMemo(() => {
-    if (!merchants)
+    if (!statusCounts) {
       return { total: 0, verified: 0, pending: 0, rejected: 0, incomplete: 0 };
+    }
     return {
-      total: merchants.length,
-      verified: merchants.filter((m) => m.profileStatus === "VERIFIED").length,
-      pending: merchants.filter(
-        (m) => m.profileStatus === "PENDING_VERIFICATION",
-      ).length,
-      rejected: merchants.filter((m) => m.profileStatus === "REJECTED").length,
-      incomplete: merchants.filter((m) => m.profileStatus === "INCOMPLETE")
-        .length,
+      total: pagination?.total || 0,
+      verified: statusCounts.VERIFIED || 0,
+      pending: statusCounts.PENDING_VERIFICATION || 0,
+      rejected: statusCounts.REJECTED || 0,
+      incomplete: statusCounts.INCOMPLETE || 0,
     };
-  }, [merchants]);
+  }, [statusCounts, pagination]);
+
+  // ==================== PAGINATION HANDLERS ====================
+  const handlePageChange = (newPage: number) => {
+    console.log("📄 Changing page from", page, "to", newPage);
+    if (pagination && newPage >= 1 && newPage <= pagination.totalPages) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    console.log("📊 Changing limit from", limit, "to", newLimit);
+    setLimit(newLimit);
+    setPage(1);
+  };
 
   // Loading state
   if (isLoading) {
@@ -934,10 +930,29 @@ export const AllMerchantsPage: React.FC = () => {
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col justify-center items-center h-[80vh]">
+          <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Error Loading Merchants
+          </h2>
+          <p className="text-gray-600">
+            {error instanceof Error ? error.message : "Unknown error"}
+          </p>
+          <Button onClick={() => refetch()} className="mt-4">
+            Try Again
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="pb-8">
-        {/* Merchant Details Modal - Now uses prop directly without local state */}
         <MerchantDetailsModal
           merchant={selectedMerchant}
           isOpen={isModalOpen}
@@ -967,14 +982,13 @@ export const AllMerchantsPage: React.FC = () => {
                   Merchant Directory
                 </h1>
                 <p className="text-gray-600 mt-2">
-                  Manage and monitor all registered merchants in your network
+                  Manage and monitor all registered merchants
                 </p>
               </div>
             </div>
 
-            {/* Enhanced Refresh Button */}
             <motion.button
-              whileHover={{ scale: 1.05, backgroundColor: "#f3f4f6" }}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => refetch()}
               disabled={isRefetching}
@@ -989,7 +1003,7 @@ export const AllMerchantsPage: React.FC = () => {
             </motion.button>
           </div>
 
-          {/* Enhanced Stats Cards */}
+          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -1121,7 +1135,7 @@ export const AllMerchantsPage: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Enhanced Search and Filters Section */}
+          {/* Search and Filters */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1129,7 +1143,6 @@ export const AllMerchantsPage: React.FC = () => {
             className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 p-5 shadow-sm"
           >
             <div className="flex flex-col lg:flex-row gap-5">
-              {/* Search */}
               <div className="flex-1">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Search Merchants
@@ -1138,7 +1151,7 @@ export const AllMerchantsPage: React.FC = () => {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search by business name, email, location, or contact..."
+                    placeholder="Search by business name, email, location..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl transition-all bg-white shadow-sm"
@@ -1146,7 +1159,6 @@ export const AllMerchantsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Status Filter */}
               <div className="lg:w-64">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Filter by Status
@@ -1155,21 +1167,21 @@ export const AllMerchantsPage: React.FC = () => {
                   <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <select
                     value={filterStatus}
-                    onChange={(e) =>
-                      setFilterStatus(e.target.value as FilterStatus)
-                    }
+                    onChange={(e) => {
+                      setFilterStatus(e.target.value as FilterStatus);
+                      setPage(1);
+                    }}
                     className="w-full pl-10 pr-8 py-3.5 border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl transition-all cursor-pointer appearance-none bg-white shadow-sm"
                   >
                     <option value="all">All Status</option>
-                    <option value="verified">Verified</option>
-                    <option value="pending">Pending</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="incomplete">Incomplete</option>
+                    <option value="VERIFIED">Verified</option>
+                    <option value="PENDING_VERIFICATION">Pending</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="INCOMPLETE">Incomplete</option>
                   </select>
                 </div>
               </div>
 
-              {/* Sort */}
               <div className="lg:w-64">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Sort By
@@ -1178,7 +1190,10 @@ export const AllMerchantsPage: React.FC = () => {
                   <SortAsc className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortBy)}
+                    onChange={(e) => {
+                      setSortBy(e.target.value as SortBy);
+                      setPage(1);
+                    }}
                     className="w-full pl-10 pr-8 py-3.5 border-2 border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl transition-all cursor-pointer appearance-none bg-white shadow-sm"
                   >
                     <option value="date">Newest First</option>
@@ -1191,64 +1206,139 @@ export const AllMerchantsPage: React.FC = () => {
           </motion.div>
         </motion.div>
 
-        {/* Results Count - Enhanced */}
+        {/* Results Header */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
           className="mb-6"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
                 Merchant Results
               </h3>
               <p className="text-gray-600">
-                Found{" "}
+                Showing{" "}
                 <span className="font-bold text-gray-900">
-                  {filteredAndSortedMerchants.length}
+                  {pagination ? (page - 1) * limit + 1 : 0}
+                </span>{" "}
+                to{" "}
+                <span className="font-bold text-gray-900">
+                  {pagination ? Math.min(page * limit, pagination.total) : 0}
                 </span>{" "}
                 of{" "}
                 <span className="font-bold text-gray-900">
-                  {merchants?.length || 0}
+                  {pagination?.total || 0}
                 </span>{" "}
                 merchants
               </p>
             </div>
-            {filteredAndSortedMerchants.length > 0 && (
-              <div className="text-sm text-gray-600">
-                <span className="font-medium">Sorted by: </span>
-                <span className="font-semibold text-gray-900">
-                  {sortBy === "date"
-                    ? "Newest First"
-                    : sortBy === "name"
-                      ? "Business Name"
-                      : "Status"}
-                </span>
-              </div>
-            )}
+
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 font-medium">Show:</span>
+              <select
+                value={limit}
+                onChange={(e) => handleLimitChange(Number(e.target.value))}
+                className="px-3 py-2 border-2 border-gray-200 rounded-lg text-sm font-semibold"
+              >
+                <option value={6}>6 per page</option>
+                <option value={12}>12 per page</option>
+                <option value={24}>24 per page</option>
+                <option value={48}>48 per page</option>
+              </select>
+            </div>
           </div>
         </motion.div>
 
-        {/* Merchants Grid - FIXED VISIBILITY */}
-        {filteredAndSortedMerchants.length > 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-              {filteredAndSortedMerchants.map((merchant, index) => (
-                <MerchantCard
-                  key={merchant.id}
-                  merchant={merchant}
-                  index={index}
-                  onViewDetails={handleViewDetails}
-                  onEdit={handleEdit}
-                />
-              ))}
-            </div>
-          </motion.div>
+        {/* Merchants Grid */}
+        {merchants.length > 0 ? (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {merchants.map((merchant, index) => (
+                  <MerchantCard
+                    key={merchant.id}
+                    merchant={merchant}
+                    index={index}
+                    onViewDetails={handleViewDetails}
+                    onEdit={handleEdit}
+                  />
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9 }}
+                className="mt-8 flex items-center justify-center gap-2"
+              >
+                <Button
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 1 || isRefetching}
+                  variant="outline"
+                  className="px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  {Array.from(
+                    { length: pagination.totalPages },
+                    (_, i) => i + 1,
+                  )
+                    .filter((p) => {
+                      return (
+                        p === 1 ||
+                        p === pagination.totalPages ||
+                        Math.abs(p - page) <= 1
+                      );
+                    })
+                    .map((p, index, array) => {
+                      const showEllipsisBefore =
+                        index > 0 && p - array[index - 1] > 1;
+
+                      return (
+                        <React.Fragment key={p}>
+                          {showEllipsisBefore && (
+                            <span className="px-3 py-2 text-gray-500">...</span>
+                          )}
+                          <button
+                            onClick={() => handlePageChange(p)}
+                            disabled={isRefetching}
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                              p === page
+                                ? "bg-blue-500 text-white shadow-md"
+                                : "bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                <Button
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === pagination.totalPages || isRefetching}
+                  variant="outline"
+                  className="px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </motion.div>
+            )}
+          </>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -1283,6 +1373,7 @@ export const AllMerchantsPage: React.FC = () => {
                     onClick={() => {
                       setSearchQuery("");
                       setFilterStatus("all");
+                      setPage(1);
                     }}
                     variant="outline"
                     className="px-8 py-3 border-2 border-gray-300 hover:border-gray-400 text-gray-700 rounded-xl font-semibold"

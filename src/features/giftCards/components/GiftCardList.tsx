@@ -106,23 +106,19 @@ export const EnhancedGiftCardList: React.FC = () => {
 
   const [currentTime] = useState(() => Date.now());
 
+  // Use dynamic stats from API response
   const stats = useMemo(() => {
-    const total = giftCards.length;
-    const active = giftCards.filter((card) => card.isActive).length;
-    const totalValue = giftCards.reduce(
-      (sum, card) => sum + parseFloat(card.price),
-      0,
-    );
-    const expiringSoon = giftCards.filter((card) => {
-      const expiryDate = new Date(card.expiryDate);
-      const daysUntilExpiry = Math.ceil(
-        (expiryDate.getTime() - currentTime) / (1000 * 60 * 60 * 24),
-      );
-      return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
-    }).length;
+    if (!data?.data) {
+      return { total: 0, active: 0, totalValue: 0, expiringSoon: 0 };
+    }
 
-    return { total, active, totalValue, expiringSoon };
-  }, [giftCards, currentTime]);
+    return {
+      total: data.data.totalGiftCards || 0,
+      active: data.data.activeCards || 0,
+      totalValue: parseFloat(data.data.totalValue || "0"),
+      expiringSoon: data.data.expiringSoon || 0,
+    };
+  }, [data?.data]);
 
   const processedCards = useMemo(() => {
     let filtered = giftCards;
@@ -354,7 +350,7 @@ export const EnhancedGiftCardList: React.FC = () => {
               <Gift className="w-6 h-6 text-blue-600" />
             </div>
             <span className="text-sm font-medium text-gray-600">
-              {data?.data.total}/{data?.data.limit}
+              {data?.data.totalGiftCards}/{data?.data.limitAllowed}
             </span>
           </div>
           <h3 className="text-2xl font-bold text-gray-900 mb-1">
