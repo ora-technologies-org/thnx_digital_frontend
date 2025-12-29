@@ -1,0 +1,310 @@
+import { Mail, Phone, MessageSquare, Calendar, User, X } from "lucide-react";
+import AdminLayout from "@/shared/components/layout/AdminLayout";
+import { useContactMessages } from "@/features/admin/hooks/useAdmin";
+import { ContactMessage } from "@/features/admin/services/contactusService";
+import { useState } from "react";
+import { Spinner } from "@/shared/components/ui/Spinner";
+
+export default function ContactUsPage() {
+  const { data: messages = [], isLoading, error } = useContactMessages();
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <Spinner size="lg" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <Spinner size="lg" />
+          {/* <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-red-800 text-center mb-2">
+              Error Loading Messages
+            </h3>
+            <p className="text-red-600 text-center">
+              {error instanceof Error ? error.message : "An error occurred"}
+            </p>
+          </div> */}
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+              Contact Messages
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">
+              Manage and respond to user inquiries
+            </p>
+            <div className="mt-4">
+              <div className="bg-white px-4 py-2 rounded-lg shadow-sm inline-block">
+                <p className="text-lg sm:text-xl text-blue-600">
+                  {messages.length}{" "}
+                  <span className="text-xs sm:text-sm text-gray-500">
+                    Total Messages
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {messages.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-8 sm:p-12 text-center">
+              <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-700 mb-2">
+                No Messages Yet
+              </h3>
+              <p className="text-sm sm:text-base text-gray-500">
+                Contact messages will appear here when submitted
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {messages.map((message) => (
+                <ContactCard key={message.id} message={message} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}
+
+interface ContactCardProps {
+  message: ContactMessage;
+}
+
+function ContactCard({ message }: ContactCardProps) {
+  const [showFullMessage, setShowFullMessage] = useState(false);
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case "new":
+        return "bg-green-100 text-green-800";
+      case "read":
+        return "bg-blue-100 text-blue-800";
+      case "replied":
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Function to truncate message to exactly 3 lines
+  const truncateMessageToThreeLines = (text: string) => {
+    const lines = text.split("\n");
+    const maxLines = 3;
+
+    if (lines.length <= maxLines) {
+      // If 3 lines or less, show all
+      return text;
+    }
+
+    // Take first 3 lines and add ellipsis
+    const truncated = lines.slice(0, maxLines).join("\n");
+    return truncated + "...";
+  };
+
+  const truncatedMessage = truncateMessageToThreeLines(message.message);
+  const isTruncated = message.message !== truncatedMessage;
+
+  return (
+    <>
+      <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 sm:p-6 border border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
+                {message.name}
+              </h3>
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="truncate">
+                  {new Date(message.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+          {message.status && (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusColor(message.status)}`}
+            >
+              {message.status}
+            </span>
+          )}
+        </div>
+
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center gap-2 text-gray-700 min-w-0">
+            <Mail className="w-4 h-4 text-blue-500 flex-shrink-0" />
+            <a
+              href={`mailto:${message.email}`}
+              className="hover:text-blue-600 transition-colors text-sm truncate"
+            >
+              {message.email}
+            </a>
+          </div>
+          {message.phone && (
+            <div className="flex items-center gap-2 text-gray-700 min-w-0">
+              <Phone className="w-4 h-4 text-green-500 flex-shrink-0" />
+              <a
+                href={`tel:${message.phone}`}
+                className="hover:text-green-600 transition-colors text-sm truncate"
+              >
+                {message.phone}
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Message Content - Fixed to 3 lines */}
+        <div
+          className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+          onClick={() => setShowFullMessage(true)}
+        >
+          <div className="flex items-start gap-2 mb-2">
+            <MessageSquare className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+            <p className="text-xs sm:text-sm font-medium text-gray-700">
+              Message {isTruncated && "(Click to view full)"}
+            </p>
+          </div>
+          <div className="relative">
+            {/* This div ensures exactly 3 lines with ellipsis */}
+            <div className="line-clamp-3 text-gray-600 text-xs sm:text-sm leading-relaxed break-words whitespace-pre-line">
+              {message.message}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Full Message Modal */}
+      {showFullMessage && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={() => setShowFullMessage(false)}
+            />
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {message.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">{message.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowFullMessage(false)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">
+                      Contact Information
+                    </h4>
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-blue-500" />
+                        <a
+                          href={`mailto:${message.email}`}
+                          className="hover:text-blue-600"
+                        >
+                          {message.email}
+                        </a>
+                      </div>
+                      {message.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-green-500" />
+                          <a
+                            href={`tel:${message.phone}`}
+                            className="hover:text-green-600"
+                          >
+                            {message.phone}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">
+                      Submitted On
+                    </h4>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Calendar className="w-4 h-4" />
+                      {new Date(message.createdAt).toLocaleDateString("en-US", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Full Message
+                    </h4>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <p className="text-gray-700 whitespace-pre-line leading-relaxed">
+                        {message.message}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={() => setShowFullMessage(false)}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

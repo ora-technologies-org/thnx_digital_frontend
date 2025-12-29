@@ -1,325 +1,445 @@
-// src/features/orders/components/OrderDetailsModal.tsx - DETAILED ORDER VIEW! 📋
-import React from 'react';
-import { motion } from 'framer-motion';
-import { 
-  X, User, Mail, Phone, MapPin, Calendar, CreditCard,
-  Package, Gift, DollarSign, CheckCircle, Clock, XCircle,
-  Download, Printer
-} from 'lucide-react';
-import { Modal } from '../../../shared/components/ui/Modal';
-import { Badge } from '../../../shared/components/ui/Badge';
-import { Button } from '../../../shared/components/ui/Button';
-import type { Order } from '../types/order.types';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X,
+  User,
+  Phone,
+  Mail,
+  CreditCard,
+  Calendar,
+  DollarSign,
+  QrCode,
+  CheckCircle,
+  Clock,
+  XCircle,
+} from "lucide-react";
 
-interface OrderDetailsModalProps {
+export type OrderStatus = "ACTIVE" | "USED" | "EXPIRED";
+export type PaymentStatus = "COMPLETED" | "PENDING" | "FAILED";
+
+export interface Customer {
+  name?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+
+  // Identifiers
+  orderId?: string;
+  orderNumber?: string;
+  qrCode?: string;
+
+  // Status
+  status: OrderStatus;
+  paymentStatus?: PaymentStatus;
+
+  // Amounts
+  purchaseAmount?: number | string;
+  currentBalance?: number | string;
+  bonusAmount?: number | string;
+  amount?: number | string;
+  totalAmount?: number;
+
+  // Customer
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customer?: Customer;
+
+  // Payment
+  paymentMethod?: string;
+  transactionId?: string;
+
+  // Dates
+  createdAt: string;
+  purchasedAt?: string;
+  expiresAt?: string;
+  usedAt?: string;
+
+  // Extras
+  notes?: string;
+
+  // Items (if applicable)
+  items?: OrderItem[];
+}
+
+interface OrderDetailModalProps {
   order: Order;
+
   isOpen: boolean;
+
   onClose: () => void;
 }
 
-export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
+/**
+ * OrderDetailModal Component
+ * Displays comprehensive details of a selected order in a modal dialog
+ * Shows customer info, order details, payment info, dates, and additional information
+ */
+export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   order,
   isOpen,
   onClose,
 }) => {
+  // Early return if no order is provided
+  if (!order) return null;
+
+  /**
+   * Returns the appropriate icon component for order status
+   * @param status - The order status (ACTIVE, USED, EXPIRED)
+   * @returns React icon component with appropriate color
+   */
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-6 h-6 text-green-600" />;
-      case 'pending':
-        return <Clock className="w-6 h-6 text-orange-600" />;
-      case 'failed':
-        return <XCircle className="w-6 h-6 text-red-600" />;
+      case "ACTIVE":
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case "USED":
+        return <CheckCircle className="w-5 h-5 text-gray-600" />;
+      case "EXPIRED":
+        return <XCircle className="w-5 h-5 text-red-600" />;
       default:
-        return null;
+        return <Clock className="w-5 h-5 text-gray-600" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  /**
+   * Returns the appropriate Tailwind CSS classes for order status badge
+   * @param status - The order status (ACTIVE, USED, EXPIRED)
+   * @returns Tailwind CSS classes for background and text color
+   */
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <Badge variant="success" className="text-base">Completed</Badge>;
-      case 'pending':
-        return <Badge variant="warning" className="text-base">Pending</Badge>;
-      case 'failed':
-        return <Badge variant="danger" className="text-base">Failed</Badge>;
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "USED":
+        return "bg-gray-100 text-gray-800";
+      case "EXPIRED":
+        return "bg-red-100 text-red-800";
       default:
-        return <Badge variant="default" className="text-base">{status}</Badge>;
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  /**
+   * Returns the appropriate Tailwind CSS classes for payment status badge
+   * @param status - The payment status (COMPLETED, PENDING, FAILED)
+   * @returns Tailwind CSS classes for background and text color
+   */
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case "COMPLETED":
+        return "bg-green-100 text-green-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
+      case "FAILED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
-  const handleDownloadReceipt = () => {
-    // Implementation for downloading receipt
-    console.log('Downloading receipt for order:', order.orderId);
-  };
+  // ============================================================================
+  // Render
+  // ============================================================================
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="xl">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between pb-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Order Details
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">Order ID:</span>
-              <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
-                {order.orderId}
-              </code>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {getStatusIcon(order.status)}
-            {getStatusBadge(order.status)}
-          </div>
-        </div>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+          />
 
-        {/* Order Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Customer Information */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Customer Information
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Name
-                </label>
-                <p className="text-sm font-medium text-gray-900 mt-1">
-                  {order.customer.name}
-                </p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Email
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <a
-                    href={`mailto:${order.customer.email}`}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    {order.customer.email}
-                  </a>
-                </div>
-              </div>
-              {order.customer.phone && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Phone
-                  </label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <a
-                      href={`tel:${order.customer.phone}`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {order.customer.phone}
-                    </a>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* QR Code Icon */}
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <QrCode className="w-6 h-6 text-white" />
                   </div>
-                </div>
-              )}
-              {order.customer.address && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Address
-                  </label>
-                  <div className="flex items-start gap-2 mt-1">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    <p className="text-sm text-gray-900">{order.customer.address}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Order Information */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-purple-600" />
-              Order Information
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Order Date
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-gray-900">
-                    {new Date(order.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500 ml-6">
-                  {new Date(order.createdAt).toLocaleTimeString()}
-                </p>
-              </div>
-              {order.completedAt && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Completed Date
-                  </label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <CheckCircle className="w-4 h-4 text-green-400" />
-                    <p className="text-sm text-gray-900">
-                      {new Date(order.completedAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                  {/* Title and Order ID */}
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      Order Details
+                    </h2>
+                    <p className="text-blue-100 text-sm">
+                      {order.qrCode?.split("-").slice(-2).join("-") ||
+                        order.orderId ||
+                        "N/A"}
                     </p>
                   </div>
                 </div>
-              )}
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Payment Method
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <CreditCard className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-gray-900 capitalize">
-                    {order.paymentMethod || 'Card Payment'}
-                  </p>
-                </div>
-              </div>
-              {order.transactionId && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Transaction ID
-                  </label>
-                  <code className="block px-2 py-1 bg-white rounded text-xs font-mono mt-1">
-                    {order.transactionId}
-                  </code>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Gift Card Details */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Gift className="w-5 h-5 text-blue-600" />
-            Gift Card Details
-          </h3>
-          <div className="bg-white rounded-lg p-4 shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                  {order.giftCard.title}
-                </h4>
-                {order.giftCard.description && (
-                  <p className="text-sm text-gray-600">{order.giftCard.description}</p>
+                {/* Close Button */}
+                <button
+                  onClick={onClose}
+                  className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+                <div className="mb-6 flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  {/* Order Status */}
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(order.status)}
+                    <div>
+                      <div className="text-sm text-gray-600">Order Status</div>
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getStatusColor(order.status || "ACTIVE")}`}
+                      >
+                        {order.status || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Payment Status */}
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">Payment Status</div>
+                    <span
+                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getPaymentStatusColor(order.paymentStatus || "PENDING")}`}
+                    >
+                      {order.paymentStatus || "PENDING"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-600" />
+                    Customer Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Full Name */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <User className="w-4 h-4" />
+                        Full Name
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {order.customerName || order.customer?.name || "N/A"}
+                      </div>
+                    </div>
+
+                    {/* Phone Number */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <Phone className="w-4 h-4" />
+                        Phone Number
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {order.customerPhone || order.customer?.phone || "N/A"}
+                      </div>
+                    </div>
+
+                    {/* Email Address - spans full width on desktop */}
+                    <div className="p-4 bg-gray-50 rounded-xl md:col-span-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <Mail className="w-4 h-4" />
+                        Email Address
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {order.customerEmail || order.customer?.email || "N/A"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                    Order Details
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Purchase Amount */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Purchase Amount
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        Rs.{" "}
+                        {parseFloat(
+                          order.purchaseAmount || order.amount || 0,
+                        ).toLocaleString()}
+                      </div>
+                    </div>
+
+                    {/* Current Balance */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Current Balance
+                      </div>
+                      <div className="text-2xl font-bold text-green-600">
+                        Rs.{" "}
+                        {parseFloat(
+                          order.currentBalance || order.amount || 0,
+                        ).toLocaleString()}
+                      </div>
+                    </div>
+
+                    {/* Bonus Amount - only shown if bonus exists */}
+                    {order.bonusAmount && parseFloat(order.bonusAmount) > 0 && (
+                      <div className="p-4 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
+                        <div className="text-sm text-orange-700 mb-1">
+                          Bonus Amount
+                        </div>
+                        <div className="text-xl font-bold text-orange-600">
+                          Rs. {parseFloat(order.bonusAmount).toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-purple-600" />
+                    Payment Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Payment Method */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Payment Method
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {order.paymentMethod || "N/A"}
+                      </div>
+                    </div>
+
+                    {/* Transaction ID - only shown if transaction ID exists */}
+                    {order.transactionId && (
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <div className="text-sm text-gray-600 mb-1">
+                          Transaction ID
+                        </div>
+                        <div className="font-mono text-sm text-gray-900">
+                          {order.transactionId}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    Additional Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* QR Code */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">QR Code</div>
+                      <div className="font-mono text-sm text-gray-900 break-all">
+                        {order.qrCode || "N/A"}
+                      </div>
+                    </div>
+
+                    {/* Purchase Date */}
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Purchase Date
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {new Date(
+                          order.purchasedAt || order.createdAt,
+                        ).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Expiry Date - only shown if expiry date exists */}
+                    {order.expiresAt && (
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <div className="text-sm text-gray-600 mb-1">
+                          Expiry Date
+                        </div>
+                        <div className="font-semibold text-gray-900">
+                          {new Date(order.expiresAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Used Date - only shown if order has been used */}
+                    {order.usedAt && (
+                      <div className="p-4 bg-gray-50 rounded-xl">
+                        <div className="text-sm text-gray-600 mb-1">
+                          Used Date
+                        </div>
+                        <div className="font-semibold text-gray-900">
+                          {new Date(order.usedAt).toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {order.notes && (
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <div className="text-sm text-blue-700 mb-2 font-semibold">
+                      Notes
+                    </div>
+                    <div className="text-gray-700">{order.notes}</div>
+                  </div>
                 )}
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-gray-900">
-                  ₹{parseFloat(order.giftCard.price).toFixed(2)}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Qty: {order.quantity}
-                </div>
-              </div>
-            </div>
-            {order.giftCard.code && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Gift Card Code
-                </label>
-                <code className="block text-lg font-mono font-bold text-gray-900 mt-1 tracking-wider">
-                  {order.giftCard.code}
-                </code>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Payment Summary */}
-        <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            Payment Summary
-          </h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="text-gray-900">
-                ₹{(parseFloat(order.giftCard.price) * order.quantity).toFixed(2)}
-              </span>
-            </div>
-            {order.discount && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Discount</span>
-                <span className="text-green-600">
-                  -₹{parseFloat(order.discount).toFixed(2)}
-                </span>
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors font-medium"
+                >
+                  Close
+                </button>
               </div>
-            )}
-            {order.tax && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tax</span>
-                <span className="text-gray-900">
-                  ₹{parseFloat(order.tax).toFixed(2)}
-                </span>
-              </div>
-            )}
-            <div className="border-t border-gray-300 pt-2 mt-2">
-              <div className="flex justify-between">
-                <span className="text-base font-semibold text-gray-900">Total</span>
-                <span className="text-2xl font-bold text-gray-900">
-                  ₹{parseFloat(order.amount).toFixed(2)}
-                </span>
-              </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-
-        {/* Notes */}
-        {order.notes && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-2">Notes</h4>
-            <p className="text-sm text-gray-700">{order.notes}</p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
-          <Button
-            variant="outline"
-            onClick={handlePrint}
-            className="flex-1"
-          >
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleDownloadReceipt}
-            className="flex-1"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Download Receipt
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onClose}
-            className="flex-1"
-          >
-            Close
-          </Button>
-        </div>
-      </div>
-    </Modal>
+        </>
+      )}
+    </AnimatePresence>
   );
 };

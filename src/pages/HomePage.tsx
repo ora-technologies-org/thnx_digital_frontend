@@ -1,31 +1,56 @@
+import React, { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useInView } from "react-intersection-observer";
+import {
+  Gift,
+  ShoppingBag,
+  QrCode,
+  Zap,
+  Shield,
+  ArrowRight,
+  Sparkles,
+  Heart,
+  Check,
+  ChevronRight,
+} from "lucide-react";
 
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
-import { 
-  Gift, ShoppingBag, QrCode, Zap, Shield, ArrowRight, Sparkles, Heart, Check, ChevronRight
-} from 'lucide-react';
-
-import { GradientText } from '../shared/components/animated/GradientText';
-import { MagneticButton } from '../shared/components/animated/MagneticButton';
-import { TiltCard } from '../shared/components/animated/TiltCard';
-import { StatsCounter } from '../shared/components/animated/StatsCounter';
-import { FloatingGiftCard } from '../shared/components/animated/FloatingGiftCard';
-import { ScrollProgress } from '../shared/components/animated/ScrollProgress';
-import { FAQAccordion } from '../shared/components/animated/FAQAccordion';
-import { TestimonialCard } from '../shared/components/animated/TestimonialCard';
-import { NewsletterSignup } from '../shared/components/animated/NewsletterSignup';
-import { GiftCardBuilder } from '../shared/components/animated/GiftCardBuilder';
-
-
-import { fadeInUp, staggerContainer, slideInLeft, slideInRight } from '../shared/utils/animations';
-import { FloatingChatButton } from '@/shared/components/animated';
+import { GradientText } from "../shared/components/animated/GradientText";
+import { MagneticButton } from "../shared/components/animated/MagneticButton";
+import { TiltCard } from "../shared/components/animated/TiltCard";
+import { StatsCounter } from "../shared/components/animated/StatsCounter";
+import { FloatingGiftCard } from "../shared/components/animated/FloatingGiftCard";
+import { ScrollProgress } from "../shared/components/animated/ScrollProgress";
+import { FAQAccordion } from "../shared/components/animated/FAQAccordion";
+import { TestimonialCard } from "../shared/components/animated/TestimonialCard";
+import { NewsletterSignup } from "../shared/components/animated/NewsletterSignup";
+import { GiftCardBuilder } from "../shared/components/animated/GiftCardBuilder";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  fadeInUp,
+  staggerContainer,
+  slideInLeft,
+  slideInRight,
+} from "../shared/utils/animations";
+import { FloatingChatButton } from "@/shared/components/animated";
+import { useAppSelector } from "@/app/hooks";
 
 export const HomePage: React.FC = () => {
-  const [heroRef, heroInView] = useInView({ threshold: 0.2, triggerOnce: true });
-  const [featuresRef, featuresInView] = useInView({ threshold: 0.2, triggerOnce: true });
-  const [statsRef, statsInView] = useInView({ threshold: 0.2, triggerOnce: true });
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const [heroRef, heroInView] = useInView({
+    threshold: 0.2,
+    triggerOnce: true,
+  });
+  const [featuresRef, featuresInView] = useInView({
+    threshold: 0.2,
+    triggerOnce: true,
+  });
+  const [statsRef] = useInView({
+    threshold: 0.2,
+    triggerOnce: true,
+  });
 
   const { scrollY } = useScroll();
   const y1 = useTransform(scrollY, [0, 500], [0, 150]);
@@ -34,52 +59,77 @@ export const HomePage: React.FC = () => {
   // FAQ data
   const faqs = [
     {
-      question: 'How do I purchase a gift card?',
-      answer: 'Simply browse our marketplace, select a gift card, enter your details, and make payment. No account needed! You\'ll receive your QR code instantly via email.',
+      question: "How do I purchase a gift card?",
+      answer:
+        "Simply browse our marketplace, select a gift card, enter your details, and make payment. No account needed! You'll receive your QR code instantly via email.",
     },
     {
-      question: 'Can I use a gift card partially?',
-      answer: 'Yes! Our QR codes support partial redemption. Use any amount up to your balance, and the remaining balance stays on the same QR code.',
+      question: "Can I use a gift card partially?",
+      answer:
+        "Yes! Our QR codes support partial redemption. Use any amount up to your balance, and the remaining balance stays on the same QR code.",
     },
     {
-      question: 'What if I lose my QR code?',
-      answer: 'No worries! You can always retrieve your gift card using your email address in the "Track My Gift Card" section.',
+      question: "What if I lose my QR code?",
+      answer:
+        'No worries! You can always retrieve your gift card using your email address in the "Track My Gift Card" section.',
     },
     {
-      question: 'How do I become a merchant?',
-      answer: 'Click "Become a Merchant", fill out the registration form, complete your profile with documents, and wait for admin verification. Once approved, you can start creating gift cards!',
+      question: "How do I become a merchant?",
+      answer:
+        'Click "Become a Merchant", fill out the registration form, complete your profile with documents, and wait for admin verification. Once approved, you can start creating gift cards!',
     },
     {
-      question: 'Are there any fees for merchants?',
-      answer: 'We charge a small transaction fee only when a gift card is redeemed. Creating and listing gift cards is completely free!',
+      question: "Are there any fees for merchants?",
+      answer:
+        "We charge a small transaction fee only when a gift card is redeemed. Creating and listing gift cards is completely free!",
     },
   ];
 
   // Testimonials data
   const testimonials = [
     {
-      name: 'Rajesh Kumar',
-      role: 'Restaurant Owner',
-      avatar: 'RK',
+      name: "Rajesh Kumar",
+      role: "Restaurant Owner",
+      avatar: "RK",
       rating: 5,
-      text: 'Thnx Digital transformed how we sell gift cards! The QR code system is brilliant and our customers love the convenience.',
+      text: "Thnx Digital transformed how we sell gift cards! The QR code system is brilliant and our customers love the convenience.",
     },
     {
-      name: 'Priya Sharma',
-      role: 'Happy Customer',
-      avatar: 'PS',
+      name: "Priya Sharma",
+      role: "Happy Customer",
+      avatar: "PS",
       rating: 5,
-      text: 'I bought gift cards for my entire family! The process was so smooth, and they could use them at multiple locations. Highly recommend!',
+      text: "I bought gift cards for my entire family! The process was so smooth, and they could use them at multiple locations. Highly recommend!",
     },
     {
-      name: 'Amit Patel',
-      role: 'Spa Owner',
-      avatar: 'AP',
+      name: "Amit Patel",
+      role: "Spa Owner",
+      avatar: "AP",
       rating: 5,
-      text: 'Managing gift cards was always a headache until we found Thnx Digital. Now everything is tracked digitally and redemption is instant!',
+      text: "Managing gift cards was always a headache until we found Thnx Digital. Now everything is tracked digitally and redemption is instant!",
     },
   ];
+  useEffect(() => {
+    const qrFromUrl = searchParams.get("qr");
 
+    if (qrFromUrl) {
+      console.log("🔍 QR code detected in URL:", qrFromUrl);
+
+      // Change 'merchant' to 'MERCHANT' (uppercase)
+      if (isAuthenticated && user?.role === "MERCHANT") {
+        console.log(
+          "✅ Authenticated merchant detected, redirecting to scan page",
+        );
+        navigate(`/merchant/scan?qr=${encodeURIComponent(qrFromUrl)}`, {
+          replace: true,
+        });
+      } else if (isAuthenticated && user?.role !== "MERCHANT") {
+        console.log("ℹ️ User is authenticated but not a merchant");
+      } else {
+        console.log("ℹ️ User not authenticated, staying on homepage");
+      }
+    }
+  }, [searchParams, isAuthenticated, user, navigate]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 overflow-hidden">
       {/* Scroll Progress Bar */}
@@ -89,7 +139,7 @@ export const HomePage: React.FC = () => {
       <FloatingChatButton />
 
       {/* ===== HEADER ===== */}
-      <motion.header 
+      <motion.header
         className="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-lg border-b border-gray-200/50"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
@@ -99,7 +149,7 @@ export const HomePage: React.FC = () => {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 group">
-              <motion.div 
+              <motion.div
                 className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg"
                 whileHover={{ rotate: 360, scale: 1.1 }}
                 transition={{ duration: 0.6 }}
@@ -142,7 +192,10 @@ export const HomePage: React.FC = () => {
       </motion.header>
 
       {/* ===== HERO SECTION ===== */}
-      <section ref={heroRef} className="relative pt-32 pb-20 px-4 overflow-hidden min-h-screen flex items-center">
+      <section
+        ref={heroRef}
+        className="relative pt-32 pb-20 px-4 overflow-hidden min-h-screen flex items-center"
+      >
         {/* Animated background elements */}
         <motion.div
           style={{ y: y1 }}
@@ -162,16 +215,18 @@ export const HomePage: React.FC = () => {
               variants={staggerContainer}
             >
               {/* Badge */}
-              <motion.div 
-                variants={fadeInUp} 
+              <motion.div
+                variants={fadeInUp}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 rounded-full mb-6"
               >
                 <Sparkles className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-600">🎉 Over 10,000 Happy Users!</span>
+                <span className="text-sm font-medium text-blue-600">
+                  🎉 Over 10,000 Happy Users!
+                </span>
               </motion.div>
 
               {/* Heading */}
-              <motion.h1 
+              <motion.h1
                 variants={fadeInUp}
                 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight"
               >
@@ -181,16 +236,20 @@ export const HomePage: React.FC = () => {
               </motion.h1>
 
               {/* Subheading */}
-              <motion.p 
+              <motion.p
                 variants={fadeInUp}
                 className="text-xl text-gray-600 mb-8 leading-relaxed"
               >
-                Create, purchase, and redeem gift cards with <span className="font-semibold text-gray-900">QR codes</span>. 
-                Simple, fast, and secure. <span className="text-blue-600 font-semibold">No account needed to buy!</span>
+                Create, purchase, and redeem gift cards with{" "}
+                <span className="font-semibold text-gray-900">QR codes</span>.
+                Simple, fast, and secure.{" "}
+                <span className="text-blue-600 font-semibold">
+                  No account needed to buy!
+                </span>
               </motion.p>
 
               {/* CTA Buttons */}
-              <motion.div 
+              <motion.div
                 variants={fadeInUp}
                 className="flex flex-wrap gap-4 mb-8"
               >
@@ -208,43 +267,49 @@ export const HomePage: React.FC = () => {
               </motion.div>
 
               {/* Trust indicators */}
-              <motion.div 
+              <motion.div
                 variants={fadeInUp}
                 className="grid grid-cols-3 gap-4 pt-8 border-t border-gray-200"
               >
                 <div className="text-center">
                   <Shield className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <span className="text-sm text-gray-600 block">100% Secure</span>
+                  <span className="text-sm text-gray-600 block">
+                    100% Secure
+                  </span>
                 </div>
                 <div className="text-center">
                   <Zap className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-                  <span className="text-sm text-gray-600 block">Instant Delivery</span>
+                  <span className="text-sm text-gray-600 block">
+                    Instant Delivery
+                  </span>
                 </div>
                 <div className="text-center">
                   <Heart className="w-8 h-8 text-red-600 mx-auto mb-2" />
-                  <span className="text-sm text-gray-600 block">Loved by Many</span>
+                  <span className="text-sm text-gray-600 block">
+                    Loved by Many
+                  </span>
                 </div>
               </motion.div>
             </motion.div>
 
             {/* Right: Floating Cards */}
-            <motion.div 
+            <motion.div
               className="relative h-[600px] hidden lg:block"
               initial="hidden"
               animate={heroInView ? "visible" : "hidden"}
               variants={staggerContainer}
             >
-              <FloatingGiftCard 
+              <FloatingGiftCard
                 delay={0.2}
                 size="lg"
                 className="absolute top-0 right-20"
               />
-              <FloatingGiftCard 
+              <FloatingGiftCard
                 delay={0.4}
                 size="md"
                 className="absolute top-40 left-10 rotate-12"
               />
-              <FloatingGiftCard 
+              <FloatingGiftCard
                 delay={0.6}
                 size="md"
                 className="absolute bottom-20 right-0 -rotate-12"
@@ -255,7 +320,10 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ===== STATS SECTION ===== */}
-      <section ref={statsRef} className="py-20 px-4 bg-white/50 backdrop-blur-sm">
+      <section
+        ref={statsRef}
+        className="py-20 px-4 bg-white/50 backdrop-blur-sm"
+      >
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial="hidden"
@@ -285,7 +353,7 @@ export const HomePage: React.FC = () => {
       <section ref={featuresRef} className="py-20 px-4">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
-          <motion.div 
+          <motion.div
             className="text-center mb-16"
             initial="hidden"
             animate={featuresInView ? "visible" : "hidden"}
@@ -295,12 +363,13 @@ export const HomePage: React.FC = () => {
               Why Choose <GradientText>Thnx Digital</GradientText>?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Experience the future of gift cards with cutting-edge technology and seamless user experience
+              Experience the future of gift cards with cutting-edge technology
+              and seamless user experience
             </p>
           </motion.div>
 
           {/* Features Grid */}
-          <motion.div 
+          <motion.div
             className="grid md:grid-cols-3 gap-8 mb-12"
             initial="hidden"
             animate={featuresInView ? "visible" : "hidden"}
@@ -316,7 +385,9 @@ export const HomePage: React.FC = () => {
                   Create Gift Cards
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-4">
-                  Merchants can create beautiful, custom gift cards for their business in minutes. Set your price, expiry, and start selling!
+                  Merchants can create beautiful, custom gift cards for their
+                  business in minutes. Set your price, expiry, and start
+                  selling!
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2 text-sm text-gray-600">
@@ -345,7 +416,8 @@ export const HomePage: React.FC = () => {
                   Easy Purchase
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-4">
-                  Customers can buy gift cards without creating an account. Just enter details, pay, and receive your QR code instantly!
+                  Customers can buy gift cards without creating an account. Just
+                  enter details, pay, and receive your QR code instantly!
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2 text-sm text-gray-600">
@@ -374,7 +446,8 @@ export const HomePage: React.FC = () => {
                   QR Code Redemption
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-4">
-                  Use QR codes to redeem at any merchant location instantly. Track balance, history, and use partially - all in one code!
+                  Use QR codes to redeem at any merchant location instantly.
+                  Track balance, history, and use partially - all in one code!
                 </p>
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2 text-sm text-gray-600">
@@ -407,10 +480,12 @@ export const HomePage: React.FC = () => {
       <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white overflow-hidden relative">
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full" 
+          <div
+            className="absolute top-0 left-0 w-full h-full"
             style={{
-              backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-              backgroundSize: '50px 50px'
+              backgroundImage:
+                "radial-gradient(circle, white 1px, transparent 1px)",
+              backgroundSize: "50px 50px",
             }}
           />
         </div>
@@ -449,7 +524,8 @@ export const HomePage: React.FC = () => {
               </motion.div>
               <h3 className="text-2xl font-semibold mb-3">Choose Gift Card</h3>
               <p className="text-blue-100">
-                Browse from hundreds of gift cards from your favorite local merchants
+                Browse from hundreds of gift cards from your favorite local
+                merchants
               </p>
 
               {/* Connecting line */}
@@ -471,7 +547,9 @@ export const HomePage: React.FC = () => {
               >
                 2
               </motion.div>
-              <h3 className="text-2xl font-semibold mb-3">Purchase Instantly</h3>
+              <h3 className="text-2xl font-semibold mb-3">
+                Purchase Instantly
+              </h3>
               <p className="text-blue-100">
                 Enter your details and get your QR code immediately via email
               </p>
@@ -497,7 +575,8 @@ export const HomePage: React.FC = () => {
               </motion.div>
               <h3 className="text-2xl font-semibold mb-3">Redeem Anywhere</h3>
               <p className="text-blue-100">
-                Show your QR code at any merchant location to redeem your gift card
+                Show your QR code at any merchant location to redeem your gift
+                card
               </p>
             </motion.div>
           </div>
@@ -576,16 +655,17 @@ export const HomePage: React.FC = () => {
           <motion.div
             className="absolute inset-0 opacity-20"
             animate={{
-              backgroundPosition: ['0% 0%', '100% 100%'],
+              backgroundPosition: ["0% 0%", "100% 100%"],
             }}
             transition={{
               duration: 10,
               repeat: Infinity,
-              repeatType: 'reverse',
+              repeatType: "reverse",
             }}
             style={{
-              backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-              backgroundSize: '50px 50px',
+              backgroundImage:
+                "radial-gradient(circle, white 1px, transparent 1px)",
+              backgroundSize: "50px 50px",
             }}
           />
 
@@ -594,7 +674,8 @@ export const HomePage: React.FC = () => {
               Ready to Get Started?
             </h2>
             <p className="text-xl text-blue-100 mb-8">
-              Join thousands of happy customers and merchants using Thnx Digital today
+              Join thousands of happy customers and merchants using Thnx Digital
+              today
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link to="/browse">
@@ -604,7 +685,11 @@ export const HomePage: React.FC = () => {
                 </MagneticButton>
               </Link>
               <Link to="/register">
-                <MagneticButton size="lg" variant="outline" className="bg-white text-blue-600 hover:bg-gray-100">
+                <MagneticButton
+                  size="lg"
+                  variant="outline"
+                  className="bg-white text-blue-600 hover:bg-gray-100"
+                >
                   Become a Merchant
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </MagneticButton>
@@ -635,10 +720,26 @@ export const HomePage: React.FC = () => {
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">For Merchants</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">API</a></li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    For Merchants
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    API
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -646,10 +747,26 @@ export const HomePage: React.FC = () => {
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    About Us
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Careers
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Blog
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Contact
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -657,17 +774,34 @@ export const HomePage: React.FC = () => {
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Refund Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Terms of Service
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Refund Policy
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">
+                    Cookie Policy
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
 
           <div className="pt-8 border-t border-gray-800 text-center">
             <p className="text-gray-500 text-sm">
-              © 2025 Thnx Digital. All rights reserved. Made with ❤️ in Nepal By OraTechnologies
+              © 2025 Thnx Digital. All rights reserved. Made with ❤️ in Nepal By
+              OraTechnologies
             </p>
           </div>
         </div>
