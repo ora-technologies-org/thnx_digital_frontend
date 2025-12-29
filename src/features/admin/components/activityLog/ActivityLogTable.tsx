@@ -1,7 +1,7 @@
 // src/features/admin/components/activityLog/ActivityLogTable.tsx
 
-import React, { useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,16 +9,15 @@ import {
   User,
   Info,
   ExternalLink,
-  Wifi,
   WifiOff,
   Radio,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   ActivityLog,
   ActivityLogPagination,
   CATEGORY_CONFIG,
   SEVERITY_CONFIG,
-} from '../../types/activityLog.types';
+} from "../../types/activityLog.types";
 
 interface ActivityLogTableProps {
   logs: ActivityLog[];
@@ -29,17 +28,17 @@ interface ActivityLogTableProps {
   // Real-time props
   newLogIds?: Set<string>;
   isConnected?: boolean;
-  connectionStatus?: 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus?: "connecting" | "connected" | "disconnected" | "error";
   onReconnect?: () => void;
   realtimeCount?: number;
 }
 
 const formatTime = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 };
 
@@ -48,14 +47,14 @@ const getRelativeTime = (dateString: string) => {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffInSeconds < 5) return 'Just now';
+  if (diffInSeconds < 5) return "Just now";
   if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
   });
 };
 
@@ -66,8 +65,8 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
   isLoading,
   onViewDetails,
   newLogIds = new Set(),
-  isConnected = false,
-  connectionStatus = 'disconnected',
+  // isConnected = false,
+  connectionStatus = "disconnected",
   onReconnect,
   realtimeCount = 0,
 }) => {
@@ -76,7 +75,7 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
   // Auto-scroll to top when new logs arrive
   useEffect(() => {
     if (realtimeCount > 0 && tableRef.current) {
-      tableRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      tableRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [realtimeCount]);
 
@@ -106,8 +105,12 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
         <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
           <Info className="w-10 h-10 text-gray-400" />
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">No activity logs found</h3>
-        <p className="text-gray-600">Try adjusting your filters or check back later</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">
+          No activity logs found
+        </h3>
+        <p className="text-gray-600">
+          Try adjusting your filters or check back later
+        </p>
       </motion.div>
     );
   }
@@ -123,10 +126,10 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
       <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h3 className="font-semibold text-gray-900">Activity Logs</h3>
-          
+
           {/* Live Status Badge */}
           <div className="flex items-center gap-2">
-            {connectionStatus === 'connected' && (
+            {connectionStatus === "connected" && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -141,31 +144,37 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                 <Radio className="w-3 h-3 text-green-600" />
               </motion.div>
             )}
-            
-            {connectionStatus === 'connecting' && (
+
+            {connectionStatus === "connecting" && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100 rounded-full">
                 <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                <span className="text-xs font-medium text-yellow-700">Connecting...</span>
+                <span className="text-xs font-medium text-yellow-700">
+                  Connecting...
+                </span>
               </div>
             )}
-            
-            {connectionStatus === 'disconnected' && (
+
+            {connectionStatus === "disconnected" && (
               <button
                 onClick={onReconnect}
                 className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
               >
                 <WifiOff className="w-3 h-3 text-gray-500" />
-                <span className="text-xs font-medium text-gray-600">Offline</span>
+                <span className="text-xs font-medium text-gray-600">
+                  Offline
+                </span>
               </button>
             )}
-            
-            {connectionStatus === 'error' && (
+
+            {connectionStatus === "error" && (
               <button
                 onClick={onReconnect}
                 className="flex items-center gap-2 px-3 py-1.5 bg-red-100 hover:bg-red-200 rounded-full transition-colors"
               >
                 <WifiOff className="w-3 h-3 text-red-500" />
-                <span className="text-xs font-medium text-red-600">Reconnect</span>
+                <span className="text-xs font-medium text-red-600">
+                  Reconnect
+                </span>
               </button>
             )}
           </div>
@@ -182,13 +191,14 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
           )}
         </div>
 
-        <p className="text-sm text-gray-500">
-          {pagination.total} total logs
-        </p>
+        <p className="text-sm text-gray-500">{pagination.total} total logs</p>
       </div>
 
       {/* Table */}
-      <div ref={tableRef} className="overflow-x-auto max-h-[600px] overflow-y-auto">
+      <div
+        ref={tableRef}
+        className="overflow-x-auto max-h-[600px] overflow-y-auto"
+      >
         <table className="w-full">
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -225,19 +235,23 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                 return (
                   <motion.tr
                     key={log.id}
-                    initial={isNew ? { opacity: 0, x: -20, backgroundColor: '#FFF7ED' } : { opacity: 0, y: 10 }}
-                    animate={{ 
-                      opacity: 1, 
-                      x: 0, 
+                    initial={
+                      isNew
+                        ? { opacity: 0, x: -20, backgroundColor: "#FFF7ED" }
+                        : { opacity: 0, y: 10 }
+                    }
+                    animate={{
+                      opacity: 1,
+                      x: 0,
                       y: 0,
-                      backgroundColor: isNew ? '#FFF7ED' : '#FFFFFF',
+                      backgroundColor: isNew ? "#FFF7ED" : "#FFFFFF",
                     }}
                     exit={{ opacity: 0, x: 20 }}
-                    transition={{ 
+                    transition={{
                       duration: isNew ? 0.5 : 0.2,
                       delay: isNew ? 0 : index * 0.02,
                     }}
-                    className={`hover:bg-gray-50 transition-colors ${isNew ? 'ring-2 ring-orange-300 ring-inset' : ''}`}
+                    className={`hover:bg-gray-50 transition-colors ${isNew ? "ring-2 ring-orange-300 ring-inset" : ""}`}
                   >
                     {/* Time */}
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -259,7 +273,9 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                           <p className="text-sm font-medium text-gray-900">
                             {getRelativeTime(log.createdAt)}
                           </p>
-                          <p className="text-xs text-gray-500">{formatTime(log.createdAt)}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatTime(log.createdAt)}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -276,8 +292,12 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
                     {/* Severity */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${severityConfig.dotColor}`} />
-                        <span className={`text-xs font-medium ${severityConfig.color}`}>
+                        <span
+                          className={`w-2 h-2 rounded-full ${severityConfig.dotColor}`}
+                        />
+                        <span
+                          className={`text-xs font-medium ${severityConfig.color}`}
+                        >
                           {severityConfig.label}
                         </span>
                       </div>
@@ -292,7 +312,10 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
 
                     {/* Description */}
                     <td className="px-6 py-4">
-                      <p className="text-sm text-gray-900 max-w-md truncate" title={log.description}>
+                      <p
+                        className="text-sm text-gray-900 max-w-md truncate"
+                        title={log.description}
+                      >
                         {log.description}
                       </p>
                     </td>
@@ -333,14 +356,14 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
       {/* Pagination */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          Showing{' '}
+          Showing{" "}
           <span className="font-semibold">
             {(pagination.page - 1) * pagination.limit + 1}
-          </span>{' '}
-          to{' '}
+          </span>{" "}
+          to{" "}
           <span className="font-semibold">
             {Math.min(pagination.page * pagination.limit, pagination.total)}
-          </span>{' '}
+          </span>{" "}
           of <span className="font-semibold">{pagination.total}</span> results
         </p>
 
@@ -356,34 +379,37 @@ export const ActivityLogTable: React.FC<ActivityLogTableProps> = ({
           </motion.button>
 
           <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-              let pageNum: number;
-              if (pagination.totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (pagination.page <= 3) {
-                pageNum = i + 1;
-              } else if (pagination.page >= pagination.totalPages - 2) {
-                pageNum = pagination.totalPages - 4 + i;
-              } else {
-                pageNum = pagination.page - 2 + i;
-              }
+            {Array.from(
+              { length: Math.min(5, pagination.totalPages) },
+              (_, i) => {
+                let pageNum: number;
+                if (pagination.totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (pagination.page <= 3) {
+                  pageNum = i + 1;
+                } else if (pagination.page >= pagination.totalPages - 2) {
+                  pageNum = pagination.totalPages - 4 + i;
+                } else {
+                  pageNum = pagination.page - 2 + i;
+                }
 
-              return (
-                <motion.button
-                  key={pageNum}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => onPageChange(pageNum)}
-                  className={`w-10 h-10 rounded-lg font-medium transition-colors ${
-                    pagination.page === pageNum
-                      ? 'bg-orange-500 text-white'
-                      : 'hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {pageNum}
-                </motion.button>
-              );
-            })}
+                return (
+                  <motion.button
+                    key={pageNum}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => onPageChange(pageNum)}
+                    className={`w-10 h-10 rounded-lg font-medium transition-colors ${
+                      pagination.page === pageNum
+                        ? "bg-orange-500 text-white"
+                        : "hover:bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {pageNum}
+                  </motion.button>
+                );
+              },
+            )}
           </div>
 
           <motion.button

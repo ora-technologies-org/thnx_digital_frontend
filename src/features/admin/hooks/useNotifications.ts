@@ -1,20 +1,18 @@
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useCallback } from 'react';
-import { notificationApi } from '../api/notification.api';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import { notificationApi } from "../api/notification.api";
 import {
-  Notification,
   NotificationFilters,
   UpdatePreferencesPayload,
-} from '../types/notification.types';
+} from "../types/notification.types";
 
 // Query keys
 export const notificationQueryKeys = {
-  all: ['notifications'] as const,
+  all: ["notifications"] as const,
   list: (filters: NotificationFilters) =>
-    [...notificationQueryKeys.all, 'list', filters] as const,
-  unreadCount: () => [...notificationQueryKeys.all, 'unread-count'] as const,
-  preferences: () => [...notificationQueryKeys.all, 'preferences'] as const,
+    [...notificationQueryKeys.all, "list", filters] as const,
+  unreadCount: () => [...notificationQueryKeys.all, "unread-count"] as const,
+  preferences: () => [...notificationQueryKeys.all, "preferences"] as const,
 };
 
 // Default filters
@@ -67,12 +65,15 @@ export const useNotifications = (initialFilters: NotificationFilters = {}) => {
   });
 
   // Filter update functions
-  const updateFilters = useCallback((newFilters: Partial<NotificationFilters>) => {
-    setFilters((prev) => ({
-      ...prev,
-      ...newFilters,
-    }));
-  }, []);
+  const updateFilters = useCallback(
+    (newFilters: Partial<NotificationFilters>) => {
+      setFilters((prev) => ({
+        ...prev,
+        ...newFilters,
+      }));
+    },
+    [],
+  );
 
   const setPage = useCallback((page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -88,7 +89,9 @@ export const useNotifications = (initialFilters: NotificationFilters = {}) => {
 
   // Refresh notifications
   const refresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: notificationQueryKeys.list(filters) });
+    queryClient.invalidateQueries({
+      queryKey: notificationQueryKeys.list(filters),
+    });
   }, [queryClient, filters]);
 
   return {
@@ -170,7 +173,7 @@ export const useNotificationPreferences = () => {
     (key: keyof UpdatePreferencesPayload, value: boolean) => {
       updateMutation.mutate({ [key]: value });
     },
-    [updateMutation]
+    [updateMutation],
   );
 
   return {
@@ -192,7 +195,7 @@ export const useTestNotification = () => {
       type,
       merchantUserId,
     }: {
-      type?: 'self' | 'admin' | 'merchant';
+      type?: "self" | "admin" | "merchant";
       merchantUserId?: string;
     }) => notificationApi.sendTestNotification(type, merchantUserId),
   });

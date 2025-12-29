@@ -1,114 +1,30 @@
-
-
-
-// // src/pages/auth/LoginPage.tsx
-// import React, { useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { LoginForm } from '../../features/auth/components/LoginForm';
-// import { Card } from '../../shared/components/ui/Card';
-// import { Gift } from 'lucide-react';
-// import { useAppSelector } from '../../app/hooks';
-// import { Spinner } from '../../shared/components/ui/Spinner';
-
-// export const LoginPage: React.FC = () => {
-//   const navigate = useNavigate();
-  
-//   // Select directly from Redux store
-//   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-//   const isLoading = useAppSelector((state) => state.auth.isLoading);
-//   const user = useAppSelector((state) => state.auth.user);
-
-//   useEffect(() => {
-//     console.log('📍 LoginPage - Direct Redux State:', { 
-//       isLoading, 
-//       isAuthenticated, 
-//       userRole: user?.role,
-//       timestamp: new Date().toISOString()
-//     });
-    
-//     // Wait for auth initialization
-//     if (isLoading) {
-//       console.log('⏳ Still initializing auth...');
-//       return;
-//     }
-    
-//     // Redirect if already authenticated
-//     if (isAuthenticated && user) {
-//       console.log('✅ Already authenticated, redirecting...');
-      
-//       if (user.role === 'MERCHANT') {
-//         console.log('🚀 Redirecting to /merchant/dashboard');
-//         navigate('/merchant/dashboard', { replace: true });
-//       } else if (user.role === 'ADMIN') {
-//         console.log('🚀 Redirecting to /admin/dashboard');
-//         navigate('/admin/dashboard', { replace: true });
-//       } else {
-//         console.log('🚀 Redirecting to /');
-//         navigate('/', { replace: true });
-//       }
-//     }
-//   }, [isAuthenticated, isLoading, user, navigate]);
-
-//   // Show loading during initialization
-//   if (isLoading) {
-//     console.log('🔄 LoginPage: Rendering loading spinner');
-//     return (
-//       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-//         <Spinner size="lg" />
-//         <p className="ml-3 text-gray-600">Checking authentication...</p>
-//       </div>
-//     );
-//   }
-
-//   // Don't render login form if authenticated
-//   if (isAuthenticated) {
-//     console.log('⏭️ LoginPage: Authenticated, rendering null during redirect');
-//     return null;
-//   }
-
-//   console.log('📝 LoginPage: Rendering login form');
-  
-//   return (
-//     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-//       <Card className="w-full max-w-md">
-//         <div className="text-center mb-8">
-//           <div className="flex justify-center mb-4">
-//             <Gift className="h-12 w-12 text-blue-600" />
-//           </div>
-//           <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-//           <p className="text-gray-600 mt-2">Login to your account</p>
-//         </div>
-//         <LoginForm />
-//       </Card>
-//     </div>
-//   );
-// };
-
-
-// src/pages/auth/LoginPage.tsx - ENHANCED VERSION! ✨
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { motion } from 'framer-motion';
-import { LogIn, Mail, Lock, ArrowRight, Gift } from 'lucide-react';
-import { Card } from '../../shared/components/ui/Card';
-import { Input } from '../../shared/components/ui/Input';
-import { MagneticButton } from '../../shared/components/animated/MagneticButton';
-import { useAuth } from '../../features/auth/hooks/useAuth';
-import { fadeInUp, staggerContainer } from '../../shared/utils/animations';
+import React, { useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { motion } from "framer-motion";
+import { LogIn, Mail, Lock, ArrowRight, Gift } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
+import { Card } from "../../shared/components/ui/Card";
+import { Input } from "../../shared/components/ui/Input";
+import { MagneticButton } from "../../shared/components/animated/MagneticButton";
+import { useAuth } from "../../features/auth/hooks/useAuth";
+import { useAppSelector } from "../../app/hooks";
+import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export const LoginPage: React.FC = () => {
+  const { login, loginWithGoogle, isLoading } = useAuth();
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
   const {
     register,
@@ -117,6 +33,39 @@ export const LoginPage: React.FC = () => {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
+
+  // ==================== AUTO REDIRECT AFTER LOGIN ====================
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Get the location user was trying to access before being redirected to login
+      const from = location.state?.from?.pathname;
+      const search = location.state?.from?.search || "";
+
+      console.log("🔓 User authenticated, preparing redirect:", {
+        from,
+        search,
+        userRole: user.role,
+        fullPath: from && search ? `${from}${search}` : from,
+      });
+
+      // If user came from a protected route (like /merchant/scan?qr=XXX)
+      if (from && from !== "/login") {
+        const redirectPath = search ? `${from}${search}` : from;
+        console.log("↩️ Redirecting back to protected route:", redirectPath);
+        navigate(redirectPath, { replace: true });
+      } else {
+        // Default redirect based on role
+        console.log("🏠 No previous route, redirecting to default dashboard");
+        if (user.role === "MERCHANT") {
+          navigate("/merchant/dashboard", { replace: true });
+        } else if (user.role === "ADMIN") {
+          navigate("/admin/dashboard", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      }
+    }
+  }, [isAuthenticated, user, navigate, location]);
 
   const onSubmit = (data: LoginFormData) => {
     login(data);
@@ -159,7 +108,10 @@ export const LoginPage: React.FC = () => {
           </motion.div>
 
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Welcome <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Back</span>
+            Welcome{" "}
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Back
+            </span>
           </h1>
           <p className="text-gray-600 text-lg">
             Login to your merchant account
@@ -180,7 +132,7 @@ export const LoginPage: React.FC = () => {
                   type="email"
                   placeholder="your@email.com"
                   error={errors.email?.message}
-                  {...register('email')}
+                  {...register("email")}
                   className="transition-all focus:scale-[1.02]"
                   icon={<Mail className="w-5 h-5 text-gray-400" />}
                 />
@@ -196,7 +148,7 @@ export const LoginPage: React.FC = () => {
                   type="password"
                   placeholder="••••••••"
                   error={errors.password?.message}
-                  {...register('password')}
+                  {...register("password")}
                   className="transition-all focus:scale-[1.02]"
                   icon={<Lock className="w-5 h-5 text-gray-400" />}
                 />
@@ -235,12 +187,17 @@ export const LoginPage: React.FC = () => {
                   className="w-full"
                   onClick={handleSubmit(onSubmit)}
                   type="button"
+                  disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
                       <motion.div
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                       />
                       Logging in...
@@ -268,13 +225,38 @@ export const LoginPage: React.FC = () => {
                 </div>
               </motion.div>
 
+              {/* Google Sign-In Button */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="flex justify-center"
+              >
+                <GoogleLogin
+                  onSuccess={(credentialResponse) => {
+                    console.log("🔐 Google credential received");
+                    if (credentialResponse.credential) {
+                      loginWithGoogle(credentialResponse.credential);
+                    }
+                  }}
+                  onError={() => {
+                    console.error("❌ Google login failed");
+                  }}
+                  useOneTap
+                  theme="outline"
+                  size="large"
+                  width="100%"
+                  text="continue_with"
+                />
+              </motion.div>
+
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
+                transition={{ delay: 0.8 }}
                 className="text-center text-sm text-gray-600"
               >
-                Don't have an account?{' '}
+                Don't have an account?{" "}
                 <Link
                   to="/register"
                   className="text-blue-600 hover:underline font-medium"
@@ -287,10 +269,7 @@ export const LoginPage: React.FC = () => {
         </motion.div>
 
         {/* Customer Link */}
-        <motion.div
-          variants={fadeInUp}
-          className="mt-6 text-center"
-        >
+        <motion.div variants={fadeInUp} className="mt-6 text-center">
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
             <div className="p-4">
               <p className="text-sm text-gray-700 mb-2">
