@@ -6,11 +6,11 @@ import {
   Mail,
   Calendar,
   MessageSquare,
+  Building2,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchSupportTicketById,
-  SupportTicket,
   updateSupportTicket,
 } from "@/features/admin/services/adminTicketService";
 
@@ -19,6 +19,25 @@ import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
 
 type TicketStatus = "OPEN" | "IN_PROGRESS" | "CLOSE";
+
+// Updated interface to match API response
+interface SupportTicket {
+  id: string;
+  title: string;
+  merchantQuery: string;
+  adminResponse: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  merchant?: {
+    businessName?: string;
+    businessEmail?: string;
+    user?: {
+      name?: string;
+      email?: string;
+    };
+  };
+}
 
 interface TicketDetailModalProps {
   ticketId: string;
@@ -66,7 +85,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     message: "",
     confirmText: "OK",
   });
-
+  //Fetches a support ticket by its ID using React Query.
   const { data, isLoading } = useQuery({
     queryKey: ["supportTicket", ticketId],
     queryFn: () => fetchSupportTicketById(ticketId),
@@ -83,7 +102,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     if (formData.status === "OPEN" && formData.response === "") {
       return {
         status: ticket.status as TicketStatus,
-        response: ticket.response || "",
+        response: ticket.adminResponse || "",
       };
     }
 
@@ -164,7 +183,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
   const handleClose = () => {
     if (
-      currentFormData.response !== (ticket?.response || "") ||
+      currentFormData.response !== (ticket?.adminResponse || "") ||
       currentFormData.status !== ticket?.status
     ) {
       openResponseModal(
@@ -174,7 +193,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
         () => {
           setFormData({
             status: (ticket?.status as TicketStatus) || "OPEN",
-            response: ticket?.response || "",
+            response: ticket?.adminResponse || "",
           });
           onClose();
         },
@@ -223,20 +242,30 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                 {ticket.title}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                {ticket.merchantName && (
+                {ticket.merchant?.user?.name && (
                   <div className="flex items-center gap-2 text-gray-700">
                     <User className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium">Merchant:</span>
-                    <span>{ticket.merchantName}</span>
+                    <span className="font-medium">User:</span>
+                    <span>{ticket.merchant.user.name}</span>
                   </div>
                 )}
-                {ticket.merchantEmail && (
+                {ticket.merchant?.businessName && (
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Building2 className="w-4 h-4 text-purple-600" />
+                    <span className="font-medium">Business:</span>
+                    <span>{ticket.merchant.businessName}</span>
+                  </div>
+                )}
+                {ticket.merchant?.user?.email && (
                   <div className="flex items-center gap-2 text-gray-700">
                     <Mail className="w-4 h-4 text-blue-600" />
                     <span className="font-medium">Email:</span>
-                    <span>{ticket.merchantEmail}</span>
+                    <span className="truncate">
+                      {ticket.merchant.user.email}
+                    </span>
                   </div>
                 )}
+
                 <div className="flex items-center gap-2 text-gray-700">
                   <Calendar className="w-4 h-4 text-blue-600" />
                   <span className="font-medium">Created:</span>

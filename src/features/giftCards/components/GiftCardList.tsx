@@ -1,5 +1,5 @@
 // src/features/giftCards/components/EnhancedGiftCardList.tsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -15,8 +15,6 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
-  CheckCircle,
-  XCircle,
 } from "lucide-react";
 import type { AxiosError } from "axios";
 import { Button } from "../../../shared/components/ui/Button";
@@ -38,15 +36,33 @@ import { GiftCardDisplay } from "./GiftCardDisplay";
 import { GiftCardListItem } from "./GiftCardListItem";
 import { useGiftCardSettings } from "@/features/merchant/hooks/useGiftCardSetting";
 
+// Type definitions for view modes, sorting and filtering options
 type ViewMode = "grid" | "list";
 type SortOption = "newest" | "oldest" | "price-high" | "price-low" | "expiry";
 type FilterOption = "all" | "active" | "inactive" | "expiring";
 
-interface ModalMessage {
-  type: "success" | "error";
+interface NotificationState {
+  isOpen: boolean;
+  type: "success" | "error" | "warning" | "info";
+  title: string;
+  message: string;
+  onConfirm?: () => void;
+  showActions?: boolean;
+  confirmText?: string;
+}
+
+interface DeleteConfirmState {
+  isOpen: boolean;
+  giftCard: GiftCard | null;
+  title: string;
   message: string;
 }
 
+/**
+ * Decodes JWT token to extract user verification status
+ * @param token - JWT access token
+ * @returns Decoded token payload or null if decoding fails
+ */
 const decodeToken = (token: string) => {
   try {
     const base64Url = token.split(".")[1];
@@ -64,6 +80,10 @@ const decodeToken = (token: string) => {
   }
 };
 
+/**
+ * Extracts user verification status from JWT token stored in localStorage
+ * @returns Object containing verification status and profile status
+ */
 const getUserVerificationStatus = () => {
   const token = localStorage.getItem("accessToken");
   if (!token) return { isVerified: false, profileStatus: "UNVERIFIED" };
@@ -77,36 +97,80 @@ const getUserVerificationStatus = () => {
   };
 };
 
+/**
+ * Main component for displaying and managing gift cards
+ * Includes filtering, sorting, creation, editing, and deletion functionality
+ */
 export const EnhancedGiftCardList: React.FC = () => {
+  // Data fetching and mutations
   const { data, isLoading, refetch } = useGiftCards();
   const createMutation = useCreateGiftCard();
   const updateMutation = useUpdateGiftCard();
   const deleteMutation = useDeleteGiftCard();
   const { settings: cardSettings } = useGiftCardSettings();
 
+  // Modal states
   const createModal = useModal();
   const editModal = useModal();
-  const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
-  const [modalMessage, setModalMessage] = useState<ModalMessage | null>(null);
 
+  // Load Google Fonts
+  useEffect(() => {
+    const fonts = [
+      "Inter",
+      "Roboto",
+      "Poppins",
+      "Montserrat",
+      "Open Sans",
+      "Lato",
+    ];
+    const link = document.createElement("link");
+    link.href = `https://fonts.googleapis.com/css2?${fonts.map((font) => `family=${font.replace(" ", "+")}`).join("&")}&display=swap`;
+    link.rel = "stylesheet";
+
+    if (!document.querySelector(`link[href="${link.href}"]`)) {
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  // Notification and delete confirmation states
+  const [notification, setNotification] = useState<NotificationState>({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    showActions: false,
+  });
+
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({
+    isOpen: false,
+    giftCard: null,
+    title: "Delete Gift Card",
+    message: "",
+  });
+
+  // Component state
+  const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Capture current time once on mount (pure because it's a lazy initializer)
+  const [currentTime] = useState(() => Date.now());
+
+  // Extract gift cards from API response with memoization
   const giftCards = useMemo(
     () => data?.data.giftCards || [],
     [data?.data.giftCards],
   );
   const canCreateMore = (data?.data.remaining || 0) > 0;
 
+  // Get user verification status
   const { isVerified, profileStatus } = getUserVerificationStatus();
   const isProfileVerified = isVerified && profileStatus === "VERIFIED";
 
-  const [currentTime] = useState(() => Date.now());
-
-  // Use dynamic stats from API response
+  // Calculate statistics from API data
   const stats = useMemo(() => {
     if (!data?.data) {
       return { total: 0, active: 0, totalValue: 0, expiringSoon: 0 };
@@ -120,9 +184,82 @@ export const EnhancedGiftCardList: React.FC = () => {
     };
   }, [data?.data]);
 
+  /**
+   * Shows a notification modal
+   * @param type - Type of notification (success, error, warning, info)
+   * @param title - Modal title
+   * @param message - Modal message
+   * @param showActions - Whether to show action buttons
+   * @param onConfirm - Callback for confirm action
+   * @param confirmText - Text for confirm button
+   */
+  const showNotification = (
+    type: NotificationState["type"],
+    title: string,
+    message: string,
+    showActions: boolean = false,
+    onConfirm?: () => void,
+    confirmText: string = "OK",
+  ) => {
+    setNotification({
+      isOpen: true,
+      type,
+      title,
+      message,
+      showActions,
+      onConfirm,
+      confirmText,
+    });
+  };
+
+  /**
+   * Closes the notification modal
+   */
+  const closeNotification = () => {
+    setNotification((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  /**
+   * Shows delete confirmation modal
+   * @param giftCard - Gift card to delete
+   */
+  const showDeleteConfirm = (giftCard: GiftCard) => {
+    const expiryDate = new Date(giftCard.expiryDate);
+    const isExpired = expiryDate < new Date();
+    const hasPurchases = (giftCard._count?.purchases || 0) > 0;
+
+    let message = "Are you sure you want to delete this gift card? ";
+
+    if (hasPurchases) {
+      message += `This card has ${giftCard._count?.purchases} purchase(s). `;
+    }
+
+    if (isExpired) {
+      message += "This card has already expired. ";
+    }
+
+    message += "This action cannot be undone.";
+
+    setDeleteConfirm({
+      isOpen: true,
+      giftCard,
+      title: `Delete "${giftCard.title}"`,
+      message,
+    });
+  };
+
+  /**
+   * Closes the delete confirmation modal
+   */
+  const closeDeleteConfirm = () => {
+    setDeleteConfirm((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  // Process and filter gift cards based on search, filter, and sort criteria
   const processedCards = useMemo(() => {
     let filtered = giftCards;
 
+    // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(
         (card) =>
@@ -132,6 +269,7 @@ export const EnhancedGiftCardList: React.FC = () => {
       );
     }
 
+    // Apply status filter
     if (filterBy !== "all") {
       filtered = filtered.filter((card) => {
         if (filterBy === "active") return card.isActive;
@@ -147,6 +285,7 @@ export const EnhancedGiftCardList: React.FC = () => {
       });
     }
 
+    // Apply sorting
     const sorted = [...filtered].sort((a, b) => {
       if (sortBy === "newest")
         return (
@@ -170,37 +309,53 @@ export const EnhancedGiftCardList: React.FC = () => {
     return sorted;
   }, [giftCards, searchQuery, filterBy, sortBy, currentTime]);
 
+  /**
+   * Handles gift card creation
+   * @param formData - Data for the new gift card
+   */
   const handleCreate = (formData: CreateGiftCardData) => {
     createMutation.mutate(formData, {
       onSuccess: (response) => {
-        setModalMessage({
-          type: "success",
-          message: response?.message || "Gift card created successfully!",
-        });
-
-        setTimeout(() => {
-          createModal.close();
-          setModalMessage(null);
-        }, 2000);
+        showNotification(
+          "success",
+          "Gift Card Created",
+          response?.message || "Gift card created successfully!",
+          false,
+          () => {
+            createModal.close();
+            refetch();
+          },
+          "Continue",
+        );
       },
-
       onError: (error: AxiosError<{ message?: string }>) => {
-        setModalMessage({
-          type: "error",
-          message:
-            error.response?.data?.message ||
+        showNotification(
+          "error",
+          "Creation Failed",
+          error.response?.data?.message ||
             error.message ||
             "Failed to create gift card. Please try again.",
-        });
+          true,
+          undefined,
+          "Try Again",
+        );
       },
     });
   };
 
+  /**
+   * Handles gift card edit initiation
+   * @param giftCard - The gift card to edit
+   */
   const handleEdit = (giftCard: GiftCard) => {
     setSelectedCard(giftCard);
-    setModalMessage(null);
     editModal.open();
   };
+
+  /**
+   * Handles gift card update
+   * @param formData - Updated data for the gift card
+   */
   const handleUpdate = (formData: UpdateGiftCardData) => {
     if (!selectedCard) return;
 
@@ -208,41 +363,74 @@ export const EnhancedGiftCardList: React.FC = () => {
       { id: selectedCard.id, data: formData },
       {
         onSuccess: (response) => {
-          setModalMessage({
-            type: "success",
-            message: response?.message || "Gift card updated successfully!",
-          });
-
-          setTimeout(() => {
-            editModal.close();
-            setSelectedCard(null);
-            setModalMessage(null);
-          }, 2000);
+          showNotification(
+            "success",
+            "Gift Card Updated",
+            response?.message || "Gift card updated successfully!",
+            false,
+            () => {
+              editModal.close();
+              setSelectedCard(null);
+              refetch();
+            },
+            "Continue",
+          );
         },
-
         onError: (error: AxiosError<{ message?: string }>) => {
-          setModalMessage({
-            type: "error",
-            message:
-              error.response?.data?.message ||
+          showNotification(
+            "error",
+            "Update Failed",
+            error.response?.data?.message ||
               error.message ||
               "Failed to update gift card. Please try again.",
-          });
+            true,
+            undefined,
+            "Try Again",
+          );
         },
       },
     );
   };
 
+  /**
+   * Handles gift card deletion
+   * @param id - ID of the gift card to delete
+   */
   const handleDelete = (id: string) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this gift card? This action cannot be undone.",
-      )
-    ) {
-      deleteMutation.mutate(id);
-    }
+    deleteMutation.mutate(id, {
+      onSuccess: (response) => {
+        showNotification(
+          "success",
+          "Gift Card Deleted",
+          response?.message || "Gift card deleted successfully!",
+          false,
+          () => {
+            refetch();
+          },
+          "OK",
+        );
+        closeDeleteConfirm();
+      },
+      onError: (error: AxiosError<{ message?: string }>) => {
+        showNotification(
+          "error",
+          "Deletion Failed",
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to delete gift card. Please try again.",
+          true,
+          undefined,
+          "Try Again",
+        );
+        closeDeleteConfirm();
+      },
+    });
   };
 
+  /**
+   * Handles gift card duplication
+   * @param card - Gift card to duplicate
+   */
   const handleDuplicate = (card: GiftCard) => {
     const duplicateData = {
       title: `${card.title} (Copy)`,
@@ -251,9 +439,37 @@ export const EnhancedGiftCardList: React.FC = () => {
       expiryDate: card.expiryDate,
       isActive: card.isActive,
     };
-    createMutation.mutate(duplicateData);
+    createMutation.mutate(duplicateData, {
+      onSuccess: (response) => {
+        showNotification(
+          "success",
+          "Gift Card Duplicated",
+          response?.message || "Gift card duplicated successfully!",
+          false,
+          () => {
+            refetch();
+          },
+          "OK",
+        );
+      },
+      onError: (error: AxiosError<{ message?: string }>) => {
+        showNotification(
+          "error",
+          "Duplication Failed",
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to duplicate gift card. Please try again.",
+          true,
+          undefined,
+          "Try Again",
+        );
+      },
+    });
   };
 
+  /**
+   * Exports gift cards to CSV format
+   */
   const handleExport = () => {
     const csvContent = [
       ["Title", "Price", "Status", "Expiry Date", "Created At", "Purchases"],
@@ -274,20 +490,31 @@ export const EnhancedGiftCardList: React.FC = () => {
     const a = document.createElement("a");
     a.href = url;
     a.download = `gift-cards-${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    showNotification(
+      "success",
+      "Export Successful",
+      `${giftCards.length} gift cards exported successfully!`,
+      false,
+      undefined,
+      "OK",
+    );
   };
 
-  const handleModalClose = () => {
-    createModal.close();
-    setModalMessage(null);
+  /**
+   * Clears all filters and search query
+   */
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setFilterBy("all");
+    setSortBy("newest");
   };
 
-  const handleEditModalClose = () => {
-    editModal.close();
-    setSelectedCard(null);
-    setModalMessage(null);
-  };
-
+  // Show loading state
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -297,27 +524,29 @@ export const EnhancedGiftCardList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        {!isVerified && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start gap-3"
-          >
-            <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="text-sm font-semibold text-yellow-900 mb-1">
-                Account Verification Required
-              </h3>
-              <p className="text-sm text-yellow-800">
-                Please verify your account to create orders. Check your email
-                for verification instructions.
-              </p>
-            </div>
-          </motion.div>
-        )}
+    <div className="space-y-8 overflow-x-hidden max-w-full px-2 sm:px-0">
+      {/* Verification Status Banner */}
+      {!isVerified && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 mb-6 flex items-start gap-3"
+        >
+          <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <h3 className="text-sm font-semibold text-yellow-900 mb-1">
+              Account Verification Required
+            </h3>
+            <p className="text-sm text-yellow-800">
+              Please verify your account to create orders. Check your email for
+              verification instructions.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
+      {/* Profile Verification Status */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div
           className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
             isProfileVerified
@@ -339,12 +568,13 @@ export const EnhancedGiftCardList: React.FC = () => {
         </div>
       </div>
 
+      {/* Statistics Cards */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
       >
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <Gift className="w-6 h-6 text-blue-600" />
@@ -359,7 +589,7 @@ export const EnhancedGiftCardList: React.FC = () => {
           <p className="text-sm text-gray-600">Total Gift Cards</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-green-600" />
@@ -377,7 +607,7 @@ export const EnhancedGiftCardList: React.FC = () => {
           <p className="text-sm text-gray-600">Active Cards</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-purple-600" />
@@ -389,7 +619,7 @@ export const EnhancedGiftCardList: React.FC = () => {
           <p className="text-sm text-gray-600">Total Value</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
               <AlertCircle className="w-6 h-6 text-orange-600" />
@@ -402,13 +632,14 @@ export const EnhancedGiftCardList: React.FC = () => {
         </div>
       </motion.div>
 
+      {/* Search and Filter Controls */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-xl shadow-sm p-6 border border-gray-200"
+        className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200"
       >
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -417,22 +648,22 @@ export const EnhancedGiftCardList: React.FC = () => {
                 placeholder="Search gift cards by title, description, or price..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
 
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-2 sm:gap-3 flex-wrap">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 rounded-lg border transition-colors text-sm ${
                 showFilters
                   ? "bg-blue-50 border-blue-300 text-blue-700"
                   : "border-gray-300 text-gray-700 hover:bg-gray-50"
               }`}
             >
               <Filter className="w-4 h-4" />
-              Filters
+              <span className="hidden sm:inline">Filters</span>
             </button>
 
             <div className="flex border border-gray-300 rounded-lg overflow-hidden">
@@ -471,17 +702,17 @@ export const EnhancedGiftCardList: React.FC = () => {
             <button
               onClick={handleExport}
               disabled={giftCards.length === 0}
-              className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 sm:px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               title="Export to CSV"
             >
               <Download className="w-4 h-4" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </button>
 
             <Button
               onClick={createModal.open}
               disabled={!canCreateMore || !isProfileVerified}
-              className="px-6"
+              className="px-3 sm:px-6 text-sm"
               title={
                 !isProfileVerified
                   ? "Please verify your profile to create gift cards"
@@ -490,23 +721,24 @@ export const EnhancedGiftCardList: React.FC = () => {
                     : ""
               }
             >
-              <Plus className="h-5 w-5 mr-2" />
-              Create Card
+              <Plus className="h-5 w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Create Card</span>
               {!isProfileVerified && <ShieldAlert className="h-4 w-4 ml-2" />}
             </Button>
           </div>
         </div>
 
+        {/* Advanced Filters Panel */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="mt-6 pt-6 border-t border-gray-200"
+              className="mt-6 pt-6 border-t border-gray-200 overflow-hidden"
             >
               <div className="flex flex-wrap gap-6">
-                <div className="flex-1 min-w-[250px]">
+                <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Status
                   </label>
@@ -515,7 +747,7 @@ export const EnhancedGiftCardList: React.FC = () => {
                     onChange={(e) =>
                       setFilterBy(e.target.value as FilterOption)
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="all">All Cards</option>
                     <option value="active">Active Only</option>
@@ -524,14 +756,14 @@ export const EnhancedGiftCardList: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="flex-1 min-w-[250px]">
+                <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Sort By
                   </label>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="newest">Newest First</option>
                     <option value="oldest">Oldest First</option>
@@ -544,11 +776,7 @@ export const EnhancedGiftCardList: React.FC = () => {
                 {(searchQuery || filterBy !== "all" || sortBy !== "newest") && (
                   <div className="flex items-end">
                     <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setFilterBy("all");
-                        setSortBy("newest");
-                      }}
+                      onClick={clearAllFilters}
                       className="px-6 py-3 text-blue-600 hover:text-blue-700 font-medium hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       Clear All Filters
@@ -561,6 +789,7 @@ export const EnhancedGiftCardList: React.FC = () => {
         </AnimatePresence>
       </motion.div>
 
+      {/* Results Summary */}
       {(searchQuery || filterBy !== "all" || sortBy !== "newest") && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -574,11 +803,12 @@ export const EnhancedGiftCardList: React.FC = () => {
         </motion.div>
       )}
 
+      {/* Gift Cards List/Grid */}
       {processedCards.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-sm p-12 text-center border border-gray-200"
+          className="bg-white rounded-2xl shadow-sm p-6 sm:p-12 text-center border border-gray-200"
         >
           <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Gift className="w-12 h-12 text-blue-600" />
@@ -607,7 +837,7 @@ export const EnhancedGiftCardList: React.FC = () => {
           layout
           className={
             viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8"
               : "space-y-4"
           }
         >
@@ -626,7 +856,7 @@ export const EnhancedGiftCardList: React.FC = () => {
                     giftCard={giftCard}
                     settings={cardSettings}
                     onEdit={() => handleEdit(giftCard)}
-                    onDelete={() => handleDelete(giftCard.id)}
+                    onDelete={() => showDeleteConfirm(giftCard)}
                     onDuplicate={() => handleDuplicate(giftCard)}
                   />
                 ) : (
@@ -634,7 +864,7 @@ export const EnhancedGiftCardList: React.FC = () => {
                     giftCard={giftCard}
                     settings={cardSettings}
                     onEdit={() => handleEdit(giftCard)}
-                    onDelete={() => handleDelete(giftCard.id)}
+                    onDelete={() => showDeleteConfirm(giftCard)}
                     onDuplicate={() => handleDuplicate(giftCard)}
                   />
                 )}
@@ -644,49 +874,19 @@ export const EnhancedGiftCardList: React.FC = () => {
         </motion.div>
       )}
 
+      {/* Create Gift Card Modal */}
       <Modal
         isOpen={createModal.isOpen}
-        onClose={handleModalClose}
+        onClose={createModal.close}
         title="Create Gift Card"
         size="xl"
       >
         {isProfileVerified ? (
-          <div className="space-y-6">
-            {modalMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex items-start gap-3 p-4 rounded-lg border ${
-                  modalMessage.type === "success"
-                    ? "bg-green-50 border-green-200"
-                    : "bg-red-50 border-red-200"
-                }`}
-              >
-                {modalMessage.type === "success" ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                )}
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${
-                      modalMessage.type === "success"
-                        ? "text-green-900"
-                        : "text-red-900"
-                    }`}
-                  >
-                    {modalMessage.message}
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            <GiftCardForm
-              onSubmit={handleCreate}
-              isLoading={createMutation.isPending}
-              submitLabel="Create Gift Card"
-            />
-          </div>
+          <GiftCardForm
+            onSubmit={handleCreate}
+            isLoading={createMutation.isPending}
+            submitLabel="Create Gift Card"
+          />
         ) : (
           <div className="p-8 text-center">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -701,7 +901,7 @@ export const EnhancedGiftCardList: React.FC = () => {
             </p>
             <Button
               onClick={() => {
-                handleModalClose();
+                createModal.close();
                 window.location.href = "/merchant/profile";
               }}
             >
@@ -711,43 +911,18 @@ export const EnhancedGiftCardList: React.FC = () => {
         )}
       </Modal>
 
+      {/* Edit Gift Card Modal */}
       <Modal
         isOpen={editModal.isOpen}
-        onClose={handleEditModalClose}
+        onClose={() => {
+          editModal.close();
+          setSelectedCard(null);
+        }}
         title="Edit Gift Card"
         size="xl"
       >
         {selectedCard && (
           <div className="space-y-6">
-            {modalMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex items-start gap-3 p-4 rounded-lg border ${
-                  modalMessage.type === "success"
-                    ? "bg-green-50 border-green-200"
-                    : "bg-red-50 border-red-200"
-                }`}
-              >
-                {modalMessage.type === "success" ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                )}
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${
-                      modalMessage.type === "success"
-                        ? "text-green-900"
-                        : "text-red-900"
-                    }`}
-                  >
-                    {modalMessage.message}
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <p className="text-sm text-gray-700">
                 <strong>ID:</strong> {selectedCard.id}
@@ -769,6 +944,60 @@ export const EnhancedGiftCardList: React.FC = () => {
             />
           </div>
         )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteConfirm.isOpen}
+        onClose={closeDeleteConfirm}
+        title={deleteConfirm.title}
+        type="error"
+        showActions={true}
+        onConfirm={() => {
+          if (deleteConfirm.giftCard) {
+            handleDelete(deleteConfirm.giftCard.id);
+          }
+        }}
+        confirmText="Delete"
+        cancelText="Cancel"
+        size="md"
+      >
+        <div className="text-center py-4">
+          <p className="text-gray-700 mb-2">{deleteConfirm.message}</p>
+          {deleteConfirm.giftCard && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-900">
+                {deleteConfirm.giftCard.title}
+              </p>
+              <p className="text-sm text-gray-600 mt-1">
+                Price: ₹{deleteConfirm.giftCard.price}
+              </p>
+              <p className="text-sm text-gray-600">
+                Expires:{" "}
+                {new Date(
+                  deleteConfirm.giftCard.expiryDate,
+                ).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Notification Modal for Success/Error Messages */}
+      <Modal
+        isOpen={notification.isOpen}
+        onClose={closeNotification}
+        title={notification.title}
+        type={notification.type}
+        showActions={notification.showActions}
+        onConfirm={notification.onConfirm}
+        confirmText={notification.confirmText}
+        cancelText="Close"
+        size="md"
+      >
+        <div className="text-center py-4">
+          <p className="text-gray-700">{notification.message}</p>
+        </div>
       </Modal>
     </div>
   );

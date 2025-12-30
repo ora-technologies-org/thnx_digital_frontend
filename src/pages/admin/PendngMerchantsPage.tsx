@@ -701,7 +701,7 @@ export const PendingMerchantsPage: React.FC = () => {
     page,
     limit,
     search: debouncedSearch || undefined,
-    sortBy: "date",
+    sortBy: "createdAt",
     order: "desc",
   });
 

@@ -104,53 +104,6 @@ export const ScanPage: React.FC = () => {
     clearHistory,
   } = useRedemptionHistory();
 
-  // ==================== AUTO-VERIFY QR FROM URL ====================
-  useEffect(() => {
-    console.log("🔍 ScanPage mounted:", {
-      qrCodeParam,
-      isAuthenticated,
-      userRole: user?.role,
-    });
-
-    if (qrCodeParam) {
-      setQrCode(qrCodeParam);
-      autoVerifyQR(qrCodeParam);
-    }
-  }, [qrCodeParam, isAuthenticated, user, autoVerifyQR]);
-
-  // ==================== AUTO VERIFY FUNCTION ====================
-  const autoVerifyQR = useCallback(
-    async (code: string) => {
-      console.log("🚀 Auto-verifying QR code:", code);
-
-      setIsLoading(true);
-      setError("");
-      setPurchaseData(null);
-      clearHistory();
-
-      try {
-        const result = await VerifyService.verifyQRCode(code);
-
-        if (result.success && result.data) {
-          setPurchaseData(result.data);
-          setError("");
-
-          if (result.data.qrCode) {
-            await getRecentRedemptions(result.data.qrCode);
-          }
-        } else {
-          setError(result.message || "Invalid QR code");
-        }
-      } catch (err) {
-        console.error("❌ QR code verification error:", err);
-        setError("Failed to verify QR code");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [clearHistory, getRecentRedemptions],
-  );
-
   // ==================== MANUAL QR CODE VERIFICATION ====================
   const handleVerify = async () => {
     if (!qrCode.trim()) {
@@ -308,6 +261,58 @@ export const ScanPage: React.FC = () => {
     history.length > 0
       ? history.slice(0, 3)
       : purchaseData?.recentRedemptions?.slice(0, 3) || [];
+
+  // ==================== AUTO-VERIFY QR FROM URL ====================
+  useEffect(() => {
+    console.log("🔍 ScanPage mounted:", {
+      qrCodeParam,
+      isAuthenticated,
+      userRole: user?.role,
+    });
+
+    const autoVerifyQR = async (code: string) => {
+      console.log("🚀 Auto-verifying QR code:", code);
+
+      setIsLoading(true);
+      setError("");
+      setPurchaseData(null);
+      clearHistory();
+
+      try {
+        const result = await VerifyService.verifyQRCode(code);
+
+        if (result.success && result.data) {
+          console.log("✅ QR verified successfully:", result.data);
+          setPurchaseData(result.data);
+          setError("");
+
+          // Fetch redemption history from API
+          if (result.data.qrCode) {
+            await getRecentRedemptions(result.data.qrCode);
+          }
+        } else {
+          console.log("❌ QR verification failed:", result.message);
+          setError(result.message || "Invalid QR code");
+        }
+      } catch (err) {
+        console.error("❌ QR code verification error:", err);
+        setError("Failed to verify QR code");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (qrCodeParam) {
+      setQrCode(qrCodeParam);
+      autoVerifyQR(qrCodeParam);
+    }
+  }, [
+    qrCodeParam,
+    isAuthenticated,
+    user?.role,
+    clearHistory,
+    getRecentRedemptions,
+  ]);
 
   return (
     <DashboardLayout>
@@ -742,6 +747,8 @@ export const ScanPage: React.FC = () => {
         customerEmail={purchaseData?.customerEmail}
         customerPhone={purchaseData?.customerPhone}
         currentBalance={purchaseData?.currentBalance || "0"}
+        merchantAddress={purchaseData?.merchant?.address || ""}
+        merchantCity={purchaseData?.merchant?.city || ""}
         onOTPVerified={handleOTPVerified}
         onRequestOTP={requestOTP}
         onVerifyOTP={verifyOTP}

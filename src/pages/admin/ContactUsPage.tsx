@@ -6,7 +6,14 @@ import { useState } from "react";
 import { Spinner } from "@/shared/components/ui/Spinner";
 
 export default function ContactUsPage() {
-  const { data: messages = [], isLoading, error } = useContactMessages();
+  const { data, isLoading, error } = useContactMessages();
+
+  // Handle different response structures
+  const messages = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.messages)
+      ? data.messages
+      : [];
 
   if (isLoading) {
     return (
@@ -22,16 +29,14 @@ export default function ContactUsPage() {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center min-h-screen px-4">
-          <Spinner size="lg" />
-          {/* <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold text-red-800 text-center mb-2">
               Error Loading Messages
             </h3>
             <p className="text-red-600 text-center">
               {error instanceof Error ? error.message : "An error occurred"}
             </p>
-          </div> */}
+          </div>
         </div>
       </AdminLayout>
     );

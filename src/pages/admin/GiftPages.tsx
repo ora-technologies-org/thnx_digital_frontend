@@ -16,6 +16,8 @@ import {
 import { merchantService } from "@/features/admin/services/merchantService";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { GiftCardDisplay } from "@/features/giftCards/components/GiftCardDisplay";
+import { Spinner } from "@/shared/components/ui/Spinner";
+import { Button } from "@/shared/components/ui/Button";
 
 // Custom useDebounce hook
 const useDebounce = (value, delay = 500) => {
@@ -108,6 +110,27 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   );
 };
 
+// Loading Skeleton Component
+const MerchantCardSkeleton = () => (
+  <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 animate-pulse">
+    <div className="flex items-center gap-3 sm:gap-4 mb-4">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gray-200 flex-shrink-0" />
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="h-5 bg-gray-200 rounded w-3/4" />
+        <div className="h-4 bg-gray-200 rounded w-1/2" />
+      </div>
+    </div>
+    <div className="space-y-2 mb-4">
+      <div className="h-4 bg-gray-200 rounded w-full" />
+      <div className="h-6 bg-gray-200 rounded-full w-24" />
+    </div>
+    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+      <div className="h-6 bg-gray-200 rounded-full w-20" />
+      <div className="h-8 bg-gray-200 rounded-lg w-28" />
+    </div>
+  </div>
+);
+
 // Error Message
 const ErrorMessage = ({ message, onRetry }) => (
   <motion.div
@@ -120,12 +143,9 @@ const ErrorMessage = ({ message, onRetry }) => (
     </div>
     <p className="text-lg text-red-600 mb-4">{message}</p>
     {onRetry && (
-      <button
-        onClick={onRetry}
-        className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-      >
+      <Button onClick={onRetry} variant="danger">
         Retry
-      </button>
+      </Button>
     )}
   </motion.div>
 );
@@ -254,12 +274,13 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
             </div>
 
             <div className="flex justify-end gap-3 p-4 sm:p-6 border-t border-gray-200">
-              <button
+              <Button
                 onClick={onClose}
-                className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
+                variant="outline"
+                className="hover:bg-gray-50"
               >
                 Close
-              </button>
+              </Button>
             </div>
           </motion.div>
         </motion.div>
@@ -278,12 +299,12 @@ const MerchantCard = ({ merchant, onClick }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -5, boxShadow: "0 20px 40px rgba(0,0,0,0.1)" }}
+      whileHover={{ y: -5, boxShadow: "0 25px 50px rgba(139, 92, 246, 0.15)" }}
       onClick={onClick}
-      className="bg-white rounded-xl p-4 sm:p-6 cursor-pointer border border-gray-200 hover:border-purple-300 transition-all"
+      className="bg-gradient-to-br from-white to-purple-50/30 rounded-2xl p-4 sm:p-6 cursor-pointer border-2 border-purple-100 hover:border-purple-300 transition-all shadow-sm hover:shadow-xl"
     >
       <div className="flex items-center gap-3 sm:gap-4 mb-4">
-        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg flex-shrink-0">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold shadow-lg flex-shrink-0 ring-4 ring-purple-100">
           {initial}
         </div>
         <div className="flex-1 min-w-0">
@@ -301,31 +322,32 @@ const MerchantCard = ({ merchant, onClick }) => {
       </div>
 
       <div className="space-y-2 mb-4">
-        <p className="text-xs sm:text-sm text-gray-600 truncate">
+        <p className="text-xs sm:text-sm text-gray-600 truncate flex items-center gap-1.5">
+          <span className="text-purple-500">✉</span>
           {merchant.businessEmail || merchant.user?.email || "No email"}
         </p>
         {merchant.businessCategory && (
-          <span className="inline-block px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
+          <span className="inline-block px-3 py-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 text-xs font-semibold rounded-full border border-purple-200">
             {merchant.businessCategory}
           </span>
         )}
         {merchant.description && (
-          <p className="text-xs sm:text-sm text-gray-700 line-clamp-2">
+          <p className="text-xs sm:text-sm text-gray-700 line-clamp-2 mt-2">
             {merchant.description}
           </p>
         )}
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-4 border-t border-purple-100">
         <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
             merchant.profileStatus === "VERIFIED"
-              ? "bg-green-100 text-green-800"
+              ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200"
               : merchant.profileStatus === "PENDING_VERIFICATION"
-                ? "bg-yellow-100 text-yellow-800"
+                ? "bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 border border-yellow-200"
                 : merchant.profileStatus === "REJECTED"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-gray-100 text-gray-800"
+                  ? "bg-gradient-to-r from-red-100 to-rose-100 text-red-800 border border-red-200"
+                  : "bg-gradient-to-r from-gray-100 to-slate-100 text-gray-800 border border-gray-200"
           }`}
         >
           {merchant.profileStatus === "VERIFIED"
@@ -336,16 +358,19 @@ const MerchantCard = ({ merchant, onClick }) => {
                 ? "✗ Rejected"
                 : merchant.profileStatus || "Unknown"}
         </span>
-        <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all whitespace-nowrap">
+        <Button
+          variant="gradient"
+          size="sm"
+          className="shadow-md hover:shadow-lg whitespace-nowrap"
+        >
           View Cards →
-        </button>
+        </Button>
       </div>
     </motion.div>
   );
 };
 
 // Merchants Page
-// Merchants Page - Fixed Version
 const MerchantsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -358,6 +383,7 @@ const MerchantsPage = () => {
     data: merchants,
     error,
     refetch,
+    isLoading,
   } = useQuery({
     queryKey: ["merchants"],
     queryFn: merchantService.getMerchants,
@@ -410,6 +436,28 @@ const MerchantsPage = () => {
     return (
       <ErrorMessage message="Failed to load merchants" onRetry={refetch} />
     );
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-200 rounded-xl sm:rounded-2xl animate-pulse" />
+            <div className="space-y-2">
+              <div className="h-8 bg-gray-200 rounded w-64 animate-pulse" />
+              <div className="h-4 bg-gray-200 rounded w-48 animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {[...Array(6)].map((_, i) => (
+            <MerchantCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (selectedMerchant) {
     return (
@@ -517,6 +565,7 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
     data: cardsData,
     error,
     refetch,
+    isLoading,
   } = useQuery({
     queryKey: ["merchant-gift-cards", merchant.userId],
     queryFn: () => merchantService.MerchantGiftCard(merchant.userId),
@@ -553,18 +602,45 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
       <ErrorMessage message="Failed to load gift cards" onRetry={refetch} />
     );
 
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <Button onClick={onBack} variant="ghost" className="mb-4 sm:mb-6">
+          <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+          Back to Merchants
+        </Button>
+
+        <div className="bg-white rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-200 animate-pulse">
+          <div className="space-y-3">
+            <div className="h-8 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded w-1/2" />
+            <div className="flex gap-2">
+              <div className="h-6 bg-gray-200 rounded-full w-20" />
+              <div className="h-6 bg-gray-200 rounded-full w-32" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center py-20">
+          <Spinner size="lg" />
+        </div>
+      </div>
+    );
+  }
+
   const safeCards = cards || [];
   const filteredCards = filterCards(safeCards);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      <button
+      <Button
         onClick={onBack}
-        className="flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium mb-4 sm:mb-6 transition-colors text-sm sm:text-base"
+        variant="ghost"
+        className="mb-4 sm:mb-6 hover:bg-purple-50"
       >
-        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
         Back to Merchants
-      </button>
+      </Button>
 
       <div className="bg-white rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">

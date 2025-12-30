@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,7 +40,11 @@ type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
  */
 export const ChangePasswordPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { changePassword, isLoading, changeSuccess } = useChangePassword();
+
+  // Check if this is first-time login
+  const isFirstTime = location.state?.isFirstTime || false;
 
   // Local state for password visibility toggles
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -98,25 +102,19 @@ export const ChangePasswordPage: React.FC = () => {
       confirmPassword: "***",
     });
 
-    const success = await changePassword(
+    // The hook now handles the redirect to login automatically
+    await changePassword(
       data.currentPassword,
       data.newPassword,
       data.confirmPassword,
     );
-
-    // On success, show success UI then redirect
-    if (success) {
-      setTimeout(() => {
-        navigate("/dashboard"); // Redirect to dashboard or appropriate page
-      }, 2000);
-    }
   };
 
   /**
-   * Navigate back after success
+   * Navigate back to login (called from success screen)
    */
-  const handleGoBack = () => {
-    navigate("/dashboard");
+  const handleGoToLogin = () => {
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -163,7 +161,9 @@ export const ChangePasswordPage: React.FC = () => {
           <p className="text-gray-600 text-lg">
             {changeSuccess
               ? "Password changed successfully!"
-              : "This is your first time logging in. Please change your password."}
+              : isFirstTime
+                ? "This is your first time logging in. Please change your password."
+                : "Update your password to keep your account secure"}
           </p>
         </motion.div>
 
@@ -173,14 +173,19 @@ export const ChangePasswordPage: React.FC = () => {
             {!changeSuccess ? (
               // Password change form
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-8">
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-gray-600 text-center mb-6"
-                >
-                  Please enter your current password and choose a new one.
-                </motion.p>
+                {isFirstTime && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"
+                  >
+                    <p className="text-sm text-blue-800">
+                      <strong>Important:</strong> For security reasons, you must
+                      change your password before accessing your account.
+                    </p>
+                  </motion.div>
+                )}
 
                 {/* Current password input with visibility toggle */}
                 <motion.div
@@ -364,20 +369,22 @@ export const ChangePasswordPage: React.FC = () => {
                   </MagneticButton>
                 </motion.div>
 
-                {/* Cancel button */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8 }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => navigate(-1)}
-                    className="w-full text-center text-gray-600 hover:text-gray-900 transition-colors"
+                {/* Cancel button - only show if not first time */}
+                {!isFirstTime && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8 }}
                   >
-                    Cancel
-                  </button>
-                </motion.div>
+                    <button
+                      type="button"
+                      onClick={() => navigate(-1)}
+                      className="w-full text-center text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </motion.div>
+                )}
               </form>
             ) : (
               // Success message after password change
@@ -400,8 +407,8 @@ export const ChangePasswordPage: React.FC = () => {
                     Password Changed Successfully!
                   </h3>
                   <p className="text-gray-600">
-                    Your password has been updated successfully. You can
-                    continue using your account with the new password.
+                    Your password has been updated. You will be redirected to
+                    the login page to sign in with your new password.
                   </p>
                 </div>
 
@@ -409,10 +416,10 @@ export const ChangePasswordPage: React.FC = () => {
                   size="lg"
                   variant="primary"
                   className="w-full"
-                  onClick={handleGoBack}
+                  onClick={handleGoToLogin}
                 >
                   <Shield className="mr-2 h-5 w-5" />
-                  Go Back
+                  Go to Login
                 </MagneticButton>
               </motion.div>
             )}

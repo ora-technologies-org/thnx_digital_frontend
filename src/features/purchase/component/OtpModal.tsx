@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Shield,
-  CheckCircle,
-  X,
-  Clock,
-  AlertCircle,
-  Receipt,
-} from "lucide-react";
+import { Shield, CheckCircle, Clock, AlertCircle, Receipt } from "lucide-react";
 import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/Button";
 
@@ -19,6 +12,8 @@ interface OTPModalProps {
   customerEmail?: string;
   customerPhone?: string;
   currentBalance: string;
+  merchantAddress?: string; // NEW: merchant address
+  merchantCity?: string; // NEW: merchant city
   onOTPVerified: (
     amount: string,
     locationName: string,
@@ -41,6 +36,8 @@ export const OTPModal: React.FC<OTPModalProps> = ({
   customerEmail,
   customerPhone,
   currentBalance,
+  merchantAddress = "",
+  merchantCity = "",
   onOTPVerified,
   onRequestOTP,
   onVerifyOTP,
@@ -99,6 +96,16 @@ export const OTPModal: React.FC<OTPModalProps> = ({
   };
 
   const [canResend, setCanResend] = useState(false);
+
+  // ==================== PREFILL LOCATION ADDRESS ====================
+  useEffect(() => {
+    if (isOpen && merchantAddress && merchantCity && !locationAddress) {
+      const fullAddress = `${merchantAddress}`;
+      const locationName = `${merchantCity}`;
+      setLocationAddress(fullAddress);
+      setLocationName(locationName);
+    }
+  }, [isOpen, merchantAddress, merchantCity, locationAddress]);
 
   // ==================== HANDLERS ====================
 
@@ -287,12 +294,6 @@ export const OTPModal: React.FC<OTPModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
         </div>
 
         {/* ========== STEP 1: OTP VERIFICATION ========== */}
@@ -481,6 +482,7 @@ export const OTPModal: React.FC<OTPModalProps> = ({
                   placeholder="Connaught Place, New Delhi"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {merchantAddress && merchantCity && <p></p>}
               </div>
 
               <div>

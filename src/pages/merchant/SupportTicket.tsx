@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, Loader2, CheckCircle, HelpCircle } from "lucide-react";
+import { Send, Loader2, HelpCircle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
 import { Card } from "@/shared/components/ui/Card";
-
+import { Modal } from "@/shared/components/ui/Modal"; // Import the Modal component
 import { createSupportTicket } from "@/features/giftCards/services/SuportTicketService";
 import { DashboardLayout } from "@/shared/components/layout/DashboardLayout";
 
@@ -17,13 +17,13 @@ export const SupportTicketPage: React.FC = () => {
     title?: string;
     query?: string;
   }>({});
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const mutation = useMutation({
     mutationFn: createSupportTicket,
     onSuccess: () => {
-      setTimeout(() => {
-        setFormData({ title: "", query: "" });
-      }, 2000);
+      setShowSuccessModal(true);
+      setFormData({ title: "", query: "" });
     },
     onError: (error: unknown) => {
       if (error instanceof Error) {
@@ -73,6 +73,10 @@ export const SupportTicketPage: React.FC = () => {
     mutation.mutate(formData);
   };
 
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+  };
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -94,30 +98,6 @@ export const SupportTicketPage: React.FC = () => {
         </motion.div>
 
         <div className="max-w-3xl">
-          {/* Success Message Card */}
-          {mutation.isSuccess && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6"
-            >
-              <Card className="p-6 bg-green-50 border-green-200">
-                <div className="flex items-start gap-4">
-                  <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-green-900 mb-1">
-                      Ticket Submitted Successfully!
-                    </h3>
-                    <p className="text-green-800">
-                      We've received your support ticket. Our team will review
-                      it and get back to you as soon as possible.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          )}
-
           {/* Main Form Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -245,6 +225,26 @@ export const SupportTicketPage: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={handleCloseSuccessModal}
+        title="Ticket Submitted Successfully!"
+        type="success"
+        size="md"
+        showActions
+        confirmText="Got it"
+        cancelText="Cancel"
+        onConfirm={handleCloseSuccessModal}
+      >
+        <div className="text-center space-y-4">
+          <p className="text-gray-700 mb-2">
+            We've received your support ticket. Our team will review it and get
+            back to you as soon as possible.
+          </p>
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 };

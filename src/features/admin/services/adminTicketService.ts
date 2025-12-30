@@ -1,22 +1,30 @@
 import api from "@/shared/utils/api";
 import type { AxiosError } from "axios";
+
 export interface SupportTicket {
   id: string;
   title: string;
   query: string;
-  status: "IN_PROGRESS" | "CLOSE";
+  status: "OPEN" | "IN_PROGRESS" | "CLOSE";
   response?: string;
   createdAt: string;
   updatedAt: string;
   merchantName?: string;
   merchantEmail?: string;
+  businessName?: string;
+  adminResponse?: string;
 }
+
 interface ApiErrorResponse {
   message?: string;
 }
+
 export interface FetchTicketsParams {
   search?: string;
   order?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+  status?: string;
 }
 
 export interface UpdateTicketData {
@@ -29,6 +37,9 @@ export const fetchSupportTickets = async (params?: FetchTicketsParams) => {
     const queryParams = new URLSearchParams();
     if (params?.search) queryParams.append("search", params.search);
     if (params?.order) queryParams.append("order", params.order);
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.status) queryParams.append("status", params.status);
 
     const url = `/merchants/support-ticket${
       queryParams.toString() ? `?${queryParams.toString()}` : ""

@@ -1,8 +1,7 @@
-// src/features/auth/components/AuthInitializer.tsx - OPTIMIZED VERSION
+// src/features/auth/components/AuthInitializer.tsx - FIXED VERSION
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { setCredentials, setLoading, logout } from "../slices/authSlice";
-import { authService } from "../services/authService";
+import { setCredentials, setLoading } from "../slices/authSlice";
 import { Spinner } from "../../../shared/components/ui/Spinner";
 
 export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
@@ -32,7 +31,7 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // ✅ OPTIMIZATION: If we have cached user data, restore immediately
+      // ✅ If we have cached user data, restore immediately
       if (cachedUserStr) {
         try {
           const cachedUser = JSON.parse(cachedUserStr);
@@ -53,50 +52,22 @@ export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
 
           console.log("✅ Session restored instantly from cache!");
 
-          // Optional: Validate token in background (don't await)
-          authService.getCurrentUser().catch((error) => {
-            console.warn("⚠️ Background token validation failed:", error);
-            console.log("🧹 Token expired, logging out...");
-            dispatch(logout());
-          });
+          // DON'T validate in background - let api interceptor handle token refresh
+          // The interceptor will automatically refresh tokens when they expire
 
           return;
         } catch (error) {
           console.error("❌ Failed to parse cached user:", error);
-          // Continue to API call below
+          // Clear invalid cache
+          localStorage.removeItem("user");
+          dispatch(setLoading(false));
         }
-      }
-
-      // No cached user - fetch from API (e.g., first login)
-      try {
-        console.log("📡 No cached user, fetching from API...");
-
-        const user = await authService.getCurrentUser();
-
-        console.log("✅ User fetched from API:", {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-        });
-
-        dispatch(
-          setCredentials({
-            user,
-            accessToken,
-            refreshToken,
-          }),
-        );
-
-        console.log("✅ Auth initialization complete!");
-      } catch (error) {
-        console.error("❌ Auth initialization failed:", error);
-        console.log("🧹 Clearing invalid tokens...");
-
-        // Clear invalid tokens
+      } else {
+        // No cached user but have tokens - shouldn't happen normally
+        // Clear tokens to force fresh login
+        console.warn("⚠️ Have tokens but no cached user - clearing tokens");
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        localStorage.removeItem("user");
-
         dispatch(setLoading(false));
       }
     };

@@ -365,13 +365,13 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
               >
                 View Profile
               </motion.button>
-              <motion.button
+              {/* <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors"
               >
                 <Mail className="w-4 h-4" />
-              </motion.button>
+              </motion.button> */}
             </div>
           </CardContent>
         </Card>

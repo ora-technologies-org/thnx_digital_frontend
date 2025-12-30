@@ -44,15 +44,14 @@ export interface RedemptionHistoryParams {
   status?: string;
 }
 
-// Send data in request body using POST method
+// Use GET method with query parameters
 export const fetchRedemptionHistory = async (
   params: RedemptionHistoryParams,
 ): Promise<RedemptionHistoryResponse> => {
   try {
-    const response = await api({
-      method: "POST",
-      url: "/purchases/redemptions/history",
-      data: {
+    // Filter out undefined values to avoid sending them as query params
+    const queryParams = Object.fromEntries(
+      Object.entries({
         qrCode: params.qrCode,
         purchaseId: params.purchaseId,
         page: params.page || 1,
@@ -60,10 +59,13 @@ export const fetchRedemptionHistory = async (
         startDate: params.startDate,
         endDate: params.endDate,
         status: params.status,
-      },
-      headers: {
-        "Content-Type": "application/json",
-      },
+      }).filter(([value]) => value !== undefined && value !== null),
+    );
+
+    console.log("Query params being sent:", queryParams); // Debug log
+
+    const response = await api.get("/purchases/redemptions/history", {
+      params: queryParams,
     });
 
     return response.data;

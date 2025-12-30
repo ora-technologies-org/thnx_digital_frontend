@@ -34,7 +34,7 @@ export interface Merchant {
 
 export interface MerchantSetting {
   merchantId: string;
-  // Add setting properties based on your API response
+
   [key: string]: unknown;
 }
 

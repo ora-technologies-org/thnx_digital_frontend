@@ -1,24 +1,20 @@
-// src/pages/admin/CreateMerchantPage.tsx - FIXED VERSION 🔧
-// Fixed: TypeScript any types, improved error handling, added comments
+// src/pages/admin/CreateMerchantPage.tsx - MINIMAL WITH SMART VALIDATION
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   User,
-  Mail,
-  Lock,
-  Phone,
   Building,
   FileText,
   MapPin,
-  Globe,
-  Tag,
   AlertCircle,
   ArrowLeft,
   Sparkles,
   CreditCard,
   Edit2,
   Gift,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
@@ -27,25 +23,24 @@ import {
   setField,
   clearErrors,
   resetForm,
+  setError,
 } from "@/features/admin/slices/MerchantCreateSlice";
 import {
   useCreateMerchant,
   useUpdateMerchant,
 } from "@/features/admin/hooks/useMerchantMutations";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
-
-// Import the components
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
 
-// Define proper API error response interface
+// Types
 interface ApiErrorResponse {
   message?: string;
   errors?: Record<string, string | string[]> | string;
   [key: string]: unknown;
 }
+type FieldValue = string | number | boolean | File | null | undefined;
 
-// Merchant form data interface
 interface CreateMerchantForm {
   email: string;
   password: string;
@@ -74,10 +69,8 @@ interface CreateMerchantForm {
   registrationDocument?: File | string;
   taxDocument?: File | string;
   identityDocument?: File | string;
-  additionalDocuments?: File[] | string[];
 }
 
-// API Response Interface
 interface ApiResponse {
   success: boolean;
   message: string;
@@ -97,7 +90,30 @@ interface ApiResponse {
   };
 }
 
-// Business type options
+interface ValidationRule {
+  required?: boolean;
+  pattern?: RegExp;
+  patternMessage?: string;
+  type?: "email" | "url" | "tel";
+  minLength?: number;
+}
+
+interface ResponseModalData {
+  isOpen: boolean;
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+  details?: {
+    merchantId?: string;
+    email?: string;
+    name?: string;
+    businessName?: string;
+  };
+  onConfirm?: () => void;
+  confirmText?: string;
+}
+
+// Constants
 const businessTypes = [
   "Sole Proprietorship",
   "Partnership",
@@ -107,7 +123,6 @@ const businessTypes = [
   "Non-Profit Organization",
 ];
 
-// Business category options
 const businessCategories = [
   "Retail",
   "Food & Dining",
@@ -121,86 +136,131 @@ const businessCategories = [
   "Other",
 ];
 
-// Reusable Card component for layout
-const Card = ({
+const validationRules: Record<keyof CreateMerchantForm, ValidationRule> = {
+  email: { required: true, type: "email" },
+  password: { required: true, minLength: 6 },
+  name: { required: true, minLength: 2 },
+  phone: {
+    required: true,
+    pattern: /^[+]?[1-9][\d]{0,15}$/,
+    patternMessage: "Invalid phone number",
+  },
+  businessName: { required: true, minLength: 2 },
+  businessRegistrationNumber: { required: true },
+  taxId: { required: true },
+  businessType: { required: true },
+  businessCategory: { required: true },
+  address: { required: true, minLength: 5 },
+  city: { required: true },
+  state: { required: true },
+  zipCode: { required: true },
+  country: { required: true },
+  businessPhone: { required: true },
+  businessEmail: { required: true, type: "email" },
+  website: { required: false, type: "url" },
+  description: { required: true, minLength: 10 },
+  bankName: { required: true },
+  accountNumber: { required: true },
+  accountHolderName: { required: true },
+  ifscCode: { required: true },
+  swiftCode: { required: false },
+  giftCardLimit: { required: false },
+  registrationDocument: { required: true },
+  taxDocument: { required: true },
+  identityDocument: { required: true },
+};
+
+// Minimal Components
+const FormSection = ({
+  title,
+  icon: Icon,
   children,
   className = "",
 }: {
+  title: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`bg-white rounded-2xl shadow-lg ${className}`}>
-    {children}
+  <div className={`mb-8 ${className}`}>
+    <div className="flex items-center gap-3 mb-4">
+      <div className="p-2 bg-blue-50 rounded-lg">
+        <Icon className="w-5 h-5 text-blue-600" />
+      </div>
+      <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+    </div>
+    <div className="space-y-4">{children}</div>
   </div>
 );
 
-// Reusable InputField component
-interface InputFieldProps {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+const InputField: React.FC<{
   label: string;
   name: keyof CreateMerchantForm;
   type?: string;
-  required?: boolean;
   placeholder?: string;
   error?: string;
   disabled?: boolean;
+  required?: boolean;
+  value: string | number;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  touched?: boolean;
   min?: number;
-  step?: string;
-}
-
-const InputField: React.FC<InputFieldProps> = ({
-  icon: Icon,
+}> = ({
   label,
   name,
   type = "text",
-  required = true,
   placeholder,
   error,
   disabled = false,
+  required = true,
+  value,
+  onChange,
+  onBlur,
+  touched,
   min,
-  step,
 }) => {
-  const dispatch = useDispatch();
-  const value = useSelector(
-    (state: RootState) => state.merchant.formData[name],
-  );
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = type === "number" ? Number(e.target.value) : e.target.value;
-    dispatch(setField({ field: name, value: val }));
-  };
+  const hasError = touched && error;
+  const isValid = touched && !error && value;
 
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-          <Icon className="w-5 h-5" />
-        </div>
         <input
           type={type}
           name={name}
-          value={value as string | number}
-          onChange={handleChange}
-          required={required}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
           disabled={disabled}
           min={min}
-          step={step}
-          className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none ${
-            disabled ? "bg-gray-100 cursor-not-allowed" : ""
+          className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors ${
+            disabled ? "bg-gray-50 cursor-not-allowed" : ""
           } ${
-            error
-              ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-              : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
+            hasError
+              ? "border-red-500 bg-red-50"
+              : isValid
+                ? "border-green-500 bg-green-50"
+                : "border-gray-300"
           }`}
         />
+        {touched && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {hasError ? (
+              <XCircle className="w-4 h-4 text-red-500" />
+            ) : isValid ? (
+              <CheckCircle className="w-4 h-4 text-green-500" />
+            ) : null}
+          </div>
+        )}
       </div>
-      {error && (
-        <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-          <AlertCircle className="w-4 h-4" />
+      {hasError && (
+        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
           {error}
         </p>
       )}
@@ -208,172 +268,69 @@ const InputField: React.FC<InputFieldProps> = ({
   );
 };
 
-// File Upload Field Component
-interface FileFieldProps {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+const SelectField: React.FC<{
   label: string;
   name: keyof CreateMerchantForm;
-  required?: boolean;
-  error?: string;
-  accept?: string;
-  existingFileUrl?: string;
-}
-
-const FileField: React.FC<FileFieldProps> = ({
-  icon: Icon,
-  label,
-  name,
-  required = false,
-  error,
-  accept = ".pdf,.jpg,.jpeg,.png",
-  existingFileUrl,
-}) => {
-  const dispatch = useDispatch();
-  const value = useSelector(
-    (state: RootState) => state.merchant.formData[name],
-  );
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-
-    if (file) {
-      dispatch(
-        setField({
-          field: name,
-          value: file,
-        }),
-      );
-    }
-  };
-
-  const getFileName = () => {
-    if (value instanceof File) {
-      return value.name;
-    } else if (typeof value === "string" && value) {
-      return "Existing file";
-    } else if (existingFileUrl) {
-      return "Current file uploaded";
-    }
-    return "No file chosen";
-  };
-
-  const hasFile = value instanceof File || existingFileUrl;
-
-  return (
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        <div className="flex items-center gap-3">
-          <label className="flex-1 cursor-pointer">
-            <div
-              className={`flex items-center gap-3 px-4 py-3 border-2 rounded-xl transition-all ${
-                error
-                  ? "border-red-500 hover:border-red-600"
-                  : "border-gray-200 hover:border-blue-500"
-              }`}
-            >
-              <Icon className="w-5 h-5 text-gray-400" />
-              <span className="text-sm text-gray-600 flex-1 truncate">
-                {getFileName()}
-              </span>
-              <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">
-                Browse
-              </span>
-            </div>
-            <input
-              type="file"
-              onChange={handleFileChange}
-              accept={accept}
-              required={required && !hasFile}
-              className="hidden"
-            />
-          </label>
-          {existingFileUrl && (
-            <a
-              href={existingFileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
-              title="View current file"
-            >
-              <FileText className="w-5 h-5" />
-            </a>
-          )}
-        </div>
-      </div>
-      {error && (
-        <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-          <AlertCircle className="w-4 h-4" />
-          {error}
-        </p>
-      )}
-      <p className="mt-1 text-xs text-gray-500">
-        Accepted formats: PDF, JPG, PNG (Max 5MB)
-      </p>
-    </div>
-  );
-};
-
-// Reusable SelectField component for dropdowns
-interface SelectFieldProps {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  label: string;
-  name: keyof CreateMerchantForm;
-  required?: boolean;
   options: string[];
   error?: string;
-}
-
-const SelectField: React.FC<SelectFieldProps> = ({
-  icon: Icon,
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  touched?: boolean;
+}> = ({
   label,
   name,
-  required = true,
   options,
   error,
+  required = true,
+  value,
+  onChange,
+  onBlur,
+  touched,
 }) => {
-  const dispatch = useDispatch();
-  const value = useSelector(
-    (state: RootState) => state.merchant.formData[name],
-  );
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    dispatch(setField({ field: name, value: e.target.value }));
-  };
+  const hasError = touched && error;
+  const isValid = touched && !error && value;
 
   return (
     <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-          <Icon className="w-5 h-5" />
-        </div>
         <select
           name={name}
           value={value}
-          onChange={handleChange}
-          required={required}
-          className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none appearance-none bg-white ${
-            error
-              ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-              : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none bg-white ${
+            hasError
+              ? "border-red-500 bg-red-50"
+              : isValid
+                ? "border-green-500 bg-green-50"
+                : "border-gray-300"
           }`}
         >
           <option value="">Select {label}</option>
-          {options.map((option: string) => (
+          {options.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
           ))}
         </select>
+        {touched && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            {hasError ? (
+              <XCircle className="w-4 h-4 text-red-500" />
+            ) : isValid ? (
+              <CheckCircle className="w-4 h-4 text-green-500" />
+            ) : null}
+          </div>
+        )}
       </div>
-      {error && (
-        <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-          <AlertCircle className="w-4 h-4" />
+      {hasError && (
+        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
           {error}
         </p>
       )}
@@ -381,24 +338,236 @@ const SelectField: React.FC<SelectFieldProps> = ({
   );
 };
 
-// Modal Response Interface
-interface ResponseModalData {
-  isOpen: boolean;
-  type: "success" | "error" | "info";
-  title: string;
-  message: string;
-  details?: {
-    merchantId?: string;
-    email?: string;
-    name?: string;
-    businessName?: string;
-    [key: string]: unknown;
-  };
-  onConfirm?: () => void;
-  confirmText?: string;
-}
+const TextareaField: React.FC<{
+  label: string;
+  name: keyof CreateMerchantForm;
+  placeholder?: string;
+  error?: string;
+  required?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
+  touched?: boolean;
+  rows?: number;
+}> = ({
+  label,
+  name,
+  placeholder,
+  error,
+  required = true,
+  value,
+  onChange,
+  onBlur,
+  touched,
+  rows = 3,
+}) => {
+  const hasError = touched && error;
+  const isValid = touched && !error && value;
 
-// Main CreateMerchantPage component
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <textarea
+          name={name}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          rows={rows}
+          className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none ${
+            hasError
+              ? "border-red-500 bg-red-50"
+              : isValid
+                ? "border-green-500 bg-green-50"
+                : "border-gray-300"
+          }`}
+        />
+        {touched && value && (
+          <div className="absolute right-3 top-3">
+            {hasError ? (
+              <XCircle className="w-4 h-4 text-red-500" />
+            ) : (
+              <CheckCircle className="w-4 h-4 text-green-500" />
+            )}
+          </div>
+        )}
+      </div>
+      {hasError && (
+        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const FileField: React.FC<{
+  label: string;
+  name: keyof CreateMerchantForm;
+  error?: string;
+  required?: boolean;
+  existingFileUrl?: string;
+  onChange: (file: File) => void;
+  onBlur?: () => void;
+  touched?: boolean;
+  hasFile: boolean;
+}> = ({
+  label,
+
+  error,
+  required = true,
+  existingFileUrl,
+  onChange,
+  onBlur,
+  touched,
+  hasFile,
+}) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) onChange(file);
+  };
+
+  const fileText = existingFileUrl
+    ? "Document uploaded"
+    : hasFile
+      ? "File selected"
+      : "No file chosen";
+  const hasError = touched && error;
+  const isValid = touched && !error && (hasFile || existingFileUrl);
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div
+            className={`flex-1 px-4 py-2.5 border rounded-lg transition-colors ${
+              hasError
+                ? "border-red-500 bg-red-50"
+                : isValid
+                  ? "border-green-500 bg-green-50"
+                  : "border-gray-300"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className={`text-sm ${hasError ? "text-red-600" : "text-gray-600"}`}
+              >
+                {fileText}
+              </span>
+              <span className="text-sm text-blue-600 font-medium">Browse</span>
+            </div>
+          </div>
+          <input
+            type="file"
+            onChange={handleFileChange}
+            onBlur={onBlur}
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="hidden"
+          />
+        </label>
+        {touched && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {hasError ? (
+              <XCircle className="w-4 h-4 text-red-500" />
+            ) : isValid ? (
+              <CheckCircle className="w-4 h-4 text-green-500" />
+            ) : null}
+          </div>
+        )}
+      </div>
+      {hasError && (
+        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          {error}
+        </p>
+      )}
+      <p className="mt-1 text-xs text-gray-500">PDF, JPG, PNG (Max 5MB)</p>
+    </div>
+  );
+};
+
+// const MissingFieldsAlert = ({
+//   count,
+//   onShowMissing,
+// }: {
+//   count: number;
+//   onShowMissing: () => void;
+// }) => {
+//   if (count === 0) return null;
+
+//   return (
+//     <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+//       <div className="flex items-center justify-between">
+//         <div className="flex items-center gap-2">
+//           <AlertCircle className="w-5 h-5 text-amber-600" />
+//           <span className="font-medium text-amber-800">
+//             {count} required field{count > 1 ? "s" : ""} incomplete
+//           </span>
+//         </div>
+//         <button
+//           onClick={onShowMissing}
+//           className="text-sm font-medium text-amber-700 hover:text-amber-800 underline"
+//         >
+//           Show missing fields
+//         </button>
+//       </div>
+//       <p className="mt-1 text-sm text-amber-700">
+//         Please complete all required fields for better experience
+//       </p>
+//     </div>
+//   );
+// };
+
+// Validation function
+const validateField = (
+  name: keyof CreateMerchantForm,
+  value: FieldValue,
+  rule: ValidationRule,
+): string | null => {
+  if (rule.required) {
+    if (value === undefined || value === null || value === "") {
+      return "This field is required";
+    }
+
+    if (name.includes("Document")) {
+      if (!(value instanceof File)) {
+        return "This document is required";
+      }
+    }
+  }
+
+  if (
+    value &&
+    rule.minLength &&
+    typeof value === "string" &&
+    value.length < rule.minLength
+  ) {
+    return `Minimum ${rule.minLength} characters required`;
+  }
+
+  if (value && rule.pattern && typeof value === "string") {
+    if (!rule.pattern.test(value)) {
+      return rule.patternMessage || "Invalid format";
+    }
+  }
+
+  if (rule.type === "email" && typeof value === "string") {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return "Please enter a valid email address";
+    }
+  }
+
+  return null;
+};
+// Main Component
 export const CreateMerchantPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -410,10 +579,8 @@ export const CreateMerchantPage: React.FC = () => {
 
   const { mutate: createMerchant, isPending: isCreating } = useCreateMerchant();
   const { mutate: updateMerchant, isPending: isUpdating } = useUpdateMerchant();
-
   const isPending = isCreating || isUpdating;
 
-  // State for response modal
   const [responseModal, setResponseModal] = useState<ResponseModalData>({
     isOpen: false,
     type: "success",
@@ -422,84 +589,129 @@ export const CreateMerchantPage: React.FC = () => {
     confirmText: "OK",
   });
 
-  // Log to verify edit mode detection
-  useEffect(() => {
-    if (isEditMode) {
-      console.log("Edit Mode Activated for Merchant ID:", id);
-      console.log("Form Data:", formData);
-    } else {
-      console.log("Create Mode - New Merchant");
-    }
-  }, [isEditMode, id, formData]);
+  const [touchedFields, setTouchedFields] = useState<
+    Set<keyof CreateMerchantForm>
+  >(new Set());
 
-  // Clean up form on component unmount
+  // Calculate missing fields
+  const missingFieldCount = useMemo(() => {
+    let count = 0;
+
+    Object.entries(validationRules).forEach(([field, rule]) => {
+      const fieldName = field as keyof CreateMerchantForm;
+
+      // Skip password validation in edit mode if not changed
+      if (isEditMode && field === "password" && !formData.password) {
+        return;
+      }
+
+      // Skip document validation in edit mode if they already exist
+      if (
+        isEditMode &&
+        (field === "registrationDocument" ||
+          field === "taxDocument" ||
+          field === "identityDocument") &&
+        (formData[fieldName] as string)
+      ) {
+        return;
+      }
+
+      if (rule.required) {
+        const value = formData[fieldName];
+        const hasValue = value !== undefined && value !== null && value !== "";
+
+        if (field.includes("Document")) {
+          const hasFile = value instanceof File || value;
+          if (!hasFile) count++;
+        } else if (!hasValue) {
+          count++;
+        }
+      }
+    });
+
+    return count;
+  }, [formData, isEditMode]);
+
+  // Effects
   useEffect(() => {
     return () => {
       dispatch(resetForm());
     };
   }, [dispatch]);
 
-  /**
-   * Formats the API response message for display in the modal
-   * @param response - The API response object
-   * @returns Formatted message string
-   */
-  const formatResponseMessage = (response: ApiResponse): string => {
-    const message = response.message;
+  // Handlers
+  const handleFieldBlur = useCallback(
+    (fieldName: keyof CreateMerchantForm) => {
+      setTouchedFields((prev) => new Set(prev).add(fieldName));
 
-    return message;
-  };
+      const rule = validationRules[fieldName];
+      const value = formData[fieldName];
+      const error = validateField(fieldName, value, rule);
 
-  /**
-   * Extracts error message from API error response
-   * @param error - The error object from API call
-   * @returns Object containing title, message, and details
-   */
+      if (error) {
+        dispatch(setError({ field: fieldName, message: error }));
+      }
+    },
+    [dispatch, formData],
+  );
+
+  const scrollToMissingField = useCallback(() => {
+    // Find all missing fields
+    const missingFields: { field: string; element: HTMLElement | null }[] = [];
+
+    Object.entries(validationRules).forEach(([field, rule]) => {
+      if (rule.required) {
+        const fieldName = field as keyof CreateMerchantForm;
+        const value = formData[fieldName];
+        const hasValue = value !== undefined && value !== null && value !== "";
+
+        if (!hasValue) {
+          const element = document.querySelector(`[name="${field}"]`);
+          if (element) {
+            missingFields.push({ field, element: element as HTMLElement });
+          }
+        }
+      }
+    });
+
+    // Scroll to first missing field
+    if (missingFields.length > 0) {
+      missingFields[0].element?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      missingFields[0].element?.focus();
+
+      // Highlight all missing fields
+      missingFields.forEach(({ field }) => {
+        const element = document.querySelector(`[name="${field}"]`);
+        if (element) {
+          element.classList.add("border-red-500", "bg-red-50");
+          setTimeout(() => {
+            element.classList.remove("border-red-500", "bg-red-50");
+          }, 3000);
+        }
+      });
+    }
+  }, [formData]);
+
   const extractErrorMessage = (
     error: unknown,
-  ): { title: string; message: string; details?: Record<string, unknown> } => {
+  ): { title: string; message: string } => {
     const defaultError = {
       title: "Operation Failed",
       message: "An unexpected error occurred. Please try again.",
     };
 
-    // Check if error has response data (Axios error)
     if (typeof error === "object" && error !== null) {
       const apiError = error as { response?: { data?: ApiErrorResponse } };
-
       if (apiError.response?.data) {
         const errorData = apiError.response.data;
-        let errorMessage = errorData.message || defaultError.message;
-        const errorDetails: Record<string, unknown> = {};
-
-        // Handle validation errors
-        if (errorData.errors) {
-          if (typeof errorData.errors === "object") {
-            // Format object validation errors
-            const formattedErrors = Object.entries(errorData.errors)
-              .map(([field, messages]) => {
-                if (Array.isArray(messages)) {
-                  return `${field}: ${messages.join(", ")}`;
-                }
-                return `${field}: ${messages}`;
-              })
-              .join("\n");
-            errorMessage += `\n\nValidation Errors:\n${formattedErrors}`;
-            errorDetails.validationErrors = errorData.errors;
-          } else if (typeof errorData.errors === "string") {
-            errorMessage += `\n\n${errorData.errors}`;
-          }
-        }
-
         return {
           title: "Operation Failed",
-          message: errorMessage,
-          details:
-            Object.keys(errorDetails).length > 0 ? errorDetails : undefined,
+          message: errorData.message || defaultError.message,
         };
       }
-
-      // Handle non-Axios errors
       if (error instanceof Error) {
         return {
           title: "Error",
@@ -507,24 +719,13 @@ export const CreateMerchantPage: React.FC = () => {
         };
       }
     }
-
     return defaultError;
   };
 
-  /**
-   * Opens the response modal with dynamic data
-   * @param type - Modal type (success, error, info)
-   * @param title - Modal title
-   * @param message - Modal message
-   * @param details - Additional details to display
-   * @param onConfirm - Callback function when confirm is clicked
-   * @param confirmText - Text for confirm button (default: "OK")
-   */
   const openResponseModal = (
     type: "success" | "error" | "info",
     title: string,
     message: string,
-    details?: ResponseModalData["details"],
     onConfirm?: () => void,
     confirmText: string = "OK",
   ) => {
@@ -533,115 +734,115 @@ export const CreateMerchantPage: React.FC = () => {
       type,
       title,
       message,
-      details,
       onConfirm,
       confirmText,
     });
   };
 
-  // Close response modal
   const closeResponseModal = () => {
     setResponseModal((prev) => ({ ...prev, isOpen: false }));
   };
 
-  /**
-   * Handles form submission
-   * @param e - Form event
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(clearErrors());
 
-    // Client-side validation
+    // Mark all fields as touched
+    const allFields = Object.keys(validationRules) as Array<
+      keyof CreateMerchantForm
+    >;
+    setTouchedFields(new Set(allFields));
+
+    // Validate all fields and collect errors
     const validationErrors: Record<string, string> = {};
 
-    if (!formData.email.includes("@")) {
-      validationErrors.email = "Invalid email address";
-    }
+    Object.entries(validationRules).forEach(([field, rule]) => {
+      const fieldName = field as keyof CreateMerchantForm;
 
-    // Password is only required for create, not edit
-    if (!isEditMode && formData.password.length < 8) {
-      validationErrors.password = "Password must be at least 8 characters";
-    }
-
-    if (!formData.businessName.trim()) {
-      validationErrors.businessName = "Business name is required";
-    }
-
-    // Validate giftCardLimit in edit mode
-    if (isEditMode && formData.giftCardLimit !== undefined) {
-      if (formData.giftCardLimit < 0) {
-        validationErrors.giftCardLimit = "Gift card limit cannot be negative";
+      if (isEditMode && field === "password" && !formData.password) {
+        return;
       }
-    }
 
+      if (
+        isEditMode &&
+        (field === "registrationDocument" ||
+          field === "taxDocument" ||
+          field === "identityDocument") &&
+        (formData[fieldName] as string)
+      ) {
+        return;
+      }
+
+      const value = formData[fieldName];
+      const error = validateField(fieldName, value, rule);
+
+      if (error) {
+        validationErrors[field] = error;
+      }
+    });
+
+    // If there are validation errors, scroll to first one and show message
     if (Object.keys(validationErrors).length > 0) {
-      const errorMessages = Object.values(validationErrors).join("\n");
+      // Set errors in Redux
+      Object.entries(validationErrors).forEach(([field, error]) => {
+        dispatch(
+          setError({
+            field: field as keyof CreateMerchantForm,
+            message: error,
+          }),
+        );
+      });
+
+      // Scroll to first error
+      setTimeout(() => {
+        scrollToMissingField();
+      }, 100);
+
+      // Show modal with guidance
       openResponseModal(
-        "error",
-        "Validation Error",
-        `Please fix the following errors:\n\n${errorMessages}`,
+        "info",
+        "Complete Required Fields",
+        `Please complete ${Object.keys(validationErrors).length} required field${Object.keys(validationErrors).length > 1 ? "s" : ""} before submitting.`,
       );
       return;
     }
 
-    // Call appropriate mutation based on mode
+    // Clear any previous errors
+    dispatch(clearErrors());
+
+    // Submit form
     if (isEditMode) {
       updateMerchant(
         { merchantId: id!, formData },
         {
           onSuccess: (response: ApiResponse) => {
-            openResponseModal(
-              "success",
-              "Merchant Updated Successfully",
-              formatResponseMessage(response),
-              {
-                merchantId: response.data?.user?.id,
-                email: response.data?.user?.email,
-                name: response.data?.user?.name,
-              },
-              () => {
-                dispatch(resetForm());
-                navigate("/admin/merchants");
-              },
-            );
+            openResponseModal("success", "Success", response.message, () => {
+              dispatch(resetForm());
+              navigate("/admin/merchants");
+            });
           },
           onError: (error: unknown) => {
-            const { title, message, details } = extractErrorMessage(error);
-            openResponseModal("error", title, message, details);
+            const { title, message } = extractErrorMessage(error);
+            openResponseModal("error", title, message);
           },
         },
       );
     } else {
       createMerchant(formData, {
         onSuccess: (response: ApiResponse) => {
-          openResponseModal(
-            "success",
-            "Merchant Created Successfully",
-            formatResponseMessage(response),
-            {
-              merchantId: response.data?.user?.id,
-              email: response.data?.user?.email,
-              name: response.data?.user?.name,
-              businessName: formData.businessName,
-            },
-            () => {
-              dispatch(resetForm());
-              navigate("/admin/merchants");
-            },
-          );
+          openResponseModal("success", "Success", response.message, () => {
+            dispatch(resetForm());
+            navigate("/admin/merchants");
+          });
         },
         onError: (error: unknown) => {
-          const { title, message, details } = extractErrorMessage(error);
-          openResponseModal("error", title, message, details);
+          const { title, message } = extractErrorMessage(error);
+          openResponseModal("error", title, message);
         },
       });
     }
   };
 
-  // Navigate back to merchants list
   const handleBack = () => {
-    // Check if there are unsaved changes
     const hasUnsavedChanges = Object.keys(formData).some(
       (key) => formData[key as keyof CreateMerchantForm],
     );
@@ -651,7 +852,6 @@ export const CreateMerchantPage: React.FC = () => {
         "info",
         "Unsaved Changes",
         "You have unsaved changes. Are you sure you want to leave?",
-        undefined,
         () => {
           dispatch(resetForm());
           navigate("/admin/merchants");
@@ -663,510 +863,542 @@ export const CreateMerchantPage: React.FC = () => {
     }
   };
 
+  // Helper functions for form fields
+  const handleInputChange = useCallback(
+    (field: keyof CreateMerchantForm, value: string) => {
+      dispatch(setField({ field, value }));
+    },
+    [dispatch],
+  );
+
+  const handleFileChange = useCallback(
+    (field: keyof CreateMerchantForm, file: File) => {
+      dispatch(setField({ field, value: file }));
+    },
+    [dispatch],
+  );
+
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="p-8 max-w-5xl mx-auto">
-          {/* Header section with back button and title */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <Button
-              variant="ghost"
+      <div className="min-h-screen bg-gray-50">
+        <div className="p-6 max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <button
               onClick={handleBack}
-              className="flex items-center gap-2 mb-4"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
               Back to Merchants
-            </Button>
+            </button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-2">
               <div
-                className={`w-12 h-12 bg-gradient-to-br ${
-                  isEditMode
-                    ? "from-green-500 to-emerald-600"
-                    : "from-blue-500 to-purple-600"
-                } rounded-2xl flex items-center justify-center`}
+                className={`p-2 rounded-lg ${isEditMode ? "bg-green-100" : "bg-blue-100"}`}
               >
                 {isEditMode ? (
-                  <Edit2 className="w-6 h-6 text-white" />
+                  <Edit2 className="w-6 h-6 text-green-600" />
                 ) : (
-                  <Sparkles className="w-6 h-6 text-white" />
+                  <Sparkles className="w-6 h-6 text-blue-600" />
                 )}
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900">
                   {isEditMode ? "Edit Merchant" : "Create New Merchant"}
                 </h1>
                 <p className="text-gray-600">
                   {isEditMode
-                    ? "Update merchant information"
-                    : "Add a new merchant to your platform"}
+                    ? "Update merchant details"
+                    : "Register a new merchant"}
                 </p>
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Main form section */}
+          {/* Missing Fields Alert */}
+          {/* <MissingFieldsAlert
+            count={missingFieldCount}
+            onShowMissing={scrollToMissingField}
+          /> */}
+
+          {/* Form */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
-            <form onSubmit={handleSubmit}>
-              <Card className="p-8">
-                {/* Personal Information section */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                    <User className="w-5 h-5 text-blue-600" />
-                    Personal Information
-                  </h2>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Basic details about the merchant
-                  </p>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Personal Information */}
+              <FormSection title="Personal Information" icon={User}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField
+                    label="Full Name"
+                    name="name"
+                    value={formData.name}
+                    onChange={(value) => handleInputChange("name", value)}
+                    onBlur={() => handleFieldBlur("name")}
+                    placeholder="John Doe"
+                    error={errors.name}
+                    touched={touchedFields.has("name")}
+                    disabled={isEditMode}
+                  />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InputField
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(value) => handleInputChange("email", value)}
+                    onBlur={() => handleFieldBlur("email")}
+                    placeholder="john@example.com"
+                    error={errors.email}
+                    touched={touchedFields.has("email")}
+                    disabled={isEditMode}
+                  />
+
+                  {!isEditMode && (
                     <InputField
-                      icon={User}
-                      label="Full Name"
-                      name="name"
-                      placeholder="John Doe"
-                      error={errors.name}
-                      disabled={isEditMode}
-                    />
-                    <InputField
-                      icon={Mail}
-                      label="Email Address"
-                      name="email"
-                      type="email"
-                      placeholder="john@example.com"
-                      error={errors.email}
-                      disabled={isEditMode}
-                    />
-                    <InputField
-                      icon={Lock}
                       label="Password"
                       name="password"
                       type="password"
-                      placeholder={
-                        isEditMode ? "Cannot be changed" : "••••••••"
-                      }
+                      value={formData.password}
+                      onChange={(value) => handleInputChange("password", value)}
+                      onBlur={() => handleFieldBlur("password")}
+                      placeholder="••••••••"
                       error={errors.password}
-                      required={!isEditMode}
-                      disabled={isEditMode}
+                      touched={touchedFields.has("password")}
                     />
-                    <InputField
-                      icon={Phone}
-                      label="Phone Number"
-                      name="phone"
-                      type="tel"
-                      placeholder="+1234567890"
-                      error={errors.phone}
-                      disabled={isEditMode}
-                    />
-                  </div>
+                  )}
+
+                  <InputField
+                    label="Phone Number"
+                    name="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(value) => handleInputChange("phone", value)}
+                    onBlur={() => handleFieldBlur("phone")}
+                    placeholder="+1234567890"
+                    error={errors.phone}
+                    touched={touchedFields.has("phone")}
+                    disabled={isEditMode}
+                  />
                 </div>
+              </FormSection>
 
-                <div className="border-t border-gray-200 my-8" />
-
-                {/* Gift Card Limit Section (Edit Mode Only) */}
-                {isEditMode && (
-                  <>
-                    <div className="mb-8">
-                      <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                        <Gift className="w-5 h-5 text-pink-600" />
-                        Gift Card Settings
-                      </h2>
-                      <p className="text-sm text-gray-600 mb-6">
-                        Configure gift card limitations for this merchant
-                      </p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <InputField
-                          icon={Gift}
-                          label="Gift Card Limit"
-                          name="giftCardLimit"
-                          type="number"
-                          placeholder="Enter limit (e.g., 1000)"
-                          error={errors.giftCardLimit}
-                          required={false}
-                          min={0}
-                          step="0.01"
-                        />
-                      </div>
-                      <p className="mt-2 text-xs text-gray-500">
-                        Set the maximum number of gift cards this merchant can
-                        issue. Leave empty for no limit.
-                      </p>
-                    </div>
-
-                    <div className="border-t border-gray-200 my-8" />
-                  </>
-                )}
-
-                {/* Documents Section */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-cyan-600" />
-                    Business Documents
-                  </h2>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Upload required business verification documents
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FileField
-                      icon={FileText}
-                      label="Registration Document"
-                      name="registrationDocument"
-                      required={!isEditMode}
-                      error={errors.registrationDocument}
-                      existingFileUrl={
-                        isEditMode
-                          ? (formData.registrationDocument as string)
-                          : undefined
+              {/* Gift Card Limit (Edit only) */}
+              {isEditMode && (
+                <FormSection title="Gift Card Settings" icon={Gift}>
+                  <div className="max-w-xs">
+                    <InputField
+                      label="Gift Card Limit"
+                      name="giftCardLimit"
+                      type="number"
+                      value={formData.giftCardLimit || ""}
+                      onChange={(value) =>
+                        handleInputChange("giftCardLimit", value)
                       }
-                    />
-                    <FileField
-                      icon={FileText}
-                      label="Tax Document"
-                      name="taxDocument"
-                      required={!isEditMode}
-                      error={errors.taxDocument}
-                      existingFileUrl={
-                        isEditMode
-                          ? (formData.taxDocument as string)
-                          : undefined
-                      }
-                    />
-                    <FileField
-                      icon={FileText}
-                      label="Identity Document"
-                      name="identityDocument"
-                      required={!isEditMode}
-                      error={errors.identityDocument}
-                      existingFileUrl={
-                        isEditMode
-                          ? (formData.identityDocument as string)
-                          : undefined
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-200 my-8" />
-
-                {/* Business Information section */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                    <Building className="w-5 h-5 text-purple-600" />
-                    Business Information
-                  </h2>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Details about the merchant's business
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputField
-                      icon={Building}
-                      label="Business Name"
-                      name="businessName"
-                      placeholder="ABC Company"
-                      error={errors.businessName}
-                    />
-                    <InputField
-                      icon={FileText}
-                      label="Business Registration Number"
-                      name="businessRegistrationNumber"
-                      placeholder="REG123456"
-                      error={errors.businessRegistrationNumber}
-                    />
-                    <InputField
-                      icon={FileText}
-                      label="Tax ID"
-                      name="taxId"
-                      placeholder="TAX123456"
-                      error={errors.taxId}
-                    />
-                    <SelectField
-                      icon={Tag}
-                      label="Business Type"
-                      name="businessType"
-                      options={businessTypes}
-                      error={errors.businessType}
-                    />
-                    <SelectField
-                      icon={Tag}
-                      label="Business Category"
-                      name="businessCategory"
-                      options={businessCategories}
-                      error={errors.businessCategory}
-                    />
-                    <InputField
-                      icon={Phone}
-                      label="Business Phone"
-                      name="businessPhone"
-                      type="tel"
-                      placeholder="+1234567890"
-                      error={errors.businessPhone}
-                    />
-                    <InputField
-                      icon={Mail}
-                      label="Business Email"
-                      name="businessEmail"
-                      type="email"
-                      placeholder="info@business.com"
-                      error={errors.businessEmail}
-                    />
-                    <InputField
-                      icon={Globe}
-                      label="Website"
-                      name="website"
-                      type="url"
-                      placeholder="https://www.business.com"
+                      onBlur={() => handleFieldBlur("giftCardLimit")}
+                      placeholder="Enter limit"
+                      error={errors.giftCardLimit}
+                      touched={touchedFields.has("giftCardLimit")}
                       required={false}
-                      error={errors.website}
+                      min={0}
                     />
                   </div>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Set maximum gift cards merchant can issue. Leave empty for
+                    no limit.
+                  </p>
+                </FormSection>
+              )}
 
-                  <div className="mt-6">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Business Description{" "}
-                      <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      name="description"
-                      value={formData.description}
-                      onChange={(e) =>
-                        dispatch(
-                          setField({
-                            field: "description",
-                            value: e.target.value,
-                          }),
-                        )
-                      }
-                      required
-                      placeholder="Describe your business..."
-                      rows={4}
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 transition-all outline-none resize-none ${
-                        errors.description
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-100"
-                          : "border-gray-200 focus:border-blue-500 focus:ring-blue-100"
-                      }`}
+              {/* Documents */}
+              <FormSection title="Business Documents" icon={FileText}>
+                <div className="space-y-4">
+                  <FileField
+                    label="Registration Document"
+                    name="registrationDocument"
+                    onChange={(file) =>
+                      handleFileChange("registrationDocument", file)
+                    }
+                    onBlur={() => handleFieldBlur("registrationDocument")}
+                    required={!isEditMode}
+                    error={errors.registrationDocument}
+                    touched={touchedFields.has("registrationDocument")}
+                    hasFile={
+                      !!(
+                        formData.registrationDocument instanceof File ||
+                        formData.registrationDocument
+                      )
+                    }
+                    existingFileUrl={
+                      isEditMode
+                        ? (formData.registrationDocument as string)
+                        : undefined
+                    }
+                  />
+
+                  <FileField
+                    label="Tax Document"
+                    name="taxDocument"
+                    onChange={(file) => handleFileChange("taxDocument", file)}
+                    onBlur={() => handleFieldBlur("taxDocument")}
+                    required={!isEditMode}
+                    error={errors.taxDocument}
+                    touched={touchedFields.has("taxDocument")}
+                    hasFile={
+                      !!(
+                        formData.taxDocument instanceof File ||
+                        formData.taxDocument
+                      )
+                    }
+                    existingFileUrl={
+                      isEditMode ? (formData.taxDocument as string) : undefined
+                    }
+                  />
+
+                  <FileField
+                    label="Identity Document"
+                    name="identityDocument"
+                    onChange={(file) =>
+                      handleFileChange("identityDocument", file)
+                    }
+                    onBlur={() => handleFieldBlur("identityDocument")}
+                    required={!isEditMode}
+                    error={errors.identityDocument}
+                    touched={touchedFields.has("identityDocument")}
+                    hasFile={
+                      !!(
+                        formData.identityDocument instanceof File ||
+                        formData.identityDocument
+                      )
+                    }
+                    existingFileUrl={
+                      isEditMode
+                        ? (formData.identityDocument as string)
+                        : undefined
+                    }
+                  />
+                </div>
+              </FormSection>
+
+              {/* Business Information */}
+              <FormSection title="Business Information" icon={Building}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField
+                    label="Business Name"
+                    name="businessName"
+                    value={formData.businessName}
+                    onChange={(value) =>
+                      handleInputChange("businessName", value)
+                    }
+                    onBlur={() => handleFieldBlur("businessName")}
+                    placeholder="ABC Company"
+                    error={errors.businessName}
+                    touched={touchedFields.has("businessName")}
+                  />
+
+                  <InputField
+                    label="Business Registration Number"
+                    name="businessRegistrationNumber"
+                    value={formData.businessRegistrationNumber}
+                    onChange={(value) =>
+                      handleInputChange("businessRegistrationNumber", value)
+                    }
+                    onBlur={() => handleFieldBlur("businessRegistrationNumber")}
+                    placeholder="REG123456"
+                    error={errors.businessRegistrationNumber}
+                    touched={touchedFields.has("businessRegistrationNumber")}
+                  />
+
+                  <InputField
+                    label="Tax ID"
+                    name="taxId"
+                    value={formData.taxId}
+                    onChange={(value) => handleInputChange("taxId", value)}
+                    onBlur={() => handleFieldBlur("taxId")}
+                    placeholder="TAX123456"
+                    error={errors.taxId}
+                    touched={touchedFields.has("taxId")}
+                  />
+
+                  <SelectField
+                    label="Business Type"
+                    name="businessType"
+                    value={formData.businessType}
+                    onChange={(value) =>
+                      handleInputChange("businessType", value)
+                    }
+                    onBlur={() => handleFieldBlur("businessType")}
+                    options={businessTypes}
+                    error={errors.businessType}
+                    touched={touchedFields.has("businessType")}
+                  />
+
+                  <SelectField
+                    label="Business Category"
+                    name="businessCategory"
+                    value={formData.businessCategory}
+                    onChange={(value) =>
+                      handleInputChange("businessCategory", value)
+                    }
+                    onBlur={() => handleFieldBlur("businessCategory")}
+                    options={businessCategories}
+                    error={errors.businessCategory}
+                    touched={touchedFields.has("businessCategory")}
+                  />
+
+                  <InputField
+                    label="Business Phone"
+                    name="businessPhone"
+                    type="tel"
+                    value={formData.businessPhone}
+                    onChange={(value) =>
+                      handleInputChange("businessPhone", value)
+                    }
+                    onBlur={() => handleFieldBlur("businessPhone")}
+                    placeholder="+1234567890"
+                    error={errors.businessPhone}
+                    touched={touchedFields.has("businessPhone")}
+                  />
+
+                  <InputField
+                    label="Business Email"
+                    name="businessEmail"
+                    type="email"
+                    value={formData.businessEmail}
+                    onChange={(value) =>
+                      handleInputChange("businessEmail", value)
+                    }
+                    onBlur={() => handleFieldBlur("businessEmail")}
+                    placeholder="info@business.com"
+                    error={errors.businessEmail}
+                    touched={touchedFields.has("businessEmail")}
+                  />
+
+                  <InputField
+                    label="Website"
+                    name="website"
+                    type="url"
+                    value={formData.website}
+                    onChange={(value) => handleInputChange("website", value)}
+                    onBlur={() => handleFieldBlur("website")}
+                    placeholder="https://www.business.com"
+                    error={errors.website}
+                    touched={touchedFields.has("website")}
+                    required={false}
+                  />
+                </div>
+
+                <TextareaField
+                  label="Business Description"
+                  name="description"
+                  value={formData.description}
+                  onChange={(value) => handleInputChange("description", value)}
+                  onBlur={() => handleFieldBlur("description")}
+                  placeholder="Describe your business..."
+                  error={errors.description}
+                  touched={touchedFields.has("description")}
+                  rows={4}
+                />
+              </FormSection>
+
+              {/* Banking Information */}
+              <FormSection title="Banking Information" icon={CreditCard}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField
+                    label="Bank Name"
+                    name="bankName"
+                    value={formData.bankName}
+                    onChange={(value) => handleInputChange("bankName", value)}
+                    onBlur={() => handleFieldBlur("bankName")}
+                    placeholder="Bank of America"
+                    error={errors.bankName}
+                    touched={touchedFields.has("bankName")}
+                  />
+
+                  <InputField
+                    label="Account Holder Name"
+                    name="accountHolderName"
+                    value={formData.accountHolderName}
+                    onChange={(value) =>
+                      handleInputChange("accountHolderName", value)
+                    }
+                    onBlur={() => handleFieldBlur("accountHolderName")}
+                    placeholder="John Doe"
+                    error={errors.accountHolderName}
+                    touched={touchedFields.has("accountHolderName")}
+                  />
+
+                  <InputField
+                    label="Account Number"
+                    name="accountNumber"
+                    value={formData.accountNumber}
+                    onChange={(value) =>
+                      handleInputChange("accountNumber", value)
+                    }
+                    onBlur={() => handleFieldBlur("accountNumber")}
+                    placeholder="1234567890"
+                    error={errors.accountNumber}
+                    touched={touchedFields.has("accountNumber")}
+                  />
+
+                  <InputField
+                    label="IFSC Code"
+                    name="ifscCode"
+                    value={formData.ifscCode}
+                    onChange={(value) => handleInputChange("ifscCode", value)}
+                    onBlur={() => handleFieldBlur("ifscCode")}
+                    placeholder="SBIN0001234"
+                    error={errors.ifscCode}
+                    touched={touchedFields.has("ifscCode")}
+                  />
+
+                  <InputField
+                    label="SWIFT Code"
+                    name="swiftCode"
+                    value={formData.swiftCode}
+                    onChange={(value) => handleInputChange("swiftCode", value)}
+                    onBlur={() => handleFieldBlur("swiftCode")}
+                    placeholder="SBININBB123"
+                    error={errors.swiftCode}
+                    touched={touchedFields.has("swiftCode")}
+                    required={false}
+                  />
+                </div>
+              </FormSection>
+
+              {/* Location Information */}
+              <FormSection title="Location Information" icon={MapPin}>
+                <div className="space-y-4">
+                  <InputField
+                    label="Street Address"
+                    name="address"
+                    value={formData.address}
+                    onChange={(value) => handleInputChange("address", value)}
+                    onBlur={() => handleFieldBlur("address")}
+                    placeholder="123 Main Street"
+                    error={errors.address}
+                    touched={touchedFields.has("address")}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField
+                      label="City"
+                      name="city"
+                      value={formData.city}
+                      onChange={(value) => handleInputChange("city", value)}
+                      onBlur={() => handleFieldBlur("city")}
+                      placeholder="New York"
+                      error={errors.city}
+                      touched={touchedFields.has("city")}
                     />
-                    {errors.description && (
-                      <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.description}
-                      </p>
+
+                    <InputField
+                      label="State/Province"
+                      name="state"
+                      value={formData.state}
+                      onChange={(value) => handleInputChange("state", value)}
+                      onBlur={() => handleFieldBlur("state")}
+                      placeholder="NY"
+                      error={errors.state}
+                      touched={touchedFields.has("state")}
+                    />
+
+                    <InputField
+                      label="ZIP/Postal Code"
+                      name="zipCode"
+                      value={formData.zipCode}
+                      onChange={(value) => handleInputChange("zipCode", value)}
+                      onBlur={() => handleFieldBlur("zipCode")}
+                      placeholder="10001"
+                      error={errors.zipCode}
+                      touched={touchedFields.has("zipCode")}
+                    />
+
+                    <InputField
+                      label="Country"
+                      name="country"
+                      value={formData.country}
+                      onChange={(value) => handleInputChange("country", value)}
+                      onBlur={() => handleFieldBlur("country")}
+                      placeholder="USA"
+                      error={errors.country}
+                      touched={touchedFields.has("country")}
+                    />
+                  </div>
+                </div>
+              </FormSection>
+
+              {/* Submit Section */}
+              <div className="pt-6 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    {missingFieldCount > 0 ? (
+                      <span className="text-amber-600 font-medium">
+                        {missingFieldCount} incomplete field
+                        {missingFieldCount > 1 ? "s" : ""}
+                      </span>
+                    ) : (
+                      <span className="text-green-600 font-medium">
+                        All fields are complete
+                      </span>
                     )}
                   </div>
-                </div>
 
-                <div className="border-t border-gray-200 my-8" />
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBack}
+                      disabled={isPending}
+                    >
+                      Cancel
+                    </Button>
 
-                {/* Banking Information section */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-indigo-600" />
-                    Banking Information
-                  </h2>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Bank account details for payments
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputField
-                      icon={Building}
-                      label="Bank Name"
-                      name="bankName"
-                      placeholder="Bank of America"
-                      error={errors.bankName}
-                    />
-                    <InputField
-                      icon={User}
-                      label="Account Holder Name"
-                      name="accountHolderName"
-                      placeholder="John Doe"
-                      error={errors.accountHolderName}
-                    />
-                    <InputField
-                      icon={CreditCard}
-                      label="Account Number"
-                      name="accountNumber"
-                      placeholder="1234567890"
-                      error={errors.accountNumber}
-                    />
-                    <InputField
-                      icon={FileText}
-                      label="IFSC Code"
-                      name="ifscCode"
-                      placeholder="SBIN0001234"
-                      error={errors.ifscCode}
-                    />
-                    <InputField
-                      icon={Globe}
-                      label="SWIFT Code"
-                      name="swiftCode"
-                      placeholder="SBININBB123"
-                      required={false}
-                      error={errors.swiftCode}
-                    />
+                    <Button
+                      type="submit"
+                      variant={isEditMode ? "gradient" : "gradient"}
+                      isLoading={isPending}
+                    >
+                      {isEditMode ? "Update Merchant" : "Create Merchant"}
+                    </Button>
                   </div>
                 </div>
-
-                <div className="border-t border-gray-200 my-8" />
-
-                {/* Location Information section */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-green-600" />
-                    Location Information
-                  </h2>
-                  <p className="text-sm text-gray-600 mb-6">
-                    Business location details
-                  </p>
-
-                  <div className="grid grid-cols-1 gap-6">
-                    <InputField
-                      icon={MapPin}
-                      label="Street Address"
-                      name="address"
-                      placeholder="123 Main Street"
-                      error={errors.address}
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InputField
-                        icon={MapPin}
-                        label="City"
-                        name="city"
-                        placeholder="New York"
-                        error={errors.city}
-                      />
-                      <InputField
-                        icon={MapPin}
-                        label="State/Province"
-                        name="state"
-                        placeholder="NY"
-                        error={errors.state}
-                      />
-                      <InputField
-                        icon={MapPin}
-                        label="ZIP/Postal Code"
-                        name="zipCode"
-                        placeholder="10001"
-                        error={errors.zipCode}
-                      />
-                      <InputField
-                        icon={Globe}
-                        label="Country"
-                        name="country"
-                        placeholder="USA"
-                        error={errors.country}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Submit buttons section */}
-                <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    onClick={handleBack}
-                    className="px-6"
-                  >
-                    Cancel
-                  </Button>
-
-                  <Button
-                    type="submit"
-                    variant={isEditMode ? "gradient" : "gradient"}
-                    size="lg"
-                    isLoading={isPending}
-                    disabled={isPending}
-                    className="flex-1"
-                  >
-                    {isEditMode ? "Update Merchant" : "Create Merchant"}
-                  </Button>
-                </div>
-              </Card>
+              </div>
             </form>
           </motion.div>
 
-          {/* Information card at bottom */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mt-6"
-          >
-            <Card
-              className={`p-6 bg-gradient-to-br ${
-                isEditMode
-                  ? "from-green-50 to-emerald-50 border-2 border-green-200"
-                  : "from-blue-50 to-purple-50 border-2 border-blue-200"
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                <div
-                  className={`w-10 h-10 ${
-                    isEditMode ? "bg-green-500" : "bg-blue-500"
-                  } rounded-full flex items-center justify-center flex-shrink-0`}
-                >
-                  <AlertCircle className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-2">
-                    Important Notes
-                  </h3>
-                  <ul className="text-sm text-gray-700 space-y-1">
-                    {isEditMode ? (
-                      <>
-                        <li>
-                          • Personal information (name, email, phone, password)
-                          cannot be changed
-                        </li>
-                        <li>
-                          • Only business and banking details can be updated
-                        </li>
-                        <li>
-                          • Gift card limit can be set to control the number of
-                          gift cards
-                        </li>
-                        <li>• All changes will be saved immediately</li>
-                        <li>
-                          • The merchant will receive a notification about the
-                          update
-                        </li>
-                      </>
-                    ) : (
-                      <>
-                        <li>
-                          • The merchant will be created and automatically
-                          verified
-                        </li>
-                        <li>
-                          • An email notification will be sent to the merchant
-                        </li>
-                        <li>
-                          • The merchant can log in immediately after creation
-                        </li>
-                        <li>• All fields marked with * are required</li>
-                        <li>
-                          • Banking information will be used for payment
-                          settlements
-                        </li>
-                      </>
-                    )}
-                  </ul>
-                </div>
+          {/* Information Card */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-medium text-gray-900 mb-1">
+                  Important Notes
+                </h3>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  {isEditMode ? (
+                    <>
+                      <li>
+                        • Personal information cannot be changed in edit mode
+                      </li>
+                      <li>• Documents are optional if already uploaded</li>
+                      <li>• Gift card limit can be set or left empty</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• All fields marked with * are required</li>
+                      <li>• All documents are required for new merchants</li>
+                      <li>
+                        • Merchant will receive login credentials via email
+                      </li>
+                    </>
+                  )}
+                </ul>
               </div>
-            </Card>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1185,14 +1417,7 @@ export const CreateMerchantPage: React.FC = () => {
         size="md"
       >
         <div className="text-center py-4">
-          <p className="text-gray-700 text-lg font-medium mb-2 whitespace-pre-line">
-            {responseModal.message}
-          </p>
-          {responseModal.type === "success" && (
-            <p className="text-gray-500 text-sm mt-4">
-              Your changes have been saved successfully.
-            </p>
-          )}
+          <p className="text-gray-700 mb-2">{responseModal.message}</p>
         </div>
       </Modal>
     </AdminLayout>

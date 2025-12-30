@@ -1,4 +1,5 @@
 // src/features/admin/slices/MerchantCreateSlice.ts
+
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface CreateMerchantForm {
@@ -25,7 +26,7 @@ export interface CreateMerchantForm {
   accountHolderName: string;
   ifscCode: string;
   swiftCode: string;
-  giftCardLimit?: number; // Added field for edit mode only
+  giftCardLimit?: number;
   registrationDocument?: File | string;
   taxDocument?: File | string;
   identityDocument?: File | string;
@@ -83,6 +84,7 @@ const merchantSlice = createSlice({
     ) => {
       state.formData[action.payload.field] = action.payload.value;
 
+      // Clear error for this field when user starts typing
       if (state.errors[action.payload.field]) {
         delete state.errors[action.payload.field];
       }
@@ -96,6 +98,7 @@ const merchantSlice = createSlice({
         ...action.payload,
       };
     },
+    // Set single error
     setError: (
       state,
       action: PayloadAction<{
@@ -104,6 +107,19 @@ const merchantSlice = createSlice({
       }>,
     ) => {
       state.errors[action.payload.field] = action.payload.message;
+    },
+    // Set multiple errors at once
+    setErrors: (
+      state,
+      action: PayloadAction<Partial<Record<keyof CreateMerchantForm, string>>>,
+    ) => {
+      state.errors = {
+        ...state.errors,
+        ...action.payload,
+      };
+    },
+    clearError: (state, action: PayloadAction<keyof CreateMerchantForm>) => {
+      delete state.errors[action.payload];
     },
     clearErrors: (state) => {
       state.errors = {};
@@ -115,6 +131,14 @@ const merchantSlice = createSlice({
   },
 });
 
-export const { setField, updateFormData, setError, clearErrors, resetForm } =
-  merchantSlice.actions;
+export const {
+  setField,
+  updateFormData,
+  setError,
+  setErrors,
+  clearError,
+  clearErrors,
+  resetForm,
+} = merchantSlice.actions;
+
 export default merchantSlice.reducer;

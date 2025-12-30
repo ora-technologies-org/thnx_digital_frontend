@@ -9,7 +9,6 @@ import {
   CheckCircle,
   LogOut,
   Settings,
-  Bell,
   ChevronLeft,
   ChevronRight,
   Activity,
@@ -439,7 +438,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 whileTap={{ scale: 0.95 }}
                 className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <Bell className="w-6 h-6" />
                 {pendingCount > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}

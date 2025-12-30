@@ -349,7 +349,7 @@ export const DashboardPage: React.FC = () => {
                 <div
                   onClick={() =>
                     handleProtectedAction("create a gift card", () => {
-                      console.log("Navigate to create gift card page");
+                      window.location.href = "/merchant/gift-cards";
                     })
                   }
                 >
@@ -377,7 +377,7 @@ export const DashboardPage: React.FC = () => {
                 <div
                   onClick={() =>
                     handleProtectedAction("view sales analytics", () => {
-                      console.log("Navigate to analytics page");
+                      window.location.href = "/merchant/analytics";
                     })
                   }
                 >
@@ -405,7 +405,7 @@ export const DashboardPage: React.FC = () => {
                 <div
                   onClick={() =>
                     handleProtectedAction("scan QR codes", () => {
-                      console.log("Navigate to QR scanner");
+                      window.location.href = "/merchant/scan";
                     })
                   }
                 >

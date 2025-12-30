@@ -31,8 +31,6 @@ import {
   AlertCircle,
   AlertTriangle,
   Edit2,
-  Download,
-  Send,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
@@ -57,7 +55,7 @@ type FilterStatus =
   | "PENDING_VERIFICATION"
   | "REJECTED"
   | "INCOMPLETE";
-type SortBy = "date" | "name" | "status";
+type SortBy = "createdAt" | "updatedAt";
 
 // ==================== FULL MERCHANT DETAILS MODAL - COMPLETE CODE ====================
 const MerchantDetailsModal: React.FC<{
@@ -194,7 +192,7 @@ const MerchantDetailsModal: React.FC<{
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Basic Info */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6 mb-20">
               {/* Business Information Card */}
               <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
                 <CardContent className="p-6">
@@ -438,14 +436,14 @@ const MerchantDetailsModal: React.FC<{
                         </p>
                       </div>
                     </div>
-                    <motion.button
+                    {/* <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className="px-4 py-2 bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-600 rounded-xl transition-all flex items-center gap-2 text-sm font-semibold border border-amber-200"
                     >
                       <Download className="w-4 h-4" />
                       Export
-                    </motion.button>
+                    </motion.button> */}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-3.5 bg-gradient-to-r from-amber-50/50 to-amber-100/30 rounded-xl border border-amber-100">
@@ -514,14 +512,14 @@ const MerchantDetailsModal: React.FC<{
                         </p>
                       </div>
                     </div>
-                    <motion.button
+                    {/* <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className="px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-100 hover:from-indigo-100 hover:to-purple-200 text-indigo-600 rounded-xl transition-all flex items-center gap-2 text-sm font-semibold border border-indigo-200"
                     >
                       <Send className="w-4 h-4" />
                       Message
-                    </motion.button>
+                    </motion.button> */}
                   </div>
                   <div className="space-y-4">
                     <div className="p-3.5 bg-gradient-to-r from-indigo-50/50 to-purple-100/30 rounded-xl border border-indigo-100">
@@ -772,7 +770,7 @@ export const AllMerchantsPage: React.FC = () => {
   const [limit, setLimit] = useState(3);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortBy, setSortBy] = useState<SortBy>("createdAt");
   const [selectedMerchant, setSelectedMerchant] = useState<MerchantUser | null>(
     null,
   );

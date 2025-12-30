@@ -1,5 +1,5 @@
 // src/features/orders/components/CreateOrderModal.tsx - ENHANCED ⚡
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Mail,
@@ -22,7 +22,7 @@ interface OrderFormData {
   customerEmail: string;
   customerPhone: string;
   giftCardId: string;
-  paymentMethod: "CASH" | "CARD" | "ONLINE";
+  paymentMethod: "CASH" | "CARD" | "ONLINE" | "ESEWA" | "KHALTI" | "IME_PAY";
   transactionId: string;
 }
 
@@ -109,6 +109,20 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
     (card) => card.id === formData.giftCardId,
   );
 
+  // Check if payment method is CASH
+  const isCashPayment = formData.paymentMethod === "CASH";
+
+  // Effect to clear transaction ID when switching to cash
+  useEffect(() => {
+    if (isCashPayment && formData.transactionId) {
+      setFormData((prev) => ({ ...prev, transactionId: "" }));
+
+      if (errors.transactionId) {
+        setErrors((prev) => ({ ...prev, transactionId: undefined }));
+      }
+    }
+  }, [isCashPayment, formData.transactionId, errors.transactionId]);
+
   // Open response modal
   const openResponseModal = (
     type: "success" | "error" | "info" | "warning",
@@ -129,7 +143,33 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
   };
 
   const handleChange = (field: keyof CreateOrderData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Special handling for payment method change
+    if (field === "paymentMethod") {
+      const newPaymentMethod = value as typeof formData.paymentMethod;
+
+      setFormData((prev) => {
+        const updatedData = { ...prev, [field]: newPaymentMethod };
+
+        // If switching to cash, clear transaction ID
+        if (newPaymentMethod === "CASH") {
+          updatedData.transactionId = "";
+        }
+
+        return updatedData;
+      });
+
+      // Clear transaction ID error if switching to cash
+      if (newPaymentMethod === "CASH" && errors.transactionId) {
+        setErrors((prev) => ({ ...prev, transactionId: undefined }));
+      }
+    } else {
+      // For transaction ID, only allow changes if not cash payment
+      if (field === "transactionId" && isCashPayment) {
+        return; // Prevent any changes to transaction ID when cash is selected
+      }
+
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
 
     // Mark field as touched
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -142,6 +182,11 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
+
+    // Don't validate transaction ID for cash payments
+    if (field === "transactionId" && isCashPayment) {
+      return;
+    }
 
     // Validate specific field on blur
     if (field === "customerName" && formData.customerName.trim()) {
@@ -172,7 +217,7 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       }
     }
 
-    if (field === "transactionId" && formData.transactionId) {
+    if (field === "transactionId" && formData.transactionId && !isCashPayment) {
       if (formData.transactionId.length < 3) {
         setErrors((prev) => ({
           ...prev,
@@ -207,10 +252,13 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
       newErrors.giftCardId = "Please select a gift card";
     }
 
-    if (!formData.transactionId.trim()) {
-      newErrors.transactionId = "Transaction ID is required";
-    } else if (formData.transactionId.length < 3) {
-      newErrors.transactionId = "Transaction ID is too short";
+    // Only validate transaction ID if NOT cash payment
+    if (!isCashPayment) {
+      if (!formData.transactionId.trim()) {
+        newErrors.transactionId = "Transaction ID is required";
+      } else if (formData.transactionId.length < 3) {
+        newErrors.transactionId = "Transaction ID is too short";
+      }
     }
 
     setErrors(newErrors);
@@ -540,40 +588,57 @@ export const CreateOrderModal: React.FC<CreateOrderModalProps> = ({
             {/* Transaction ID */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Transaction ID <span className="text-red-500">*</span>
+                Transaction ID{" "}
+                {!isCashPayment && <span className="text-red-500">*</span>}
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="TXN123456789"
+                  placeholder={
+                    isCashPayment
+                      ? "Not required for cash payments"
+                      : "TXN123456789"
+                  }
                   value={formData.transactionId}
                   onChange={(e) =>
                     handleChange("transactionId", e.target.value)
                   }
                   onBlur={() => handleBlur("transactionId")}
-                  disabled={isSubmitting}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                    errors.transactionId && touched.transactionId
-                      ? "border-red-500 ring-1 ring-red-500"
-                      : "border-gray-300"
+                  disabled={isSubmitting || isCashPayment}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none transition-all ${
+                    isCashPayment
+                      ? "bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed"
+                      : errors.transactionId && touched.transactionId
+                        ? "border-red-500 ring-1 ring-red-500 focus:ring-2 focus:ring-blue-500"
+                        : "border-gray-300 focus:ring-2 focus:ring-blue-500"
                   }`}
                 />
                 {formData.transactionId &&
                   !errors.transactionId &&
-                  touched.transactionId && (
+                  touched.transactionId &&
+                  !isCashPayment && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       <CheckCircle className="w-5 h-5 text-green-500" />
                     </div>
                   )}
+                {isCashPayment && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <CheckCircle className="w-5 h-5 text-gray-400" />
+                  </div>
+                )}
               </div>
-              {errors.transactionId && touched.transactionId && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.transactionId}
-                </p>
-              )}
+              {errors.transactionId &&
+                touched.transactionId &&
+                !isCashPayment && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.transactionId}
+                  </p>
+                )}
               <p className="mt-1 text-sm text-gray-500">
-                Enter the transaction ID from your payment gateway
+                {isCashPayment
+                  ? "Transaction ID is not required for cash payments"
+                  : "Enter the transaction ID from your payment gateway"}
               </p>
             </div>
           </div>

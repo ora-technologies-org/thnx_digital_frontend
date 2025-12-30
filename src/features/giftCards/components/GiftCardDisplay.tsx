@@ -2,19 +2,25 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Edit3, Copy, Trash2 } from "lucide-react";
 
-// Mock types for demonstration
+// Update the type to match your API response
+interface MerchantProfile {
+  businessName: string;
+  businessLogo?: string; // This is the logo URL from the API
+}
+
+interface Merchant {
+  id: string;
+  name: string;
+  merchantProfile: MerchantProfile;
+}
+
 interface GiftCardType {
   id: string;
   title: string;
   price: string;
   expiryDate: string;
   isActive: boolean;
-  merchant?: {
-    merchantProfile?: {
-      businessName: string;
-      merchantLogo?: React.ReactNode;
-    };
-  };
+  merchant?: Merchant;
   _count?: {
     purchases: number;
   };
@@ -69,15 +75,42 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
       case "TOP_RIGHT":
         return "to top right";
       case "LEFT_RIGHT":
-        return "to top left";
+        return "to left right";
       case "TOP_BOTTOM":
-        return "to bottom right";
+        return "to bottom";
       case "BOTTOM_LEFT":
         return "to bottom left";
       default:
         return "to top right";
     }
   };
+
+  // Construct the full URL for the business logo
+  const getLogoUrl = (logoPath?: string) => {
+    if (!logoPath) return null;
+
+    // Check if it's already a full URL
+    if (logoPath.startsWith("http")) {
+      return logoPath;
+    }
+
+    // If it's a relative path, construct the full URL using VITE_DOMAIN
+    const domain = import.meta.env.VITE_DOMAIN || "";
+
+    // Clean up the domain - remove trailing slash if present
+    const cleanDomain = domain.endsWith("/") ? domain.slice(0, -1) : domain;
+
+    // Clean up the logo path - remove leading slash if present
+    const cleanLogoPath = logoPath.startsWith("/")
+      ? logoPath.slice(1)
+      : logoPath;
+
+    return `${cleanDomain}/${cleanLogoPath}`;
+  };
+
+  const logoUrl = getLogoUrl(giftCard.merchant?.merchantProfile?.businessLogo);
+  const businessName =
+    giftCard.merchant?.merchantProfile?.businessName || "Gift Card";
 
   return (
     <motion.div
@@ -122,18 +155,29 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
           {/* Content */}
           <div className="relative z-10">
             <div className="flex justify-between items-start">
-              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                <motion.div
-                  animate={{ rotate: [0, 0, 0, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="w-8 h-8 flex items-center justify-center"
-                >
-                  {giftCard.merchant?.merchantProfile?.merchantLogo ? (
-                    giftCard.merchant.merchantProfile.merchantLogo
-                  ) : (
-                    <Sparkles className="w-8 h-8" />
-                  )}
-                </motion.div>
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm overflow-hidden">
+                {logoUrl ? (
+                  <motion.img
+                    src={logoUrl}
+                    alt={businessName}
+                    className="w-8 h-8 object-contain"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    onError={(e) => {
+                      // If image fails to load, show fallback
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <motion.div
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-8 h-8 flex items-center justify-center"
+                  >
+                    <Sparkles className="w-6 h-6" />
+                  </motion.div>
+                )}
               </div>
 
               <motion.div
@@ -160,9 +204,7 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
           <div className="relative mt-5 z-10 flex justify-between items-center">
             <div>
               <p className="text-xs opacity-80">
-                {giftCard.merchant?.merchantProfile?.businessName ||
-                  "Gift Card"}{" "}
-                • Thnx Digital
+                {businessName} • Thnx Digital
               </p>
               <p className="text-xs text-white">
                 Exp: {new Date(giftCard.expiryDate).toLocaleDateString()}
@@ -198,6 +240,17 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
 
       {/* Card Info Below */}
       <div className="mt-4 px-2">
+        {/* Title and purchase count */}
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h3 className="font-semibold text-gray-900">{giftCard.title}</h3>
+            <p className="text-sm text-gray-600 mt-1">
+              {giftCard._count?.purchases || 0} purchase
+              {giftCard._count?.purchases !== 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         {showActions && (
           <div className="flex gap-2 mt-3">
