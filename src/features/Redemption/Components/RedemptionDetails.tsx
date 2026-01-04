@@ -1,20 +1,45 @@
 import React from "react";
-
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
   User,
   CreditCard,
   MapPin,
   DollarSign,
-  FileText,
   Mail,
   Phone,
   Package,
+  X,
+  CheckCircle,
 } from "lucide-react";
 
-import { format } from "date-fns";
-import { Modal } from "@/shared/components/ui/Modal";
-import { RedemptionHistory } from "../Services/redemptionService";
+interface RedemptionHistory {
+  id: string;
+  amount: string;
+  balanceBefore: string;
+  balanceAfter: string;
+  redeemedAt: string;
+  redeemedBy: {
+    name: string;
+    email: string;
+  };
+  locationName?: string;
+  locationAddress?: string;
+  notes?: string;
+  purchasedGiftCard: {
+    qrCode: string;
+    purchaseAmount: string;
+    currentBalance: string;
+    status: "ACTIVE" | "FULLY_REDEEMED" | "EXPIRED";
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    paymentMethod: string;
+    giftCard: {
+      title: string;
+    };
+  };
+}
 
 interface RedemptionDetailsModalProps {
   isOpen: boolean;
@@ -30,181 +55,323 @@ export const RedemptionDetailsModal: React.FC<RedemptionDetailsModalProps> = ({
   if (!redemption) return null;
 
   const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "PPP p");
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatCurrency = (amount: string) => {
     return `Rs. ${parseFloat(amount).toFixed(2)}`;
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "FULLY_REDEEMED":
+        return "bg-blue-100 text-blue-800";
+      case "EXPIRED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = () => {
+    return <CheckCircle className="w-5 h-5 text-green-600" />;
+  };
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Redemption Details"
-      size="lg"
-    >
-      <div className="space-y-6">
-        {/* Redemption Info */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
-            Redemption Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Amount Redeemed</p>
-              <p className="font-semibold text-lg">
-                {formatCurrency(redemption.amount)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Balance Before/After</p>
-              <p className="font-semibold text-lg">
-                {formatCurrency(redemption.balanceBefore)} →{" "}
-                {formatCurrency(redemption.balanceAfter)}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Date & Time</p>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-400" />
-                <p className="font-medium">
-                  {formatDate(redemption.redeemedAt)}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">Redeemed By</p>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="font-medium">{redemption.redeemedBy.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {redemption.redeemedBy.email}
-                  </p>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+          />
+
+          {/* Modal */}
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      Redemption Details
+                    </h2>
+                    <p className="text-blue-100 text-sm">
+                      {redemption.purchasedGiftCard.qrCode
+                        .split("-")
+                        .slice(-2)
+                        .join("-")}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={onClose}
+                  className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Location Info */}
-        {redemption.locationName && (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              Location Details
-            </h3>
-            <div className="space-y-2">
-              <p className="font-medium">{redemption.locationName}</p>
-              <p className="text-gray-600">{redemption.locationAddress}</p>
-            </div>
-          </div>
-        )}
+              {/* Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+                {/* Status Section */}
+                <div className="mb-6 flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(redemption.purchasedGiftCard.status)}
+                    <div>
+                      <div className="text-sm text-gray-600">
+                        Gift Card Status
+                      </div>
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getStatusColor(redemption.purchasedGiftCard.status)}`}
+                      >
+                        {redemption.purchasedGiftCard.status.replace("_", " ")}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">Redemption Date</div>
+                    <div className="text-sm font-semibold text-gray-900 mt-1">
+                      {new Date(redemption.redeemedAt).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-        {/* Notes */}
-        {redemption.notes && (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              Notes
-            </h3>
-            <p className="text-gray-700">{redemption.notes}</p>
-          </div>
-        )}
+                {/* Redemption Information */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                    Redemption Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Amount Redeemed
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {formatCurrency(redemption.amount)}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Balance After
+                      </div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {formatCurrency(redemption.balanceAfter)}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl md:col-span-2">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Balance Change
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {formatCurrency(redemption.balanceBefore)} →{" "}
+                        {formatCurrency(redemption.balanceAfter)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Gift Card Info */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-primary" />
-            Gift Card Details
-          </h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Gift Card Title</span>
-              <span className="font-medium">
-                {redemption.purchasedGiftCard.giftCard.title}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">QR Code</span>
-              <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
-                {redemption.purchasedGiftCard.qrCode}
-              </code>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Original Amount</span>
-              <span className="font-medium">
-                {formatCurrency(redemption.purchasedGiftCard.purchaseAmount)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Current Balance</span>
-              <span className="font-medium">
-                {formatCurrency(redemption.purchasedGiftCard.currentBalance)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Status</span>
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  redemption.purchasedGiftCard.status === "ACTIVE"
-                    ? "bg-green-100 text-green-800"
-                    : redemption.purchasedGiftCard.status === "FULLY_REDEEMED"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {redemption.purchasedGiftCard.status.replace("_", " ")}
-              </span>
-            </div>
-          </div>
-        </div>
+                {/* Redeemed By */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-600" />
+                    Redeemed By
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <User className="w-4 h-4" />
+                        Staff Name
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {redemption.redeemedBy.name}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <Mail className="w-4 h-4" />
+                        Staff Email
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {redemption.redeemedBy.email}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl md:col-span-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <Calendar className="w-4 h-4" />
+                        Redemption Time
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {formatDate(redemption.redeemedAt)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-        {/* Customer Info */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
-            Customer Information
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600">Customer Name</p>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-gray-400" />
-                <p className="font-medium">
-                  {redemption.purchasedGiftCard.customerName}
-                </p>
+                {/* Location Information */}
+                {redemption.locationName && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-purple-600" />
+                      Location Details
+                    </h3>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Location Name
+                      </div>
+                      <div className="font-semibold text-gray-900 mb-3">
+                        {redemption.locationName}
+                      </div>
+                      <div className="text-sm text-gray-600 mb-1">Address</div>
+                      <div className="text-gray-700">
+                        {redemption.locationAddress}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Gift Card Details */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-purple-600" />
+                    Gift Card Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Gift Card Title
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {redemption.purchasedGiftCard.giftCard.title}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">QR Code</div>
+                      <div className="font-mono text-sm text-gray-900 break-all">
+                        {redemption.purchasedGiftCard.qrCode}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Original Amount
+                      </div>
+                      <div className="text-xl font-bold text-gray-900">
+                        {formatCurrency(
+                          redemption.purchasedGiftCard.purchaseAmount,
+                        )}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Current Balance
+                      </div>
+                      <div className="text-xl font-bold text-green-600">
+                        {formatCurrency(
+                          redemption.purchasedGiftCard.currentBalance,
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Customer Information */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Package className="w-5 h-5 text-blue-600" />
+                    Customer Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <User className="w-4 h-4" />
+                        Customer Name
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {redemption.purchasedGiftCard.customerName}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <Phone className="w-4 h-4" />
+                        Phone Number
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {redemption.purchasedGiftCard.customerPhone}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl md:col-span-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                        <Mail className="w-4 h-4" />
+                        Email Address
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {redemption.purchasedGiftCard.customerEmail}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-xl md:col-span-2">
+                      <div className="text-sm text-gray-600 mb-1">
+                        Payment Method
+                      </div>
+                      <div className="font-semibold text-gray-900">
+                        {redemption.purchasedGiftCard.paymentMethod}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {redemption.notes && (
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <div className="text-sm text-blue-700 mb-2 font-semibold">
+                      Notes
+                    </div>
+                    <div className="text-gray-700">{redemption.notes}</div>
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600">Email</p>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-gray-400" />
-                <p className="font-medium">
-                  {redemption.purchasedGiftCard.customerEmail}
-                </p>
+
+              {/* Footer */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors font-medium"
+                >
+                  Close
+                </button>
               </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600">Phone</p>
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-gray-400" />
-                <p className="font-medium">
-                  {redemption.purchasedGiftCard.customerPhone}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-gray-600">Payment Method</p>
-              <p className="font-medium">
-                {redemption.purchasedGiftCard.paymentMethod}
-              </p>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      </div>
-    </Modal>
+        </>
+      )}
+    </AnimatePresence>
   );
 };
