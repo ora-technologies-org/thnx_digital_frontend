@@ -6,6 +6,8 @@ export interface GiftCard {
   price: string;
   expiryDate: string;
   isActive: boolean;
+  merchantLogo?: string | null;
+  status: string;
   createdAt: string;
   updatedAt: string;
   merchant?: {
@@ -16,6 +18,9 @@ export interface GiftCard {
       logo?: string;
     };
   };
+  _count?: {
+    purchases: number;
+  };
 }
 
 export interface CreateGiftCardData {
@@ -23,6 +28,7 @@ export interface CreateGiftCardData {
   description?: string;
   price: number;
   expiryDate: string;
+  isActive?: boolean;
 }
 
 export interface UpdateGiftCardData {
@@ -33,12 +39,43 @@ export interface UpdateGiftCardData {
   isActive?: boolean;
 }
 
+export interface GiftCardSettings {
+  id: string;
+  merchantId: string;
+  primaryColor: string;
+  secondaryColor: string;
+  gradientDirection: string;
+  fontFamily: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Pagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface Filters {
+  search: string | null;
+  sortBy: string;
+  sortOrder: string;
+}
+
 export interface GiftCardsResponse {
   success: boolean;
+  message: string;
   data: {
     giftCards: GiftCard[];
-    total: number;
-    limit: number;
+    settings: GiftCardSettings[];
+    pagination: Pagination;
+    filters: Filters;
+    totalGiftCards: number;
+    activeCards: number;
+    totalValue: string;
+    expiringSoon: number;
+    limitAllowed: number;
     remaining: number;
   };
 }
