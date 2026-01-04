@@ -61,38 +61,62 @@ export const GiftCardListItem: React.FC<GiftCardListItemProps> = ({
     // Try merchant business logo
     if (giftCard.merchant?.merchantProfile?.businessLogo) {
       const logo = giftCard.merchant.merchantProfile.businessLogo;
+
+      // Debug: log the raw logo path
+      console.log("🔍 Raw logo path:", logo);
+
       // Check if it's already a full URL
       if (logo.startsWith("http://") || logo.startsWith("https://")) {
         return logo;
       }
-      // Construct full URL
+
+      // Construct URL properly
       const baseUrl =
-        import.meta.env.VITE_API_BASE_URL || window.location.origin;
-      return `${baseUrl}/${logo}`;
+        import.meta.env.VITE_API_BASE_URL ||
+        import.meta.env.VITE_DOMAIN ||
+        window.location.origin;
+
+      console.log("🔍 Base URL:", baseUrl);
+
+      // Remove trailing slash from baseUrl if present
+      const cleanBaseUrl = baseUrl.endsWith("/")
+        ? baseUrl.slice(0, -1)
+        : baseUrl;
+
+      // Remove leading slash from logo path if present
+      const cleanLogoPath = logo.startsWith("/") ? logo.slice(1) : logo;
+
+      const finalUrl = `${cleanBaseUrl}/${cleanLogoPath}`;
+      console.log("🔍 Final URL:", finalUrl);
+
+      return finalUrl;
     }
 
     return null;
   };
-
   const logoUrl = getLogoUrl();
 
   React.useEffect(() => {
     setImageError(false);
     setImageLoaded(false);
-    console.log("🖼️ Logo URL:", logoUrl);
-    console.log("🏢 Merchant:", giftCard.merchant);
-    console.log(
-      "📁 Business Logo Path:",
-      giftCard.merchant?.merchantProfile?.businessLogo,
-    );
 
-    // Test if the URL is accessible
     if (logoUrl) {
-      fetch(logoUrl, { method: "HEAD" })
-        .then((res) => console.log("✅ Logo URL is accessible:", res.status))
-        .catch((err) => console.error("❌ Logo URL not accessible:", err));
+      console.log("🖼️ Logo URL for testing:", logoUrl);
+
+      // Instead of HEAD request, just log it
+      console.log("✅ Logo URL constructed:", logoUrl);
+
+      // Test with Image object instead
+      const img = new Image();
+      img.onload = () => {
+        console.log("✅ Image can be loaded:", logoUrl);
+      };
+      img.onerror = () => {
+        console.error("❌ Image cannot be loaded:", logoUrl);
+      };
+      img.src = logoUrl;
     }
-  }, [giftCard.id, giftCard.merchant, logoUrl]);
+  }, [logoUrl]);
 
   // Get status display
   const getStatusDisplay = () => {
@@ -141,7 +165,7 @@ export const GiftCardListItem: React.FC<GiftCardListItemProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       whileHover={{ y: -2 }}
-      className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
+      className=" rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
     >
       <div className="flex flex-col sm:flex-row items-stretch">
         {/* Visual Preview Section with Image/Logo */}

@@ -91,7 +91,7 @@ export const ResetPasswordPage: React.FC = () => {
     setPasswordValue(password || "");
   }, [password]);
 
-  /**
+  /**setResetSuccess
    * Submit new password to API
    */
   const onSubmit = async (data: ResetPasswordFormData) => {
