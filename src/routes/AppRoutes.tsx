@@ -31,6 +31,7 @@ import AdminSettingPage from "@/pages/admin/SettingPage";
 import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
 import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -57,6 +58,24 @@ const AppRoutes: React.FC = () => {
       <Route path={ROUTES.MERCHANT_REDEMPTIONS} element={<RedemptionsPage />} />
       <Route path={ROUTES.MERCHANT_SETTINGS} element={<SettingsPage />} />
       <Route path={ROUTES.COMPLETE_PROFILE} element={<CompleteProfilePage />} />
+
+      <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/merchant/notifications"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin Routes */}
       <Route
