@@ -1,5 +1,3 @@
-// src/features/admin/hooks/useMerchantMutations.ts - FIXED WITH PROPER QUERY KEYS! 🔑
-
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreateMerchantForm } from "../slices/MerchantCreateSlice";
 import {
@@ -36,12 +34,6 @@ export const useCreateMerchant = () => {
         queryKey: adminQueryKeys.merchants(),
         type: "active",
       });
-
-      // alert(data.message || "Merchant created successfully!");
-    },
-    onError: (error) => {
-      console.error("❌ Failed to create merchant:", error);
-      // alert(error.message || "Failed to create merchant");
     },
   });
 };
@@ -101,17 +93,6 @@ export const useUpdateMerchant = () => {
           queryKey: adminQueryKeys.merchants(),
           type: "active",
         });
-      } // ✅ Closing the if-block
-    }, // ✅ Closing onSuccess function
-    onError: (error) => {
-      console.error("❌ Failed to update merchant:", error);
-      if (error.errors) {
-        const errorMessages = Object.entries(error.errors)
-          .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
-          .join("\n");
-        if (errorMessages) {
-          // alert(`Validation errors:\n${errorMessages}`);
-        }
       }
     },
   });

@@ -166,7 +166,10 @@ export interface RejectMerchantRequest {
 
 export interface ApiError {
   message: string;
-  errors?: Record<string, string[]>;
+  errors?: Array<{
+    field: string;
+    message: string;
+  }>;
   statusCode: number;
 }
 

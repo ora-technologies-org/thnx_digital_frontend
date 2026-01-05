@@ -1,4 +1,4 @@
-// src/pages/admin/CreateMerchantPage.tsx - MINIMAL WITH SMART VALIDATION
+// src/pages/admin/CreateMerchantPage.tsx
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
@@ -33,11 +33,12 @@ import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
 
-// Types
-interface ApiErrorResponse {
+interface ValidationErrorItem {
   message?: string;
-  errors?: Record<string, string | string[]> | string;
-  [key: string]: unknown;
+  field?: keyof CreateMerchantForm;
+}
+interface ValidationError {
+  errors: Array<ValidationErrorItem | string>;
 }
 type FieldValue = string | number | boolean | File | null | undefined;
 
@@ -417,7 +418,6 @@ const FileField: React.FC<{
   hasFile: boolean;
 }> = ({
   label,
-
   error,
   required = true,
   existingFileUrl,
@@ -493,38 +493,6 @@ const FileField: React.FC<{
   );
 };
 
-// const MissingFieldsAlert = ({
-//   count,
-//   onShowMissing,
-// }: {
-//   count: number;
-//   onShowMissing: () => void;
-// }) => {
-//   if (count === 0) return null;
-
-//   return (
-//     <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-//       <div className="flex items-center justify-between">
-//         <div className="flex items-center gap-2">
-//           <AlertCircle className="w-5 h-5 text-amber-600" />
-//           <span className="font-medium text-amber-800">
-//             {count} required field{count > 1 ? "s" : ""} incomplete
-//           </span>
-//         </div>
-//         <button
-//           onClick={onShowMissing}
-//           className="text-sm font-medium text-amber-700 hover:text-amber-800 underline"
-//         >
-//           Show missing fields
-//         </button>
-//       </div>
-//       <p className="mt-1 text-sm text-amber-700">
-//         Please complete all required fields for better experience
-//       </p>
-//     </div>
-//   );
-// };
-
 // Validation function
 const validateField = (
   name: keyof CreateMerchantForm,
@@ -567,6 +535,101 @@ const validateField = (
 
   return null;
 };
+
+// Helper function to extract error messages
+const extractErrorMessage = (
+  error: unknown,
+): { title: string; message: string; details?: Record<string, unknown> } => {
+  console.log("Extracting error message:", error);
+
+  const defaultError = {
+    title: "Operation Failed",
+    message: "An unexpected error occurred. Please try again.",
+  };
+
+  if (typeof error === "object" && error !== null) {
+    // Type the error object properly
+    const errorObj = error as Record<string, unknown>;
+
+    // 1. Check for errors array in the error object (your API format)
+    if (errorObj.errors && Array.isArray(errorObj.errors)) {
+      console.log("Found errors array in error object:", errorObj.errors);
+
+      // Create summary message for modal
+      const validationError = errorObj as ValidationError;
+      const errorMessages = validationError.errors.map((err) =>
+        typeof err === "object" && "message" in err && err.message
+          ? err.message
+          : String(err),
+      );
+
+      const errorMessage = errorMessages.join("\n\n");
+
+      return {
+        title: "Validation Failed",
+        message: errorMessage,
+        details: { errors: validationError.errors },
+      };
+    }
+
+    // 2. Check for Axios response data
+    if (errorObj.response && typeof errorObj.response === "object") {
+      const responseData = (errorObj.response as { data?: unknown }).data;
+      if (responseData && typeof responseData === "object") {
+        console.log("Found response data:", responseData);
+
+        const responseObj = responseData as Record<string, unknown>;
+        if (responseObj.errors && Array.isArray(responseObj.errors)) {
+          console.log("Found errors array in response:", responseObj.errors);
+
+          // Create summary message for modal
+          const errorMessages = responseObj.errors.map((err: unknown) =>
+            typeof err === "object" && (err as { message?: string }).message
+              ? (err as { message: string }).message
+              : String(err),
+          );
+          const errorMessage = errorMessages.join("\n\n");
+
+          return {
+            title: "Validation Failed",
+            message: errorMessage,
+            details: { errors: responseObj.errors },
+          };
+        }
+
+        // Handle other error formats
+        if (typeof responseObj.message === "string") {
+          return {
+            title: "Operation Failed",
+            message: responseObj.message,
+            details: responseData,
+          };
+        }
+      }
+    }
+
+    // 3. Direct message
+    if (typeof errorObj.message === "string") {
+      return {
+        title: "Error",
+        message: errorObj.message,
+      };
+    }
+
+    // Generic error
+    if (error instanceof Error) {
+      return {
+        title: "Error",
+        message: error.message,
+      };
+    }
+
+    return defaultError;
+  }
+
+  return defaultError;
+};
+
 // Main Component
 export const CreateMerchantPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -644,15 +707,31 @@ export const CreateMerchantPage: React.FC = () => {
     (fieldName: keyof CreateMerchantForm) => {
       setTouchedFields((prev) => new Set(prev).add(fieldName));
 
-      const rule = validationRules[fieldName];
-      const value = formData[fieldName];
-      const error = validateField(fieldName, value, rule);
+      // Clear error if user is trying to fix it
+      if (errors[fieldName]) {
+        const rule = validationRules[fieldName];
+        const value = formData[fieldName];
+        const error = validateField(fieldName, value, rule);
 
-      if (error) {
-        dispatch(setError({ field: fieldName, message: error }));
+        if (!error) {
+          // Clear just this field's error
+          dispatch(setError({ field: fieldName, message: "" }));
+        } else if (error !== errors[fieldName]) {
+          // Update error if it's different
+          dispatch(setError({ field: fieldName, message: error }));
+        }
+      } else {
+        // Normal validation for fields without errors
+        const rule = validationRules[fieldName];
+        const value = formData[fieldName];
+        const error = validateField(fieldName, value, rule);
+
+        if (error) {
+          dispatch(setError({ field: fieldName, message: error }));
+        }
       }
     },
-    [dispatch, formData],
+    [dispatch, formData, errors],
   );
 
   const scrollToMissingField = useCallback(() => {
@@ -695,33 +774,6 @@ export const CreateMerchantPage: React.FC = () => {
     }
   }, [formData]);
 
-  const extractErrorMessage = (
-    error: unknown,
-  ): { title: string; message: string } => {
-    const defaultError = {
-      title: "Operation Failed",
-      message: "An unexpected error occurred. Please try again.",
-    };
-
-    if (typeof error === "object" && error !== null) {
-      const apiError = error as { response?: { data?: ApiErrorResponse } };
-      if (apiError.response?.data) {
-        const errorData = apiError.response.data;
-        return {
-          title: "Operation Failed",
-          message: errorData.message || defaultError.message,
-        };
-      }
-      if (error instanceof Error) {
-        return {
-          title: "Error",
-          message: error.message || defaultError.message,
-        };
-      }
-    }
-    return defaultError;
-  };
-
   const openResponseModal = (
     type: "success" | "error" | "info",
     title: string,
@@ -743,77 +795,132 @@ export const CreateMerchantPage: React.FC = () => {
     setResponseModal((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    // Mark all fields as touched
-    const allFields = Object.keys(validationRules) as Array<
-      keyof CreateMerchantForm
-    >;
-    setTouchedFields(new Set(allFields));
+      // Mark all fields as touched
+      const allFields = Object.keys(validationRules) as Array<
+        keyof CreateMerchantForm
+      >;
+      setTouchedFields(new Set(allFields));
 
-    // Validate all fields and collect errors
-    const validationErrors: Record<string, string> = {};
+      // Validate all fields and collect errors
+      const validationErrors: Record<string, string> = {};
 
-    Object.entries(validationRules).forEach(([field, rule]) => {
-      const fieldName = field as keyof CreateMerchantForm;
+      Object.entries(validationRules).forEach(([field, rule]) => {
+        const fieldName = field as keyof CreateMerchantForm;
 
-      if (isEditMode && field === "password" && !formData.password) {
-        return;
-      }
+        if (isEditMode && field === "password" && !formData.password) {
+          return;
+        }
 
-      if (
-        isEditMode &&
-        (field === "registrationDocument" ||
-          field === "taxDocument" ||
-          field === "identityDocument") &&
-        (formData[fieldName] as string)
-      ) {
-        return;
-      }
+        if (
+          isEditMode &&
+          (field === "registrationDocument" ||
+            field === "taxDocument" ||
+            field === "identityDocument") &&
+          (formData[fieldName] as string)
+        ) {
+          return;
+        }
 
-      const value = formData[fieldName];
-      const error = validateField(fieldName, value, rule);
+        const value = formData[fieldName];
+        const error = validateField(fieldName, value, rule);
 
-      if (error) {
-        validationErrors[field] = error;
-      }
-    });
-
-    // If there are validation errors, scroll to first one and show message
-    if (Object.keys(validationErrors).length > 0) {
-      // Set errors in Redux
-      Object.entries(validationErrors).forEach(([field, error]) => {
-        dispatch(
-          setError({
-            field: field as keyof CreateMerchantForm,
-            message: error,
-          }),
-        );
+        if (error) {
+          validationErrors[field] = error;
+        }
       });
 
-      // Scroll to first error
-      setTimeout(() => {
-        scrollToMissingField();
-      }, 100);
+      // If there are validation errors, scroll to first one and show message
+      if (Object.keys(validationErrors).length > 0) {
+        // Set errors in Redux
+        Object.entries(validationErrors).forEach(([field, error]) => {
+          dispatch(
+            setError({
+              field: field as keyof CreateMerchantForm,
+              message: error,
+            }),
+          );
+        });
 
-      // Show modal with guidance
-      openResponseModal(
-        "info",
-        "Complete Required Fields",
-        `Please complete ${Object.keys(validationErrors).length} required field${Object.keys(validationErrors).length > 1 ? "s" : ""} before submitting.`,
-      );
-      return;
-    }
+        // Scroll to first error
+        setTimeout(() => {
+          scrollToMissingField();
+        }, 100);
 
-    // Clear any previous errors
-    dispatch(clearErrors());
+        // Show modal with guidance
+        openResponseModal(
+          "info",
+          "Complete Required Fields",
+          `Please complete ${Object.keys(validationErrors).length} required field${Object.keys(validationErrors).length > 1 ? "s" : ""} before submitting.`,
+        );
+        return;
+      }
 
-    // Submit form
-    if (isEditMode) {
-      updateMerchant(
-        { merchantId: id!, formData },
-        {
+      // Clear any previous errors
+      dispatch(clearErrors());
+
+      // Submit form
+      if (isEditMode) {
+        updateMerchant(
+          { merchantId: id!, formData },
+          {
+            onSuccess: (response: ApiResponse) => {
+              openResponseModal("success", "Success", response.message, () => {
+                dispatch(resetForm());
+                navigate("/admin/merchants");
+              });
+            },
+            // In your handleSubmit function, update the error handler with detailed logging:
+            onError: (error: unknown) => {
+              const errorDetails = extractErrorMessage(error);
+
+              // Show modal with summary
+              openResponseModal(
+                "error",
+                errorDetails.title,
+                errorDetails.message,
+              );
+
+              // Scroll to first error field
+              if (
+                errorDetails.details?.errors &&
+                Array.isArray(errorDetails.details.errors)
+              ) {
+                const firstError = errorDetails.details.errors[0];
+                if (
+                  firstError &&
+                  typeof firstError === "object" &&
+                  "field" in firstError &&
+                  firstError.field
+                ) {
+                  setTimeout(() => {
+                    const element = document.querySelector(
+                      `[name="${firstError.field}"]`,
+                    );
+                    if (element) {
+                      element.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                      });
+                      (element as HTMLElement).focus();
+
+                      // Highlight the field
+                      element.classList.add("border-red-500", "bg-red-50");
+                      setTimeout(() => {
+                        element.classList.remove("border-red-500", "bg-red-50");
+                      }, 2000);
+                    }
+                  }, 100);
+                }
+              }
+            },
+          },
+        );
+      } else {
+        createMerchant(formData, {
           onSuccess: (response: ApiResponse) => {
             openResponseModal("success", "Success", response.message, () => {
               dispatch(resetForm());
@@ -821,28 +928,56 @@ export const CreateMerchantPage: React.FC = () => {
             });
           },
           onError: (error: unknown) => {
-            const { title, message } = extractErrorMessage(error);
-            openResponseModal("error", title, message);
-          },
-        },
-      );
-    } else {
-      createMerchant(formData, {
-        onSuccess: (response: ApiResponse) => {
-          openResponseModal("success", "Success", response.message, () => {
-            dispatch(resetForm());
-            navigate("/admin/merchants");
-          });
-        },
-        onError: (error: unknown) => {
-          const { title, message } = extractErrorMessage(error);
-          openResponseModal("error", title, message);
-        },
-      });
-    }
-  };
+            const errorDetails = extractErrorMessage(error);
+            openResponseModal(
+              "error",
+              errorDetails.title,
+              errorDetails.message,
+            );
 
-  const handleBack = () => {
+            // Scroll to first error field if available
+            if (
+              errorDetails.details?.errors &&
+              Array.isArray(errorDetails.details.errors)
+            ) {
+              const firstError = errorDetails.details.errors[0];
+              if (
+                firstError &&
+                typeof firstError === "object" &&
+                "field" in firstError &&
+                firstError.field
+              ) {
+                setTimeout(() => {
+                  const element = document.querySelector(
+                    `[name="${firstError.field}"]`,
+                  );
+                  if (element) {
+                    element.scrollIntoView({
+                      behavior: "smooth",
+                      block: "center",
+                    });
+                    (element as HTMLElement).focus();
+                  }
+                }, 100);
+              }
+            }
+          },
+        });
+      }
+    },
+    [
+      isEditMode,
+      formData,
+      dispatch,
+      scrollToMissingField,
+      updateMerchant,
+      id,
+      navigate,
+      createMerchant,
+    ],
+  );
+
+  const handleBack = useCallback(() => {
     const hasUnsavedChanges = Object.keys(formData).some(
       (key) => formData[key as keyof CreateMerchantForm],
     );
@@ -861,7 +996,7 @@ export const CreateMerchantPage: React.FC = () => {
     } else {
       navigate("/admin/merchants");
     }
-  };
+  }, [formData, dispatch, navigate]);
 
   // Helper functions for form fields
   const handleInputChange = useCallback(
@@ -914,12 +1049,6 @@ export const CreateMerchantPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Missing Fields Alert */}
-          {/* <MissingFieldsAlert
-            count={missingFieldCount}
-            onShowMissing={scrollToMissingField}
-          /> */}
 
           {/* Form */}
           <motion.div
@@ -1417,11 +1546,12 @@ export const CreateMerchantPage: React.FC = () => {
         size="md"
       >
         <div className="text-center py-4">
-          <p className="text-gray-700 mb-2">{responseModal.message}</p>
+          <p className="text-gray-700 whitespace-pre-line">
+            {responseModal.message}
+          </p>
         </div>
       </Modal>
     </AdminLayout>
   );
 };
-
 export default CreateMerchantPage;

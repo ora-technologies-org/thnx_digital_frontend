@@ -89,6 +89,14 @@ const merchantSlice = createSlice({
         delete state.errors[action.payload.field];
       }
     },
+
+    clearSingleError: (
+      state,
+      action: PayloadAction<{ field: keyof CreateMerchantForm }>,
+    ) => {
+      delete state.errors[action.payload.field];
+    },
+
     updateFormData: (
       state,
       action: PayloadAction<Partial<CreateMerchantForm>>,
