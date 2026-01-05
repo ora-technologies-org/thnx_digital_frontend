@@ -1,20 +1,16 @@
 // src/features/admin/hooks/useNotificationSocket.ts
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAppSelector } from '../../../app/hooks';
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAppSelector } from "../../../app/hooks";
 import {
   connectAdminSocket,
   connectMerchantSocket,
   disconnectAdminSocket,
   disconnectMerchantSocket,
-  getAdminSocket,
-  getMerchantSocket,
-} from '../../../shared/utils/socket';
-import { Notification } from '../types/notification.types';
-import { notificationQueryKeys } from './useNotifications';
-
-// import { notificationQueryKeys } from './useNotifications';
+} from "../../../shared/utils/socket";
+import { Notification } from "../types/notification.types";
+import { notificationQueryKeys } from "./useNotifications";
 
 interface UseNotificationSocketOptions {
   enabled?: boolean;
@@ -24,27 +20,27 @@ interface UseNotificationSocketOptions {
 
 interface UseNotificationSocketReturn {
   isConnected: boolean;
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: "connecting" | "connected" | "disconnected" | "error";
   error: string | null;
   reconnect: () => void;
 }
 
 export const useNotificationSocket = (
-  options: UseNotificationSocketOptions = {}
+  options: UseNotificationSocketOptions = {},
 ): UseNotificationSocketReturn => {
   const { enabled = true, onNewNotification, onUnreadCountUpdate } = options;
 
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<
-    'connecting' | 'connected' | 'disconnected' | 'error'
-  >('disconnected');
+    "connecting" | "connected" | "disconnected" | "error"
+  >("disconnected");
   const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
-  
+
   // Get user role from Redux store
   const user = useAppSelector((state) => state.auth.user);
-  const userRole = user?.role as 'ADMIN' | 'MERCHANT' | undefined;
+  const userRole = user?.role as "ADMIN" | "MERCHANT" | undefined;
 
   // Refs to keep callbacks stable
   const onNewNotificationRef = useRef(onNewNotification);
@@ -59,12 +55,12 @@ export const useNotificationSocket = (
   }, [onUnreadCountUpdate]);
 
   const reconnect = useCallback(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (token && userRole) {
-      setConnectionStatus('connecting');
+      setConnectionStatus("connecting");
       setError(null);
 
-      if (userRole === 'ADMIN') {
+      if (userRole === "ADMIN") {
         disconnectAdminSocket();
         connectAdminSocket(token);
       } else {
@@ -75,45 +71,53 @@ export const useNotificationSocket = (
   }, [userRole]);
 
   useEffect(() => {
+    // Early return checks - don't update state
     if (!enabled || !userRole) {
       return;
     }
 
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (!token) {
-      setError('No authentication token');
-      setConnectionStatus('error');
-      return;
+      // Defer state updates to avoid synchronous setState in effect
+      const timeoutId = setTimeout(() => {
+        setError("No authentication token");
+        setConnectionStatus("error");
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }
 
-    setConnectionStatus('connecting');
+    // Only set connecting status when we're actually going to connect
+    const connectTimeoutId = setTimeout(() => {
+      setConnectionStatus("connecting");
+    }, 0);
 
     // Connect to appropriate namespace based on role
     const socket =
-      userRole === 'ADMIN'
+      userRole === "ADMIN"
         ? connectAdminSocket(token)
         : connectMerchantSocket(token);
 
     const handleConnect = () => {
       setIsConnected(true);
-      setConnectionStatus('connected');
+      setConnectionStatus("connected");
       setError(null);
     };
 
     const handleDisconnect = (reason: string) => {
       setIsConnected(false);
-      setConnectionStatus('disconnected');
-      console.log('Socket disconnected:', reason);
+      setConnectionStatus("disconnected");
+      console.log("Socket disconnected:", reason);
     };
 
     const handleConnectError = (err: Error) => {
       setIsConnected(false);
-      setConnectionStatus('error');
+      setConnectionStatus("error");
       setError(err.message);
     };
 
     const handleNewNotification = (notification: Notification) => {
-      console.log('🔔 New notification received:', notification);
+      console.log("🔔 New notification received:", notification);
 
       // Call the callback
       if (onNewNotificationRef.current) {
@@ -132,7 +136,7 @@ export const useNotificationSocket = (
     };
 
     const handleUnreadCount = (data: { count: number }) => {
-      console.log('📊 Unread count updated:', data.count);
+      console.log("📊 Unread count updated:", data.count);
 
       // Call the callback
       if (onUnreadCountUpdateRef.current) {
@@ -147,11 +151,11 @@ export const useNotificationSocket = (
     };
 
     // Attach event listeners
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.on('connect_error', handleConnectError);
-    socket.on('notification:new', handleNewNotification);
-    socket.on('notification:unread-count', handleUnreadCount);
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("notification:new", handleNewNotification);
+    socket.on("notification:unread-count", handleUnreadCount);
 
     // Check if already connected
     if (socket.connected) {
@@ -160,11 +164,12 @@ export const useNotificationSocket = (
 
     // Cleanup
     return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('connect_error', handleConnectError);
-      socket.off('notification:new', handleNewNotification);
-      socket.off('notification:unread-count', handleUnreadCount);
+      clearTimeout(connectTimeoutId);
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("notification:new", handleNewNotification);
+      socket.off("notification:unread-count", handleUnreadCount);
     };
   }, [enabled, userRole, queryClient]);
 

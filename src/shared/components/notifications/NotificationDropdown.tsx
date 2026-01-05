@@ -1,26 +1,27 @@
 // src/shared/components/notifications/NotificationDropdown.tsx
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { Link } from "react-router-dom";
 import {
-  Check,
   CheckCheck,
   Settings,
   Loader2,
   RefreshCw,
   Bell,
   BellOff,
-} from 'lucide-react';
-import { useNotifications } from '../../../features/admin/hooks/useNotifications';
-import NotificationItem from './NotificationItem';
-import { useAppSelector } from '@/app/hooks';
+} from "lucide-react";
+import { useNotifications } from "../../../features/admin/hooks/useNotifications";
+import NotificationItem from "./NotificationItem";
+import { useAppSelector } from "@/app/hooks";
 // import NotificationItem from './NotificationItem';
 
 interface NotificationDropdownProps {
   onClose: () => void;
 }
 
-const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) => {
+const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
+  onClose,
+}) => {
   const {
     notifications,
     isLoading,
@@ -32,9 +33,9 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) 
     toggleUnreadOnly,
   } = useNotifications({ limit: 10 });
 
-
   const user = useAppSelector((state) => state.auth.user);
-  const viewAllLink = user?.role === 'ADMIN' ? '/admin/notifications' : '/merchant/notifications';
+  const viewAllLink =
+    user?.role === "ADMIN" ? "/admin/notifications" : "/merchant/notifications";
 
   const hasNotifications = notifications.length > 0;
   const hasUnread = notifications.some((n) => !n.isRead);
@@ -59,7 +60,9 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) 
               className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               title="Refresh"
             >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`}
+              />
             </button>
 
             {/* Mark All as Read */}
@@ -98,8 +101,8 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onClose }) 
               flex items-center gap-1.5 px-3 py-1 text-sm rounded-full transition-colors
               ${
                 filters.unreadOnly
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }
             `}
           >

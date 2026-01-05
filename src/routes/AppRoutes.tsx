@@ -28,9 +28,10 @@ import RevenuePage from "@/pages/admin/RevenuePage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import ActivityLogPage from "@/pages/admin/ActitivityPage";
 import AdminSettingPage from "@/pages/admin/SettingPage";
-// import NotificationsPage from '../pages/NotificationsPage';
-import NotificationsPage from "@/pages/merchant/NotificationsPage";
-
+import { ForgotPasswordPage } from "@/pages/merchant/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/merchant/ResetPasswordPage";
+import { VerifyOtpPage } from "@/pages/merchant/VerifyOtpPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -42,56 +43,55 @@ const AppRoutes: React.FC = () => {
       <Route path={ROUTES.BROWSE} element={<BrowsePage />} />
       <Route path={ROUTES.PURCHASE} element={<PurchasePage />} />
 
+      {/* Auth & Password Reset Routes */}
+      <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
+      <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordPage />} />
+      <Route path={ROUTES.VERIFY_OTP} element={<VerifyOtpPage />} />
+
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
-      <Route path="/merchant/dashboard" element={<DashboardPage />} />
-      {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
-      <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
-      <Route path="/merchant/orders" element={<OrdersPage />} />
-      <Route path="/merchant/scan" element={<ScanPage />} />
-      <Route path="/merchant/analytics" element={<AnalyticsPage />} />
-      <Route path="/merchant/payouts" element={<PayoutsPage />} />
-      <Route path="/merchant/redemptions" element={<RedemptionsPage />} />
-      <Route path="/merchant/settings" element={<SettingsPage />} />
+      <Route path={ROUTES.MERCHANT_DASHBOARD} element={<DashboardPage />} />
+      <Route path={ROUTES.MERCHANT_GIFT_CARDS} element={<GiftCardsPage />} />
+      <Route path={ROUTES.MERCHANT_ORDERS} element={<OrdersPage />} />
+      <Route path={ROUTES.MERCHANT_SCAN} element={<ScanPage />} />
+      <Route path={ROUTES.MERCHANT_ANALYTICS} element={<AnalyticsPage />} />
+      <Route path={ROUTES.MERCHANT_PAYOUTS} element={<PayoutsPage />} />
+      <Route path={ROUTES.MERCHANT_REDEMPTIONS} element={<RedemptionsPage />} />
+      <Route path={ROUTES.MERCHANT_SETTINGS} element={<SettingsPage />} />
+      <Route path={ROUTES.COMPLETE_PROFILE} element={<CompleteProfilePage />} />
+
       <Route
-        path="/merchant/complete-profile"
-        element={<CompleteProfilePage />}
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
       />
 
-      <Route path="/admin/notifications" element={
-      <ProtectedRoute requiredRole="ADMIN">
-        <NotificationsPage />
-      </ProtectedRoute>
-    } />
-
-
-    <Route path="/merchant/notifications" element={
-      <ProtectedRoute requiredRole="MERCHANT">
-        <NotificationsPage />
-      </ProtectedRoute>
-    } />
+      <Route
+        path="/merchant/notifications"
+        element={
+          <ProtectedRoute requiredRole="MERCHANT">
+            <NotificationsPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin Routes */}
       <Route
-        path="/admin/dashboard"
+        path={ROUTES.ADMIN_DASHBOARD}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <AdminDashboardPage />
           </ProtectedRoute>
         }
       />
-
-      <Route path="/admin/create-merchant" element={<CreateMerchantPage />} />
-
-      {/* <Route
-        path="/admin"
-        element={
-          <ProtectedRoute requiredRole="ADMIN">
-            <AdminDashboardPage />
-          </ProtectedRoute>
-        }
-      /> */}
       <Route
-        path="/admin/pending"
+        path={ROUTES.ADMIN_CREATE_MERCHANT}
+        element={<CreateMerchantPage />}
+      />
+      <Route
+        path={ROUTES.ADMIN_PENDING}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <PendingMerchantsPage />
@@ -99,7 +99,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/giftcards"
+        path={ROUTES.ADMIN_GIFTCARDS}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <GiftPages />
@@ -107,7 +107,7 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/revenue"
+        path={ROUTES.ADMIN_REVENUE}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <RevenuePage />
@@ -115,44 +115,42 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/admin/analytics"
+        path={ROUTES.ADMIN_ANALYTICS}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <AdminAnalyticsPage />
           </ProtectedRoute>
         }
       />
-
       <Route
-        path="/admin/activity"
+        path={ROUTES.ADMIN_ACTIVITY}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <ActivityLogPage />
           </ProtectedRoute>
         }
       />
-
       <Route
-        path="/admin/settings"
+        path={ROUTES.ADMIN_SETTINGS}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <AdminSettingPage />
           </ProtectedRoute>
         }
       />
-
       <Route
-        path="/admin/merchants"
+        path={ROUTES.ADMIN_MERCHANTS}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <AllMerchantsPage />
           </ProtectedRoute>
         }
       />
+
       {/* Default Redirects */}
       <Route
-        path="/merchant"
-        element={<Navigate to="/merchant/dashboard" replace />}
+        path={ROUTES.MERCHANT_BASE}
+        element={<Navigate to={ROUTES.MERCHANT_DASHBOARD} replace />}
       />
       <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
     </Routes>

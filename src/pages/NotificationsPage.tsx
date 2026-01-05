@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import {
   Bell,
   Filter,
@@ -10,22 +9,21 @@ import {
   Loader2,
   Settings,
   ArrowLeft,
-} from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useNotifications } from '../features/admin/hooks/useNotifications';
-import { useNotificationSocket } from '../features/admin/hooks/useNotificationSocket';
-import { useAppSelector } from '../app/hooks';
-import NotificationItem from '../shared/components/notifications/NotificationItem';
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useNotifications } from "../features/admin/hooks/useNotifications";
+import { useNotificationSocket } from "../features/admin/hooks/useNotificationSocket";
+import { useAppSelector } from "../app/hooks";
+import NotificationItem from "../shared/components/notifications/NotificationItem";
 
-
-import { AdminLayout } from '../shared/components/layout/AdminLayout';
-import { DashboardLayout } from '../shared/components/layout/DashboardLayout';
+import { AdminLayout } from "../shared/components/layout/AdminLayout";
+import { DashboardLayout } from "../shared/components/layout/DashboardLayout";
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === "ADMIN";
 
   const {
     notifications,
@@ -49,8 +47,8 @@ const NotificationsPage: React.FC = () => {
   const hasUnread = notifications.some((n) => !n.isRead);
 
   // Determine links based on role
-  const backLink = isAdmin ? '/admin/dashboard' : '/merchant/dashboard';
-  const settingsLink = isAdmin ? '/admin/settings' : '/merchant/settings';
+  const backLink = isAdmin ? "/admin/dashboard" : "/merchant/dashboard";
+  const settingsLink = isAdmin ? "/admin/settings" : "/merchant/settings";
 
   // Page content (same for both layouts)
   const PageContent = (
@@ -78,7 +76,9 @@ const NotificationsPage: React.FC = () => {
               <Bell className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Notifications
+              </h1>
               <p className="text-sm text-gray-500">
                 {pagination.total} total notifications
                 {isConnected && (
@@ -98,7 +98,9 @@ const NotificationsPage: React.FC = () => {
               disabled={isFetching}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`}
+              />
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
@@ -141,13 +143,13 @@ const NotificationsPage: React.FC = () => {
             flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors
             ${
               filters.unreadOnly
-                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
             }
           `}
         >
           <Filter className="w-4 h-4" />
-          {filters.unreadOnly ? 'Showing unread only' : 'Show all'}
+          {filters.unreadOnly ? "Showing unread only" : "Show all"}
         </button>
       </motion.div>
 
@@ -200,8 +202,8 @@ const NotificationsPage: React.FC = () => {
           className="mt-6 flex items-center justify-between"
         >
           <p className="text-sm text-gray-500">
-            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+            Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
             {pagination.total}
           </p>
 

@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import {
   Bell,
   Filter,
@@ -8,10 +7,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-} from 'lucide-react';
-import { useNotifications } from '../../features/admin/hooks/useNotifications';
-import { useNotificationSocket } from '../../features/admin/hooks/useNotificationSocket';
-import NotificationItem from '../../shared/components/notifications/NotificationItem';
+} from "lucide-react";
+import { useNotifications } from "../../features/admin/hooks/useNotifications";
+import { useNotificationSocket } from "../../features/admin/hooks/useNotificationSocket";
+import NotificationItem from "../../shared/components/notifications/NotificationItem";
 
 const NotificationsPage: React.FC = () => {
   const {
@@ -31,7 +30,7 @@ const NotificationsPage: React.FC = () => {
   const { isConnected, connectionStatus } = useNotificationSocket({
     enabled: true,
   });
-
+  console.log("", connectionStatus);
   const hasNotifications = notifications.length > 0;
   const hasUnread = notifications.some((n) => !n.isRead);
 
@@ -46,7 +45,9 @@ const NotificationsPage: React.FC = () => {
                 <Bell className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Notifications
+                </h1>
                 <p className="text-sm text-gray-500">
                   {pagination.total} total notifications
                   {isConnected && (
@@ -66,7 +67,9 @@ const NotificationsPage: React.FC = () => {
                 disabled={isFetching}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`}
+                />
                 Refresh
               </button>
 
@@ -96,13 +99,13 @@ const NotificationsPage: React.FC = () => {
               flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors
               ${
                 filters.unreadOnly
-                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? "bg-blue-100 text-blue-700 border border-blue-200"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
               }
             `}
           >
             <Filter className="w-4 h-4" />
-            {filters.unreadOnly ? 'Showing unread only' : 'Show all'}
+            {filters.unreadOnly ? "Showing unread only" : "Show all"}
           </button>
         </div>
 
@@ -139,9 +142,9 @@ const NotificationsPage: React.FC = () => {
         {pagination.totalPages > 1 && (
           <div className="mt-6 flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-              {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-              {pagination.total}
+              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
+              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+              of {pagination.total}
             </p>
 
             <div className="flex items-center gap-2">

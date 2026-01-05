@@ -1,20 +1,13 @@
-
-import React from 'react';
-import { motion } from 'framer-motion';
-import {
-  Activity,
-  AlertTriangle,
-  XCircle,
-  CheckCircle,
-  TrendingUp,
-} from 'lucide-react';
-import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../types/activityLog.types';
+import React from "react";
+import { motion } from "framer-motion";
+import { Activity, AlertTriangle, XCircle, CheckCircle } from "lucide-react";
+// import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../types/activityLog.types';
 
 interface StatsData {
   today: number;
   byCategory: Record<string, number>;
   bySeverity: Record<string, number>;
-  recentErrors: any[];
+  recentErrors: unknown[];
 }
 
 interface ActivityLogStatsProps {
@@ -22,7 +15,10 @@ interface ActivityLogStatsProps {
   isLoading: boolean;
 }
 
-export const ActivityLogStats: React.FC<ActivityLogStatsProps> = ({ stats, isLoading }) => {
+export const ActivityLogStats: React.FC<ActivityLogStatsProps> = ({
+  stats,
+  isLoading,
+}) => {
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -33,7 +29,8 @@ export const ActivityLogStats: React.FC<ActivityLogStatsProps> = ({ stats, isLoa
     );
   }
 
-  const errorCount = (stats?.bySeverity?.ERROR || 0) + (stats?.bySeverity?.CRITICAL || 0);
+  const errorCount =
+    (stats?.bySeverity?.ERROR || 0) + (stats?.bySeverity?.CRITICAL || 0);
   const warningCount = stats?.bySeverity?.WARNING || 0;
   const infoCount = stats?.bySeverity?.INFO || 0;
 
@@ -44,7 +41,6 @@ export const ActivityLogStats: React.FC<ActivityLogStatsProps> = ({ stats, isLoa
       transition={{ delay: 0.1 }}
       className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
     >
-     
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -54,13 +50,14 @@ export const ActivityLogStats: React.FC<ActivityLogStatsProps> = ({ stats, isLoa
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-orange-600 font-medium">Today</p>
-            <p className="text-3xl font-bold text-orange-900">{stats?.today || 0}</p>
+            <p className="text-3xl font-bold text-orange-900">
+              {stats?.today || 0}
+            </p>
           </div>
           <Activity className="w-8 h-8 text-orange-600" />
         </div>
       </motion.div>
 
-    
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -76,7 +73,6 @@ export const ActivityLogStats: React.FC<ActivityLogStatsProps> = ({ stats, isLoa
         </div>
       </motion.div>
 
-    
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -92,7 +88,6 @@ export const ActivityLogStats: React.FC<ActivityLogStatsProps> = ({ stats, isLoa
         </div>
       </motion.div>
 
-   
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

@@ -1,10 +1,10 @@
 // src/features/admin/hooks/useActivityLogSocket.ts
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { connectSocket, disconnectSocket } from '../../../shared/utils/socket';
-import { ActivityLog } from '../types/activityLog.types';
-import { activityLogQueryKeys } from './useActivityLogs';
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { connectSocket, disconnectSocket } from "../../../shared/utils/socket";
+import { ActivityLog } from "../types/activityLog.types";
+import { activityLogQueryKeys } from "./useActivityLogs";
 
 interface UseActivityLogSocketOptions {
   enabled?: boolean;
@@ -13,18 +13,20 @@ interface UseActivityLogSocketOptions {
 
 interface UseActivityLogSocketReturn {
   isConnected: boolean;
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: "connecting" | "connected" | "disconnected" | "error";
   error: string | null;
   reconnect: () => void;
 }
 
 export const useActivityLogSocket = (
-  options: UseActivityLogSocketOptions = {}
+  options: UseActivityLogSocketOptions = {},
 ): UseActivityLogSocketReturn => {
   const { enabled = true, onNewLog } = options;
 
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected" | "error"
+  >("disconnected");
   const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
@@ -35,9 +37,9 @@ export const useActivityLogSocket = (
   }, [onNewLog]);
 
   const reconnect = useCallback(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (token) {
-      setConnectionStatus('connecting');
+      setConnectionStatus("connecting");
       setError(null);
       disconnectSocket();
       connectSocket(token);
@@ -47,36 +49,47 @@ export const useActivityLogSocket = (
   useEffect(() => {
     if (!enabled) {
       disconnectSocket();
-      setIsConnected(false);
-      setConnectionStatus('disconnected');
-      return;
+      // Defer state updates to avoid synchronous setState in effect
+      const timeoutId = setTimeout(() => {
+        setIsConnected(false);
+        setConnectionStatus("disconnected");
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }
 
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (!token) {
-      setError('No authentication token');
-      setConnectionStatus('error');
-      return;
+      // Defer state updates to avoid synchronous setState in effect
+      const timeoutId = setTimeout(() => {
+        setError("No authentication token");
+        setConnectionStatus("error");
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }
 
-    setConnectionStatus('connecting');
+    // Defer connecting status update
+    const connectingTimeoutId = setTimeout(() => {
+      setConnectionStatus("connecting");
+    }, 0);
 
     const socket = connectSocket(token);
 
     const handleConnect = () => {
       setIsConnected(true);
-      setConnectionStatus('connected');
+      setConnectionStatus("connected");
       setError(null);
     };
 
-    const handleDisconnect = (reason: string) => {
+    const handleDisconnect = () => {
       setIsConnected(false);
-      setConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
     };
 
     const handleConnectError = (err: Error) => {
       setIsConnected(false);
-      setConnectionStatus('error');
+      setConnectionStatus("error");
       setError(err.message);
     };
 
@@ -92,20 +105,21 @@ export const useActivityLogSocket = (
       });
     };
 
-    socket.on('connect', handleConnect);
-    socket.on('disconnect', handleDisconnect);
-    socket.on('connect_error', handleConnectError);
-    socket.on('activity:new', handleNewActivity);
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("activity:new", handleNewActivity);
 
     if (socket.connected) {
       handleConnect();
     }
 
     return () => {
-      socket.off('connect', handleConnect);
-      socket.off('disconnect', handleDisconnect);
-      socket.off('connect_error', handleConnectError);
-      socket.off('activity:new', handleNewActivity);
+      clearTimeout(connectingTimeoutId);
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("activity:new", handleNewActivity);
     };
   }, [enabled, queryClient]);
 

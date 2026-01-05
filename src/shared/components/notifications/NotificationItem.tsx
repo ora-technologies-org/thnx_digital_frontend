@@ -1,13 +1,13 @@
 // src/shared/components/notifications/NotificationItem.tsx
 
-import React from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { Check, Trash2, Loader2 } from 'lucide-react';
-import { useNotifications } from '../../../features/admin/hooks/useNotifications';
+import React from "react";
+import { formatDistanceToNow } from "date-fns";
+import { Check, Trash2, Loader2 } from "lucide-react";
+import { useNotifications } from "../../../features/admin/hooks/useNotifications";
 import {
   Notification,
   NOTIFICATION_TYPE_CONFIG,
-} from '../../../features/admin/types/notification.types';
+} from "../../../features/admin/types/notification.types";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -60,7 +60,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       className={`
         group relative px-4 py-3 cursor-pointer transition-colors
         hover:bg-gray-50
-        ${!notification.isRead ? 'bg-blue-50/50' : ''}
+        ${!notification.isRead ? "bg-blue-50/50" : ""}
       `}
     >
       {/* Unread Indicator */}
@@ -88,7 +88,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               <p
                 className={`
                   text-sm font-medium truncate
-                  ${!notification.isRead ? 'text-gray-900' : 'text-gray-700'}
+                  ${!notification.isRead ? "text-gray-900" : "text-gray-700"}
                 `}
               >
                 {notification.title}
@@ -101,7 +101,9 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
               {/* Meta */}
               <div className="flex items-center gap-2 mt-1">
-                <span className={`text-xs px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}
+                >
                   {config.label}
                 </span>
                 <span className="text-xs text-gray-400">{timeAgo}</span>
