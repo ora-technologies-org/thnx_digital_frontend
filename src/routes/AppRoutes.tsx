@@ -49,15 +49,22 @@ const AppRoutes: React.FC = () => {
       <Route path={ROUTES.VERIFY_OTP} element={<VerifyOtpPage />} />
 
       {/* Merchant Routes - ALL WITH /merchant/ PREFIX */}
-      <Route path={ROUTES.MERCHANT_DASHBOARD} element={<DashboardPage />} />
-      <Route path={ROUTES.MERCHANT_GIFT_CARDS} element={<GiftCardsPage />} />
-      <Route path={ROUTES.MERCHANT_ORDERS} element={<OrdersPage />} />
-      <Route path={ROUTES.MERCHANT_SCAN} element={<ScanPage />} />
-      <Route path={ROUTES.MERCHANT_ANALYTICS} element={<AnalyticsPage />} />
-      <Route path={ROUTES.MERCHANT_PAYOUTS} element={<PayoutsPage />} />
-      <Route path={ROUTES.MERCHANT_REDEMPTIONS} element={<RedemptionsPage />} />
-      <Route path={ROUTES.MERCHANT_SETTINGS} element={<SettingsPage />} />
-      <Route path={ROUTES.COMPLETE_PROFILE} element={<CompleteProfilePage />} />
+      <Route path="/merchant/dashboard" element={<DashboardPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-otp" element={<VerifyOtpPage />} />
+      {/* <Route path="/merchant/gift-cards" element={<GiftCardsPage />} /> */}
+      <Route path="/merchant/gift-cards" element={<GiftCardsPage />} />
+      <Route path="/merchant/orders" element={<OrdersPage />} />
+      <Route path="/merchant/scan" element={<ScanPage />} />
+      <Route path="/merchant/analytics" element={<AnalyticsPage />} />
+      <Route path="/merchant/payouts" element={<PayoutsPage />} />
+      <Route path="/merchant/redemptions" element={<RedemptionsPage />} />
+      <Route path="/merchant/settings" element={<SettingsPage />} />
+      <Route
+        path="/merchant/complete-profile"
+        element={<CompleteProfilePage />}
+      />
 
       <Route
         path="/admin/notifications"

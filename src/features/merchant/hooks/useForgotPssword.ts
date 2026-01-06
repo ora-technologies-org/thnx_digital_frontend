@@ -61,7 +61,7 @@ export const useForgotPassword = () => {
         params.email,
         params.otp,
         params.password,
-        params.confirmPassword
+        params.confirmPassword,
       ),
     onSuccess: (data: SuccessResponse) => {
       toast.success(data.message || "Password reset successfully!");
@@ -105,7 +105,7 @@ export const useForgotPassword = () => {
     email: string,
     otp: string,
     password: string,
-    confirmPassword: string
+    confirmPassword: string,
   ): Promise<boolean> => {
     try {
       await resetPasswordMutation.mutateAsync({
