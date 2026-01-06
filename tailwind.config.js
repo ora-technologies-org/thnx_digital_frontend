@@ -14,9 +14,17 @@ export default {
           light: "#f87171", // red-400
           dark: "#dc2626", // red-600
         },
+        accent: {
+          DEFAULT: "#9333ea", // purple-600
+          dark: "#7e22ce", // purple-700
+        },
+        danger: {
+          DEFAULT: "#dc2626", // red-600
+          dark: "#b91c1c", // red-700
+        },
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(to right, #3b82f6, #8b5cf6)",
+        "gradient-primary": "linear-gradient(to right, #2563eb, #8B5CF6)",
         "gradient-secondary": "linear-gradient(to right, #ef4444, #f97316)",
       },
       animation: {

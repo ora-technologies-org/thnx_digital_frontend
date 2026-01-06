@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { merchantService } from "@/features/admin/services/merchantService";
 import { AdminLayout } from "@/shared/components/layout/AdminLayout";
+import { Button } from "@/shared/components/ui/Button";
 
 // Status Configuration
 const statusConfig = {
@@ -262,9 +263,7 @@ const MerchantCard = ({ merchant, onClick }) => {
             <StatusBadge status={status} />
             <ActiveBadge isActive={merchant.user?.isActive} />
           </div>
-          <button className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs sm:text-sm font-medium rounded-lg shadow-md hover:shadow-lg transition-all whitespace-nowrap flex-shrink-0 mt-2 sm:mt-0">
-            View Cards →
-          </button>
+          <Button>View Cards</Button>
         </div>
       </div>
     </motion.div>
