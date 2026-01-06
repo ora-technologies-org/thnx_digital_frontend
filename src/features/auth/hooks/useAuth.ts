@@ -2,66 +2,118 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { AxiosError } from "axios";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { setCredentials, logout as logoutAction } from "../slices/authSlice";
 import { authService } from "../services/authService";
 import { LoginCredentials, RegisterData } from "../types/auth.types";
 
+// ===== CONSTANTS =====
+const ROUTES = {
+  MERCHANT_DASHBOARD: "/merchant/dashboard",
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  HOME: "/",
+  LOGIN: "/login",
+} as const;
+
+// ===== TYPES =====
+interface ApiErrorResponse {
+  message?: string;
+  error?: string;
+}
+
+type UserRole = "MERCHANT" | "ADMIN" | "USER";
+
+// ===== HELPERS =====
+/**
+ * Get target route based on user role
+ * Note: This is for UI routing only. Authorization is enforced on backend.
+ */
+const getRouteByRole = (role: UserRole): string => {
+  switch (role) {
+    case "MERCHANT":
+      return ROUTES.MERCHANT_DASHBOARD;
+    case "ADMIN":
+      return ROUTES.ADMIN_DASHBOARD;
+    default:
+      return ROUTES.HOME;
+  }
+};
+
+/**
+ * Extract error message from API error
+ */
+const getErrorMessage = (error: unknown, defaultMessage: string): string => {
+  if (error instanceof AxiosError) {
+    const data = error.response?.data as ApiErrorResponse | undefined;
+    return data?.message || data?.error || defaultMessage;
+  }
+  return defaultMessage;
+};
+
+/**
+ * Development-only logging
+ */
+const devLog = (message: string, data?: unknown) => {
+  if (import.meta.env.DEV) {
+    console.log(message, data || "");
+  }
+};
+
+const devError = (message: string, data?: unknown) => {
+  if (import.meta.env.DEV) {
+    console.error(message, data || "");
+  }
+};
+
+// ===== HOOK =====
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading, error } = useAppSelector(
-    (state) => state.auth
+    (state) => state.auth,
   );
 
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      console.log("🎉 Login successful, full response:", data);
-      console.log("📦 Response structure check:", {
+      devLog("Login successful", {
         hasData: !!data.data,
         hasUser: !!data.data?.user,
         hasTokens: !!data.data?.tokens,
         userRole: data.data?.user?.role,
       });
 
-      // ✅ Dispatch credentials to Redux
+      // Dispatch credentials to Redux (tokens stored in memory via Redux only)
       dispatch(
         setCredentials({
           user: data.data.user,
           accessToken: data.data.tokens.accessToken,
           refreshToken: data.data.tokens.refreshToken,
-        })
+        }),
       );
 
-      console.log("✅ Credentials dispatched to Redux");
-      console.log("📊 User role:", data.data.user.role);
+      devLog("Credentials dispatched to Redux");
 
       toast.success("Login successful!");
 
-      // ✅ Navigate immediately - ProtectedRoute will handle the check
-      const targetRoute =
-        data.data.user.role === "MERCHANT"
-          ? "/merchant/dashboard"
-          : data.data.user.role === "ADMIN"
-          ? "/admin/dashboard"
-          : "/";
-
-      console.log("🚀 Navigating to:", targetRoute);
+      // Navigate based on user role (UI routing only - auth enforced on backend)
+      const targetRoute = getRouteByRole(data.data.user.role);
+      devLog("Navigating to:", targetRoute);
       navigate(targetRoute, { replace: true });
     },
-    onError: (error: any) => {
-      console.error("❌ Login failed:", error);
-      console.error("📋 Error details:", {
+    onError: (error: AxiosError) => {
+      devError("Login failed:", {
         status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
+        message: error.response?.data,
       });
-      const message =
-        error.response?.data?.message ||
-        "Login failed. Please check your credentials.";
+
+      const message = getErrorMessage(
+        error,
+        "Login failed. Please check your credentials.",
+      );
       toast.error(message);
     },
   });
@@ -70,49 +122,41 @@ export const useAuth = () => {
   const googleLoginMutation = useMutation({
     mutationFn: authService.googleLogin,
     onSuccess: (data) => {
-      console.log("🎉 Google login successful, full response:", data);
-      console.log("📦 Response structure check:", {
+      devLog("Google login successful", {
         hasData: !!data.data,
         hasUser: !!data.data?.user,
         hasTokens: !!data.data?.tokens,
         userRole: data.data?.user?.role,
       });
 
-      // ✅ Dispatch credentials to Redux
+      // Dispatch credentials to Redux
       dispatch(
         setCredentials({
           user: data.data.user,
           accessToken: data.data.tokens.accessToken,
           refreshToken: data.data.tokens.refreshToken,
-        })
+        }),
       );
 
-      console.log("✅ Google credentials dispatched to Redux");
-      console.log("📊 User role:", data.data.user.role);
+      devLog("Google credentials dispatched to Redux");
 
       toast.success("Logged in with Google successfully!");
 
-      // ✅ Navigate based on user role
-      const targetRoute =
-        data.data.user.role === "MERCHANT"
-          ? "/merchant/dashboard"
-          : data.data.user.role === "ADMIN"
-          ? "/admin/dashboard"
-          : "/";
-
-      console.log("🚀 Navigating to:", targetRoute);
+      // Navigate based on user role (UI routing only - auth enforced on backend)
+      const targetRoute = getRouteByRole(data.data.user.role);
+      devLog("Navigating to:", targetRoute);
       navigate(targetRoute, { replace: true });
     },
-    onError: (error: any) => {
-      console.error("❌ Google login failed:", error);
-      console.error("📋 Error details:", {
+    onError: (error: AxiosError) => {
+      devError("Google login failed:", {
         status: error.response?.status,
-        message: error.response?.data?.message,
-        data: error.response?.data,
+        message: error.response?.data,
       });
-      const message =
-        error.response?.data?.message ||
-        "Google login failed. Please try again.";
+
+      const message = getErrorMessage(
+        error,
+        "Google login failed. Please try again.",
+      );
       toast.error(message);
     },
   });
@@ -126,14 +170,14 @@ export const useAuth = () => {
           user: data.data.user,
           accessToken: data.data.tokens.accessToken,
           refreshToken: data.data.tokens.refreshToken,
-        })
+        }),
       );
       toast.success(data.message || "Registration successful!");
-      navigate("/merchant/dashboard", { replace: true });
+      navigate(ROUTES.MERCHANT_DASHBOARD, { replace: true });
     },
-    onError: (error: any) => {
-      console.error("❌ Registration failed:", error);
-      const message = error.response?.data?.message || "Registration failed";
+    onError: (error: AxiosError) => {
+      devError("Registration failed:", error);
+      const message = getErrorMessage(error, "Registration failed");
       toast.error(message);
     },
   });
@@ -141,6 +185,8 @@ export const useAuth = () => {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: () => {
+      // Note: Ideally, refresh token should be in HttpOnly cookie
+      // and backend should handle logout without client sending token
       const refreshToken = localStorage.getItem("refreshToken") || "";
       return authService.logout(refreshToken);
     },
@@ -148,23 +194,23 @@ export const useAuth = () => {
       dispatch(logoutAction());
       queryClient.clear();
       toast.success("Logged out successfully");
-      navigate("/login", { replace: true });
+      navigate(ROUTES.LOGIN, { replace: true });
     },
     onError: () => {
       // Even if API call fails, clear local state
       dispatch(logoutAction());
       queryClient.clear();
-      navigate("/login", { replace: true });
+      navigate(ROUTES.LOGIN, { replace: true });
     },
   });
 
   const login = (credentials: LoginCredentials) => {
-    console.log("🔐 Login initiated for:", credentials.email);
+    devLog("Login initiated for:", credentials.email);
     loginMutation.mutate(credentials);
   };
 
   const loginWithGoogle = (credential: string) => {
-    console.log("🔐 Google login initiated");
+    devLog("Google login initiated");
     googleLoginMutation.mutate(credential);
   };
 
@@ -189,5 +235,12 @@ export const useAuth = () => {
     loginWithGoogle,
     register,
     logout,
+    // Expose granular loading states for flexible UI control
+    loadingStates: {
+      isLoggingIn: loginMutation.isPending,
+      isLoggingInWithGoogle: googleLoginMutation.isPending,
+      isRegistering: registerMutation.isPending,
+      isLoggingOut: logoutMutation.isPending,
+    },
   };
 };
