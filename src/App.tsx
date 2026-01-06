@@ -1,14 +1,13 @@
-
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { store } from './app/store';
-import { AuthInitializer } from './features/auth/components/AuthInitializer';
-import AppRoutes from './routes/AppRoutes';
-import './styles/globals.css';
-
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { Provider } from "react-redux";
+import { BrowserRouter } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { store } from "./app/store";
+import { AuthInitializer } from "./features/auth/components/AuthInitializer";
+import AppRoutes from "./routes/AppRoutes";
+import "./styles/globals.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,23 +20,27 @@ const queryClient = new QueryClient({
 });
 
 function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-  
+  if (!googleClientId) {
+    console.error("Google Client ID is not defined in environment variables");
+  }
+
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthInitializer> 
-            <AppRoutes />
-            <Toaster position="top-right" />
-          </AuthInitializer> 
-        </BrowserRouter>
+        <GoogleOAuthProvider clientId={googleClientId}>
+          <BrowserRouter>
+            <AuthInitializer>
+              <AppRoutes />
+              <Toaster position="top-right" />
+            </AuthInitializer>
+          </BrowserRouter>
+        </GoogleOAuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </Provider>
   );
 }
-
-
 
 export default App;

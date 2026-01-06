@@ -107,7 +107,7 @@ export const ResetPasswordPage: React.FC = () => {
       email,
       otp,
       data.password,
-      data.confirmPassword
+      data.confirmPassword,
     );
 
     // On success, show success UI then redirect to login
