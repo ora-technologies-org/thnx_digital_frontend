@@ -1,164 +1,155 @@
-// src/features/auth/hooks/useForgotPassword.ts
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { forgotPasswordService } from "../services/forgotPasswordService";
 import { toast } from "react-hot-toast";
 
-interface UseForgotPasswordReturn {
-  requestOtp: (email: string) => Promise<boolean>;
-  verifyOtp: (email: string, otp: string) => Promise<boolean>;
-  resetPassword: (
-    email: string,
-    otp: string,
-    password: string,
-    confirmPassword: string
-  ) => Promise<boolean>;
-  isLoading: boolean;
-  error: string | null;
-  isSuccess: boolean;
-  resetSuccess: boolean;
+// Define error response type
+interface ErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
 }
 
-export const useForgotPassword = (): UseForgotPasswordReturn => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
+// Define success response type
+interface SuccessResponse {
+  message?: string;
+}
 
+export const useForgotPassword = () => {
+  /**
+   * Mutation for requesting OTP
+   * Sends verification code to the provided email address
+   */
+  const requestOtpMutation = useMutation({
+    mutationFn: (email: string) => forgotPasswordService.getOtp(email),
+    onSuccess: (data: SuccessResponse) => {
+      toast.success(data.message || "OTP sent successfully!");
+    },
+    onError: (error: ErrorResponse) => {
+      toast.error(error.response?.data?.message || "Failed to send OTP");
+    },
+  });
+
+  /**
+   * Mutation for verifying OTP
+   * Validates the OTP code against the email
+   */
+  const verifyOtpMutation = useMutation({
+    mutationFn: ({ email, otp }: { email: string; otp: string }) =>
+      forgotPasswordService.verifyOtp(email, otp),
+    onSuccess: (data: SuccessResponse) => {
+      toast.success(data.message || "OTP verified!");
+    },
+    onError: (error: ErrorResponse) => {
+      toast.error(error.response?.data?.message || "Invalid OTP");
+    },
+  });
+
+  /**
+   * Mutation for resetting password
+   * Updates user's password after successful OTP verification
+   */
+  const resetPasswordMutation = useMutation({
+    mutationFn: (params: {
+      email: string;
+      otp: string;
+      password: string;
+      confirmPassword: string;
+    }) =>
+      forgotPasswordService.resetPassword(
+        params.email,
+        params.otp,
+        params.password,
+        params.confirmPassword,
+      ),
+    onSuccess: (data: SuccessResponse) => {
+      toast.success(data.message || "Password reset successfully!");
+    },
+    onError: (error: ErrorResponse) => {
+      toast.error(error.response?.data?.message || "Failed to reset password");
+    },
+  });
+
+  /**
+   * Wrapper function for requesting OTP
+   * Returns a Promise that resolves to boolean indicating success
+   */
   const requestOtp = async (email: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    setIsSuccess(false);
-
     try {
-      const response = await forgotPasswordService.getOtp(email);
-
-      if (response.success) {
-        setIsSuccess(true);
-        toast.success(
-          response.message || "OTP sent successfully! Check your email."
-        );
-        return true;
-      } else {
-        const errorMessage = response.message || "Failed to send OTP";
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return false;
-      }
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to send OTP. Please try again.";
-
-      setError(errorMessage);
-      toast.error(errorMessage);
+      await requestOtpMutation.mutateAsync(email);
+      return true;
+    } catch {
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  /**
+   * Wrapper function for verifying OTP
+   * Returns a Promise that resolves to boolean indicating success
+   */
   const verifyOtp = async (email: string, otp: string): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
     try {
-      const response = await forgotPasswordService.verifyOtp(email, otp);
-
-      if (response.success) {
-        toast.success(response.message || "OTP verified successfully!");
-        return true;
-      } else {
-        const errorMessage = response.message || "Invalid OTP";
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return false;
-      }
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to verify OTP. Please try again.";
-
-      setError(errorMessage);
-      toast.error(errorMessage);
+      await verifyOtpMutation.mutateAsync({ email, otp });
+      return true;
+    } catch {
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  /**
+   * Wrapper function for resetting password
+   * Returns a Promise that resolves to boolean indicating success
+   */
   const resetPassword = async (
     email: string,
     otp: string,
     password: string,
-    confirmPassword: string
+    confirmPassword: string,
   ): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-    setResetSuccess(false);
-
-    console.log("Hook - resetPassword called with:", {
-      email,
-      otp,
-      password,
-      confirmPassword,
-    });
-
     try {
-      const response = await forgotPasswordService.resetPassword(
+      await resetPasswordMutation.mutateAsync({
         email,
         otp,
         password,
-        confirmPassword
-      );
-
-      console.log("Reset Password Response:", response);
-
-      if (response.success) {
-        setResetSuccess(true);
-        setError(null); // Clear any previous errors
-        toast.success(response.message || "Password reset successfully!");
-        return true;
-      } else {
-        const errorMessage = response.message || "Failed to reset password";
-        setError(errorMessage);
-        toast.error(errorMessage);
-        return false;
-      }
-    } catch (err: any) {
-      console.error("Reset Password Error:", err);
-
-      // Handle validation errors from API
-      if (err.response?.data?.errors) {
-        const errors = err.response.data.errors;
-        const errorMessages = errors
-          .map((e: any) => `${e.field}: ${e.message}`)
-          .join(", ");
-        setError(errorMessages);
-        toast.error(errorMessages);
-      } else {
-        const errorMessage =
-          err.response?.data?.message ||
-          err.message ||
-          "Failed to reset password. Please try again.";
-
-        setError(errorMessage);
-        toast.error(errorMessage);
-      }
+        confirmPassword,
+      });
+      return true;
+    } catch {
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return {
+    // Async wrapper functions that return Promises
     requestOtp,
     verifyOtp,
     resetPassword,
-    isLoading,
-    error,
-    isSuccess,
-    resetSuccess,
+
+    // Combined loading state - true if any mutation is in progress
+    isLoading:
+      requestOtpMutation.isPending ||
+      verifyOtpMutation.isPending ||
+      resetPasswordMutation.isPending,
+
+    // Individual mutation states for granular control
+    isRequestingOtp: requestOtpMutation.isPending,
+    isVerifyingOtp: verifyOtpMutation.isPending,
+    isResettingPassword: resetPasswordMutation.isPending,
+
+    // Success state for password reset (used to show success UI)
+    resetSuccess: resetPasswordMutation.isSuccess,
+
+    // Error states from TanStack Query
+    requestOtpError: requestOtpMutation.error,
+    verifyOtpError: verifyOtpMutation.error,
+    resetPasswordError: resetPasswordMutation.error,
+
+    // Raw mutation objects for advanced usage
+    mutations: {
+      requestOtp: requestOtpMutation,
+      verifyOtp: verifyOtpMutation,
+      resetPassword: resetPasswordMutation,
+    },
   };
 };
