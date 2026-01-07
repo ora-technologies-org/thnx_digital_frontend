@@ -42,27 +42,86 @@ import { useProfileData } from "@/features/merchant/hooks/useProfileData";
 import { useSubmitProfile } from "@/features/merchant/hooks/useProfileComplete";
 import { RootState } from "@/app/store";
 
-// Zod Schema
+// Zod Schema matching backend validation
 const profileSchema = z.object({
-  businessName: z.string().min(2, "Business name is required"),
-  address: z.string().min(5, "Address is required"),
-  city: z.string().min(2, "City is required"),
-  state: z.string().optional(),
-  zipCode: z.string().optional(),
-  country: z.string().min(2, "Country is required"),
-  businessPhone: z.string().min(10, "Business phone is required"),
-  businessEmail: z.string().email("Invalid business email"),
-  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
-  bankName: z.string().min(2, "Bank name is required"),
-  accountNumber: z.string().min(5, "Account number is required"),
-  accountHolderName: z.string().min(2, "Account holder name is required"),
-  ifscCode: z.string().optional(),
-  swiftCode: z.string().optional(),
-  businessRegistrationNumber: z.string().optional(),
-  taxId: z.string().optional(),
-  businessType: z.string().optional(),
-  businessCategory: z.string().optional(),
-  description: z.string().optional(),
+  // Business Information
+  businessName: z.string().min(1, "Business name is required").max(255),
+  businessRegistrationNumber: z
+    .string()
+    .min(1, "Registration number is required")
+    .max(100),
+  taxId: z.string().min(1, "Tax ID is required").max(100).optional(),
+  businessType: z.string().min(1, "Business type is required").optional(),
+  businessCategory: z
+    .string()
+    .min(1, "Business category is required")
+    .max(100)
+    .optional(),
+
+  // Business Address
+  address: z.string().min(1, "Address is required").max(500),
+  city: z.string().min(1, "City is required").max(100),
+  state: z.string().min(1, "State is required").max(100).optional(),
+  zipCode: z.string().min(1, "Zip code is required").max(20).optional(),
+  country: z.string().min(1, "Country is required").max(100),
+
+  // Business Contact
+  businessPhone: z
+    .string()
+    .regex(
+      /^\+?[1-9]\d{1,14}$/,
+      "Invalid phone number format. Use international format with optional + sign (e.g., +977-9841234567 or 9841234567)",
+    )
+    .optional(),
+  businessEmail: z
+    .string()
+    .email(
+      "Invalid email format. Use standard email format (e.g., contact@business.com)",
+    )
+    .max(255),
+  website: z
+    .string()
+    .url(
+      "Invalid website URL. Must include protocol (e.g., https://www.example.com)",
+    )
+    .max(255)
+    .optional()
+    .or(z.literal("")),
+
+  // Bank Details (for payments)
+  bankName: z.string().min(1, "Bank name is required").max(255).optional(),
+  accountNumber: z
+    .string()
+    .min(1, "Account number is required")
+    .max(50)
+    .optional(),
+  accountHolderName: z
+    .string()
+    .min(1, "Account holder name is required")
+    .max(255)
+    .optional(),
+  ifscCode: z
+    .string()
+    .regex(
+      /^[A-Z]{4}0[A-Z0-9]{6}$/,
+      "Invalid IFSC code format. Must be 11 characters: 4 uppercase letters + 0 + 6 alphanumeric characters (e.g., SBIN0001234)",
+    )
+    .optional()
+    .or(z.literal("")),
+  swiftCode: z
+    .string()
+    .regex(
+      /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/,
+      "Invalid SWIFT code format. Must be 8 or 11 uppercase characters (e.g., SBININBB or SBININBB123)",
+    )
+    .optional()
+    .or(z.literal("")),
+
+  // Additional Info
+  description: z
+    .string()
+    .max(2000, "Description too long. Maximum 2000 characters allowed")
+    .optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -97,7 +156,7 @@ export const CompleteProfilePage: React.FC = () => {
 
   const submitProfileMutation = useSubmitProfile();
 
-  // Determine edit mode from BOTH sources - use useMemo to avoid recalculation
+  // Determine edit mode from BOTH sources
   const isEditMode = useMemo(() => {
     const hasApiProfileId = !!profileData?.id;
     const hasReduxProfileId = !!reduxProfile?.id;
@@ -112,7 +171,7 @@ export const CompleteProfilePage: React.FC = () => {
     });
 
     return editMode;
-  }, [profileData, reduxProfile]); // Watch entire objects
+  }, [profileData, reduxProfile]);
 
   // Get profile ID from either source
   const profileId = useMemo(() => {
@@ -132,11 +191,12 @@ export const CompleteProfilePage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, touchedFields },
     trigger,
     reset,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
+    mode: "onTouched", // This enables validation on blur
     defaultValues: {
       country: "India",
     },
@@ -159,26 +219,6 @@ export const CompleteProfilePage: React.FC = () => {
       profileStatus: profileData?.profileStatus || reduxProfile?.profileStatus,
     });
   }, [isEditMode, profileId, profileData, reduxProfile]);
-
-  // Debug profile loading
-  useEffect(() => {
-    console.log("🔍 Profile Loading Debug:", {
-      isLoadingProfile,
-      isFetching,
-      profileData,
-      reduxProfile,
-      isEditMode,
-      profileId: profileData?.id || reduxProfile?.id,
-      formPrefilled: isFormPrefilled,
-    });
-  }, [
-    isLoadingProfile,
-    isFetching,
-    profileData,
-    reduxProfile,
-    isEditMode,
-    isFormPrefilled,
-  ]);
 
   // Handle logo file selection
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,7 +262,6 @@ export const CompleteProfilePage: React.FC = () => {
 
     console.log("🔄 Syncing API data to Redux:", profileData);
 
-    // Update Redux store with fetched data
     dispatch(
       setProfile({
         businessName: profileData.businessName || "",
@@ -275,7 +314,6 @@ export const CompleteProfilePage: React.FC = () => {
       profileId: profileData?.id || reduxProfile?.id,
     });
 
-    // Only redirect if status is approved
     if (status === "approved" || status === "PENDING_VERIFICATION") {
       if (status === "PENDING_VERIFICATION") {
         toast.success("Your profile is under review!");
@@ -287,12 +325,10 @@ export const CompleteProfilePage: React.FC = () => {
     }
   }, [profileData, reduxProfile, isLoadingProfile, navigate]);
 
-  // Prefill form with fetched data from both API and Redux
+  // Prefill form with fetched data
   const prefillForm = useCallback(() => {
-    // Use API data first, then Redux as fallback
     const sourceData = profileData || reduxProfile;
 
-    // Skip if no data or still loading or already prefilled
     if (!sourceData?.id || isLoadingProfile || isFormPrefilled) {
       return;
     }
@@ -326,28 +362,18 @@ export const CompleteProfilePage: React.FC = () => {
       description: sourceData.description || "",
     };
 
-    console.log("📝 Setting form values:", formValues);
-
-    // Reset form with fetched data
     reset(formValues, {
       keepDirty: false,
       keepErrors: false,
       keepDefaultValues: false,
     });
 
-    // Set existing logo URL
     if (sourceData.businessLogo) {
-      console.log("🖼️ Setting existing logo URL:", sourceData.businessLogo);
       setExistingLogoUrl(sourceData.businessLogo);
     }
 
-    // Mark form as prefilled
     setIsFormPrefilled(true);
-
-    console.log(
-      "✅ Form prefilled successfully from",
-      profileData ? "API" : "Redux",
-    );
+    console.log("✅ Form prefilled successfully");
   }, [profileData, reduxProfile, isLoadingProfile, reset, isFormPrefilled]);
 
   // Run prefill when data is available
@@ -357,7 +383,6 @@ export const CompleteProfilePage: React.FC = () => {
       (profileData || reduxProfile?.id) &&
       !isFormPrefilled
     ) {
-      // Use setTimeout to avoid setState in synchronous effect
       setTimeout(() => {
         prefillForm();
       }, 0);
@@ -370,7 +395,7 @@ export const CompleteProfilePage: React.FC = () => {
     prefillForm,
   ]);
 
-  // Prevent accidental navigation with unsaved changes
+  // Prevent accidental navigation
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges && !submitProfileMutation.isPending) {
@@ -406,13 +431,13 @@ export const CompleteProfilePage: React.FC = () => {
 
     if (isValid) {
       setCurrentStep(currentStep + 1);
-      setValidationAttempted(false); // Reset validation attempted when navigating
+      setValidationAttempted(false);
     }
   };
 
   const handleBack = () => {
     setCurrentStep(currentStep - 1);
-    setValidationAttempted(false); // Reset validation attempted when navigating
+    setValidationAttempted(false);
   };
 
   const handleConfirmLeave = () => {
@@ -428,104 +453,47 @@ export const CompleteProfilePage: React.FC = () => {
     setPendingNavigation(null);
   };
 
-  // In the onSubmit function, replace the FormData creation section:
   const onSubmit = async (data: ProfileFormData) => {
-    // Log current state for debugging
     console.log("📝 Form submission started", {
       hasProfileData: !!profileData,
       profileId: profileData?.id,
-      hasReduxProfile: !!reduxProfile?.id,
-      reduxProfileId: reduxProfile?.id,
     });
 
-    setValidationAttempted(true); // Set validation attempted only on submit
+    setValidationAttempted(true);
 
-    // Determine edit mode based on ACTUAL profile ID existence
     const currentProfileId = profileData?.id || reduxProfile?.id;
     const isCurrentlyEditing = !!currentProfileId;
 
-    console.log("🔍 Edit mode determination:", {
-      currentProfileId,
-      isCurrentlyEditing,
-      profileDataId: profileData?.id,
-      reduxProfileId: reduxProfile?.id,
-    });
-
-    // Validation: Identity document is required for NEW profiles only
-    // ONLY validate on submit, not when navigating
     if (!isCurrentlyEditing && !identityDoc) {
       toast.error("Please upload an identity document to continue");
       setCurrentStep(3);
       return;
     }
 
-    // If we're in edit mode but don't have a profile ID, something is wrong
-    if (isCurrentlyEditing && !currentProfileId) {
-      console.error("❌ CRITICAL: Edit mode but no profile ID found!");
-      toast.error("Profile ID not found. Please refresh and try again.");
-      return;
-    }
-
     const formData = new FormData();
 
-    // Append all form fields
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
         formData.append(key, value.toString());
       }
     });
 
-    // Append business logo if a new one is uploaded
-    // DO NOT append keepExistingLogo - backend doesn't accept it
     if (businessLogo) {
       formData.append("businessLogo", businessLogo);
-      console.log("🖼️ Adding new business logo:", businessLogo.name);
     }
-    // Note: If editing and not uploading new logo, we don't need to send anything
-    // The backend should keep the existing logo automatically
 
-    // Append documents only if new ones are uploaded (optional for edit mode)
     if (identityDoc) {
       formData.append("identityDocument", identityDoc);
-      console.log("📄 Adding identity document:", identityDoc.name);
     }
 
     if (registrationDoc) {
       formData.append("registrationDocument", registrationDoc);
-      console.log("📄 Adding registration document:", registrationDoc.name);
     }
 
     if (taxDoc) {
       formData.append("taxDocument", taxDoc);
-      console.log("📄 Adding tax document:", taxDoc.name);
     }
 
-    // DO NOT add _method - backend doesn't accept it
-    // The HTTP method (PUT vs POST) is determined by the endpoint URL
-
-    console.log("📤 Final submission details:", {
-      method: isCurrentlyEditing ? "PUT" : "POST",
-      profileId: currentProfileId,
-      isEdit: isCurrentlyEditing,
-      endpoint: isCurrentlyEditing
-        ? `/merchants/${currentProfileId}`
-        : "/auth/merchant/complete-profile",
-      formDataSize: Array.from(formData.entries()).length,
-    });
-
-    // Log all FormData entries for debugging
-    console.log("📦 FormData Contents:");
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(
-          `  - ${key}: [File: ${value.name}, ${value.size} bytes, ${value.type}]`,
-        );
-      } else {
-        console.log(`  - ${key}: ${value}`);
-      }
-    }
-
-    // Submit the form
     submitProfileMutation.mutate(
       {
         formData,
@@ -536,10 +504,8 @@ export const CompleteProfilePage: React.FC = () => {
         onSuccess: (response) => {
           console.log("✅ Profile submission successful:", response);
 
-          // Get the response profile data
           const responseProfile = response?.data || response;
 
-          // Update Redux store with response
           dispatch(
             setProfile({
               ...data,
@@ -564,10 +530,8 @@ export const CompleteProfilePage: React.FC = () => {
             { duration: 3000 },
           );
 
-          // Refetch profile data
           refetchProfile();
 
-          // Navigate after a brief delay
           setTimeout(() => {
             navigate("/merchant/dashboard");
           }, 1500);
@@ -695,8 +659,8 @@ export const CompleteProfilePage: React.FC = () => {
                         "Please review and correct your information"
                       : profileData?.profileStatus === "pending" ||
                           profileData?.profileStatus === "PENDING_VERIFICATION"
-                        ? "Your profile is currently being reviewed. You can still make edits if needed."
-                        : "You are updating your existing profile. Upload new documents only if you want to replace existing ones."}
+                        ? "Your profile is currently being reviewed."
+                        : "You are updating your existing profile."}
                   </p>
                   <p className="text-xs mt-2 text-gray-600">
                     Profile ID: {profileId}
@@ -717,7 +681,7 @@ export const CompleteProfilePage: React.FC = () => {
             </h1>
             <p className="text-gray-600">
               {isEditMode
-                ? "Update your business information and resubmit for verification"
+                ? "Update your business information"
                 : "Provide your business details to start creating gift cards"}
             </p>
           </motion.div>
@@ -765,8 +729,7 @@ export const CompleteProfilePage: React.FC = () => {
                       <div className="space-y-4">
                         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                           <ImageIcon className="w-5 h-5 text-purple-600" />
-                          Business Logo{" "}
-                          {isEditMode && "(Optional - update if needed)"}
+                          Business Logo {isEditMode && "(Optional)"}
                         </h3>
 
                         <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-400 transition-colors">
@@ -799,7 +762,7 @@ export const CompleteProfilePage: React.FC = () => {
                                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium inline-flex items-center gap-2"
                                   >
                                     <X className="w-4 h-4" />
-                                    Remove New
+                                    Remove
                                   </button>
                                 )}
                               </div>
@@ -844,7 +807,10 @@ export const CompleteProfilePage: React.FC = () => {
                         <Input
                           label="Business Name *"
                           placeholder="Your Business Name"
-                          error={errors.businessName?.message}
+                          error={
+                            touchedFields.businessName &&
+                            errors.businessName?.message
+                          }
                           {...register("businessName")}
                         />
                       </div>
@@ -859,7 +825,9 @@ export const CompleteProfilePage: React.FC = () => {
                         <Input
                           label="Street Address *"
                           placeholder="123 Main Street"
-                          error={errors.address?.message}
+                          error={
+                            touchedFields.address && errors.address?.message
+                          }
                           {...register("address")}
                         />
 
@@ -867,13 +835,13 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="City *"
                             placeholder="Mumbai"
-                            error={errors.city?.message}
+                            error={touchedFields.city && errors.city?.message}
                             {...register("city")}
                           />
                           <Input
                             label="State/Province"
                             placeholder="Maharashtra"
-                            error={errors.state?.message}
+                            error={touchedFields.state && errors.state?.message}
                             {...register("state")}
                           />
                         </div>
@@ -882,13 +850,17 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="ZIP/Postal Code"
                             placeholder="400001"
-                            error={errors.zipCode?.message}
+                            error={
+                              touchedFields.zipCode && errors.zipCode?.message
+                            }
                             {...register("zipCode")}
                           />
                           <Input
                             label="Country *"
                             placeholder="India"
-                            error={errors.country?.message}
+                            error={
+                              touchedFields.country && errors.country?.message
+                            }
                             {...register("country")}
                           />
                         </div>
@@ -905,14 +877,20 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="Business Phone *"
                             placeholder="+919876543210"
-                            error={errors.businessPhone?.message}
+                            error={
+                              touchedFields.businessPhone &&
+                              errors.businessPhone?.message
+                            }
                             {...register("businessPhone")}
                           />
                           <Input
                             label="Business Email *"
                             type="email"
                             placeholder="business@example.com"
-                            error={errors.businessEmail?.message}
+                            error={
+                              touchedFields.businessEmail &&
+                              errors.businessEmail?.message
+                            }
                             {...register("businessEmail")}
                           />
                         </div>
@@ -920,7 +898,9 @@ export const CompleteProfilePage: React.FC = () => {
                         <Input
                           label="Website (Optional)"
                           placeholder="https://yourbusiness.com"
-                          error={errors.website?.message}
+                          error={
+                            touchedFields.website && errors.website?.message
+                          }
                           {...register("website")}
                         />
                       </div>
@@ -935,11 +915,16 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="Business Registration Number"
                             placeholder="REG123456"
+                            error={
+                              touchedFields.businessRegistrationNumber &&
+                              errors.businessRegistrationNumber?.message
+                            }
                             {...register("businessRegistrationNumber")}
                           />
                           <Input
                             label="Tax ID"
                             placeholder="TAX123456"
+                            error={touchedFields.taxId && errors.taxId?.message}
                             {...register("taxId")}
                           />
                         </div>
@@ -948,11 +933,19 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="Business Type"
                             placeholder="E-commerce, Restaurant, etc."
+                            error={
+                              touchedFields.businessType &&
+                              errors.businessType?.message
+                            }
                             {...register("businessType")}
                           />
                           <Input
                             label="Business Category"
                             placeholder="Retail, Services, etc."
+                            error={
+                              touchedFields.businessCategory &&
+                              errors.businessCategory?.message
+                            }
                             {...register("businessCategory")}
                           />
                         </div>
@@ -962,11 +955,20 @@ export const CompleteProfilePage: React.FC = () => {
                             Description
                           </label>
                           <textarea
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                              touchedFields.description && errors.description
+                                ? "border-red-500 focus:ring-red-500"
+                                : "border-gray-300 focus:ring-blue-500"
+                            }`}
                             rows={3}
                             placeholder="Brief description of your business..."
                             {...register("description")}
                           />
+                          {touchedFields.description && errors.description && (
+                            <p className="mt-1 text-sm text-red-600">
+                              {errors.description.message}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -996,21 +998,29 @@ export const CompleteProfilePage: React.FC = () => {
                         <Input
                           label="Bank Name *"
                           placeholder="HDFC Bank, ICICI Bank, etc."
-                          error={errors.bankName?.message}
+                          error={
+                            touchedFields.bankName && errors.bankName?.message
+                          }
                           {...register("bankName")}
                         />
 
                         <Input
                           label="Account Number *"
                           placeholder="1234567890"
-                          error={errors.accountNumber?.message}
+                          error={
+                            touchedFields.accountNumber &&
+                            errors.accountNumber?.message
+                          }
                           {...register("accountNumber")}
                         />
 
                         <Input
                           label="Account Holder Name *"
                           placeholder="As per bank records"
-                          error={errors.accountHolderName?.message}
+                          error={
+                            touchedFields.accountHolderName &&
+                            errors.accountHolderName?.message
+                          }
                           {...register("accountHolderName")}
                         />
 
@@ -1018,11 +1028,18 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="IFSC Code (India)"
                             placeholder="HDFC0000123"
+                            error={
+                              touchedFields.ifscCode && errors.ifscCode?.message
+                            }
                             {...register("ifscCode")}
                           />
                           <Input
                             label="SWIFT Code (International)"
                             placeholder="HDFCINBB"
+                            error={
+                              touchedFields.swiftCode &&
+                              errors.swiftCode?.message
+                            }
                             {...register("swiftCode")}
                           />
                         </div>
@@ -1031,8 +1048,7 @@ export const CompleteProfilePage: React.FC = () => {
                       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                         <p className="text-sm text-yellow-800">
                           <strong>Note:</strong> Your bank details will be kept
-                          secure and used only for processing payments when
-                          customers redeem gift cards at your store.
+                          secure and used only for processing payments.
                         </p>
                       </div>
                     </motion.div>
@@ -1055,18 +1071,14 @@ export const CompleteProfilePage: React.FC = () => {
                         </h2>
                         <p className="text-gray-600">
                           {isEditMode
-                            ? "Upload new documents only if you want to replace existing ones"
+                            ? "Upload new documents only if needed"
                             : "Upload documents to verify your business"}
                         </p>
                       </div>
 
                       <div className="space-y-6">
                         <DocumentUpload
-                          label={`Identity Document ${
-                            isEditMode
-                              ? "(Optional - update if needed)"
-                              : "(Required *)"
-                          }`}
+                          label={`Identity Document ${isEditMode ? "(Optional)" : "(Required *)"}`}
                           required={!isEditMode}
                           value={identityDoc}
                           onChange={setIdentityDoc}
@@ -1077,10 +1089,9 @@ export const CompleteProfilePage: React.FC = () => {
                           maxSize={10 * 1024 * 1024}
                           helperText={
                             isEditMode
-                              ? "Leave empty to keep existing document, or upload new to replace"
-                              : "Upload Aadhaar, PAN, Passport, or Driver's License (PDF, JPG, PNG up to 10MB)"
+                              ? "Leave empty to keep existing document"
+                              : "Upload Aadhaar, PAN, Passport, or Driver's License"
                           }
-                          // Only show error if validation was attempted (on submit) AND we're not in edit mode AND no document
                           error={
                             validationAttempted && !isEditMode && !identityDoc
                               ? "Identity document is required"
@@ -1095,6 +1106,7 @@ export const CompleteProfilePage: React.FC = () => {
                             isEditMode ? "Identity Document" : undefined
                           }
                         />
+
                         <DocumentUpload
                           label="Business Registration Document (Optional)"
                           value={registrationDoc}
@@ -1104,8 +1116,7 @@ export const CompleteProfilePage: React.FC = () => {
                             "image/*": [".png", ".jpg", ".jpeg"],
                           }}
                           maxSize={10 * 1024 * 1024}
-                          helperText="GST Certificate, Shop Act License, or Incorporation Certificate (PDF, JPG, PNG up to 10MB)"
-                          // NEW: Add existing document info for edit mode
+                          helperText="GST Certificate, Shop Act License, etc."
                           existingDocumentUrl={
                             isEditMode
                               ? profileData?.registrationDocument
@@ -1115,6 +1126,7 @@ export const CompleteProfilePage: React.FC = () => {
                             isEditMode ? "Registration Document" : undefined
                           }
                         />
+
                         <DocumentUpload
                           label="Tax Document (Optional)"
                           value={taxDoc}
@@ -1124,8 +1136,7 @@ export const CompleteProfilePage: React.FC = () => {
                             "image/*": [".png", ".jpg", ".jpeg"],
                           }}
                           maxSize={10 * 1024 * 1024}
-                          helperText="GST Registration or Tax Registration Document (PDF, JPG, PNG up to 10MB)"
-                          // NEW: Add existing document info for edit mode
+                          helperText="GST Registration or Tax Registration Document"
                           existingDocumentUrl={
                             isEditMode ? profileData?.taxDocument : undefined
                           }
@@ -1144,8 +1155,8 @@ export const CompleteProfilePage: React.FC = () => {
                             </p>
                             <p className="text-sm text-blue-700">
                               {isEditMode
-                                ? "Your updated profile will be reviewed within 24-48 hours. You'll receive an email notification once verified."
-                                : "Our team will review your documents within 24-48 hours. You'll receive an email notification once your account is verified and you can start creating gift cards!"}
+                                ? "Your updated profile will be reviewed within 24-48 hours."
+                                : "Our team will review your documents within 24-48 hours."}
                             </p>
                           </div>
                         </div>
@@ -1207,31 +1218,6 @@ export const CompleteProfilePage: React.FC = () => {
             </Card>
           </motion.div>
 
-          {/* Debug Button (Optional - remove in production) */}
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                console.log("🔄 Debug Info:", {
-                  isEditMode,
-                  profileData,
-                  reduxProfile,
-                  profileId,
-                  isFormPrefilled,
-                  currentStep,
-                  identityDoc,
-                  registrationDoc,
-                  taxDoc,
-                  businessLogo,
-                });
-                refetchProfile();
-              }}
-              className="text-xs text-gray-500 underline"
-            >
-              Debug Info
-            </button>
-          </div>
-
           {/* Help Text */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1266,8 +1252,7 @@ export const CompleteProfilePage: React.FC = () => {
             </div>
             <div>
               <p className="text-gray-700">
-                You have unsaved changes. Are you sure you want to leave? Your
-                progress will be lost.
+                You have unsaved changes. Are you sure you want to leave?
               </p>
             </div>
           </div>

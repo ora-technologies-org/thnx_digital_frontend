@@ -34,6 +34,7 @@ import {
 } from "../shared/utils/animations";
 import { FloatingChatButton } from "@/shared/components/animated";
 import { useAppSelector } from "@/app/hooks";
+import { ContactSection } from "@/shared/components/animated/Contactus";
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -698,6 +699,8 @@ export const HomePage: React.FC = () => {
           </div>
         </motion.div>
       </section>
+      {/* ===== CONTACT SECTION ===== */}
+      <ContactSection />
 
       {/* ===== FOOTER ===== */}
       <footer className="bg-gray-900 text-white py-12 px-4">

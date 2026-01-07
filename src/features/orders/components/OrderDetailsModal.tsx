@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   User,
-  Phone,
-  Mail,
   CreditCard,
   Calendar,
   DollarSign,
@@ -12,17 +10,28 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Receipt,
+  FileText,
 } from "lucide-react";
 
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/** Order status types */
 export type OrderStatus = "ACTIVE" | "USED" | "EXPIRED";
+
+/** Payment status types */
 export type PaymentStatus = "COMPLETED" | "PENDING" | "FAILED";
 
+/** Customer information interface */
 export interface Customer {
   name?: string;
   phone?: string;
   email?: string;
 }
 
+/** Order item interface for detailed line items */
 export interface OrderItem {
   id: string;
   name: string;
@@ -30,121 +39,154 @@ export interface OrderItem {
   price: number;
 }
 
+/** Main order interface containing all order details */
 export interface Order {
   id: string;
-
-  // Identifiers
   orderId?: string;
   orderNumber?: string;
   qrCode?: string;
-
-  // Status
   status: OrderStatus;
   paymentStatus?: PaymentStatus;
-
-  // Amounts
   purchaseAmount?: number | string;
   currentBalance?: number | string;
   bonusAmount?: number | string;
   amount?: number | string;
   totalAmount?: number;
-
-  // Customer
   customerName?: string;
   customerPhone?: string;
   customerEmail?: string;
   customer?: Customer;
-
-  // Payment
   paymentMethod?: string;
   transactionId?: string;
-
-  // Dates
   createdAt: string;
   purchasedAt?: string;
   expiresAt?: string;
   usedAt?: string;
-
-  // Extras
   notes?: string;
-
-  // Items (if applicable)
   items?: OrderItem[];
 }
 
+/** Props interface for the OrderDetailModal component */
 interface OrderDetailModalProps {
   order: Order;
-
   isOpen: boolean;
-
   onClose: () => void;
 }
 
+// ============================================================================
+// Component: OrderDetailModal
+// ============================================================================
+
 /**
  * OrderDetailModal Component
- * Displays comprehensive details of a selected order in a modal dialog
- * Shows customer info, order details, payment info, dates, and additional information
+ *
+ * A comprehensive modal dialog that displays detailed information about an order.
+ * Features:
+ * - Clean, modern design with subtle animations
+ * - Organized sections for different types of information
+ * - Responsive layout that works on all screen sizes
+ * - Visual status indicators with icons
+ * - Proper formatting for dates and currency
+ *
+ * @param order - The order object containing all details
+ * @param isOpen - Boolean controlling modal visibility
+ * @param onClose - Function to close the modal
  */
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   order,
   isOpen,
   onClose,
 }) => {
-  // Early return if no order is provided
+  // Guard clause: return null if no order is provided
   if (!order) return null;
 
+  // ============================================================================
+  // Helper Functions
+  // ============================================================================
+
   /**
-   * Returns the appropriate icon component for order status
-   * @param status - The order status (ACTIVE, USED, EXPIRED)
-   * @returns React icon component with appropriate color
+   * Returns the appropriate icon for a given order status
+   * @param status - The order status string
+   * @returns React element with status icon
    */
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "ACTIVE":
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
       case "USED":
-        return <CheckCircle className="w-5 h-5 text-gray-600" />;
+        return <CheckCircle className="w-5 h-5 text-blue-500" />;
       case "EXPIRED":
-        return <XCircle className="w-5 h-5 text-red-600" />;
+        return <XCircle className="w-5 h-5 text-rose-500" />;
       default:
-        return <Clock className="w-5 h-5 text-gray-600" />;
+        return <Clock className="w-5 h-5 text-gray-400" />;
     }
   };
 
   /**
-   * Returns the appropriate Tailwind CSS classes for order status badge
-   * @param status - The order status (ACTIVE, USED, EXPIRED)
-   * @returns Tailwind CSS classes for background and text color
+   * Returns Tailwind CSS classes for order status badge styling
+   * @param status - The order status string
+   * @returns String of Tailwind CSS classes
    */
   const getStatusColor = (status: string) => {
     switch (status) {
       case "ACTIVE":
-        return "bg-green-100 text-green-800";
+        return "bg-green-50 text-green-700 border border-green-200";
       case "USED":
-        return "bg-gray-100 text-gray-800";
+        return "bg-blue-50 text-blue-700 border border-blue-200";
       case "EXPIRED":
-        return "bg-red-100 text-red-800";
+        return "bg-rose-50 text-rose-700 border border-rose-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-50 text-gray-700 border border-gray-200";
     }
   };
 
   /**
-   * Returns the appropriate Tailwind CSS classes for payment status badge
-   * @param status - The payment status (COMPLETED, PENDING, FAILED)
-   * @returns Tailwind CSS classes for background and text color
+   * Returns Tailwind CSS classes for payment status badge styling
+   * @param status - The payment status string
+   * @returns String of Tailwind CSS classes
    */
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return "bg-green-100 text-green-800";
-      case "PENDING":
-        return "bg-yellow-100 text-yellow-800";
-      case "FAILED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  // const getPaymentStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case "COMPLETED":
+  //       return "bg-green-50 text-green-700 border border-green-200";
+  //     case "PENDING":
+  //       return "bg-amber-50 text-amber-700 border border-amber-200";
+  //     case "FAILED":
+  //       return "bg-rose-50 text-rose-700 border border-rose-200";
+  //     default:
+  //       return "bg-gray-50 text-gray-700 border border-gray-200";
+  //   }
+  // };
+
+  /**
+   * Formats currency values with INR symbol and proper formatting
+   * @param value - The amount to format (string or number)
+   * @returns Formatted currency string
+   */
+  const formatCurrency = (value: number | string | undefined) => {
+    const num = parseFloat(value as string) || 0;
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(num);
+  };
+
+  /**
+   * Formats date strings into a readable format with time
+   * @param dateString - ISO date string
+   * @returns Formatted date string
+   */
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // ============================================================================
@@ -155,283 +197,303 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Backdrop with subtle blur effect */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
           />
 
+          {/* Modal Container */}
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            {/* Modal Card with spring animation */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: "spring", duration: 0.5 }}
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+              transition={{ type: "spring", duration: 0.4 }}
+              className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-100"
             >
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {/* QR Code Icon */}
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <QrCode className="w-6 h-6 text-white" />
-                  </div>
+              {/* Header Section */}
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Order Icon */}
+                    <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                      <Receipt className="w-6 h-6 text-white" />
+                    </div>
 
-                  {/* Title and Order ID */}
-                  <div>
-                    <h2 className="text-xl font-bold text-white">
-                      Order Details
-                    </h2>
-                    <p className="text-blue-100 text-sm">
-                      {order.qrCode?.split("-").slice(-2).join("-") ||
-                        order.orderId ||
-                        "N/A"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Close Button */}
-                <button
-                  onClick={onClose}
-                  className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
-                <div className="mb-6 flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  {/* Order Status */}
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(order.status)}
+                    {/* Order Title and ID */}
                     <div>
-                      <div className="text-sm text-gray-600">Order Status</div>
-                      <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getStatusColor(order.status || "ACTIVE")}`}
-                      >
-                        {order.status || "N/A"}
-                      </span>
+                      <h2 className="text-lg font-semibold text-white">
+                        Order Details
+                      </h2>
+                      <p className="text-gray-300 text-sm font-medium mt-1">
+                        ID: {order.orderId || order.id}
+                        {order.orderNumber && ` • ${order.orderNumber}`}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Payment Status */}
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">Payment Status</div>
-                    <span
-                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getPaymentStatusColor(order.paymentStatus || "PENDING")}`}
-                    >
-                      {order.paymentStatus || "PENDING"}
-                    </span>
+                  {/* Close Button */}
+                  <button
+                    onClick={onClose}
+                    className="text-gray-300 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content Area with scrolling */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {/* Status Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  {/* Order Status Card */}
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      {getStatusIcon(order.status)}
+                      <div>
+                        <div className="text-xs text-gray-600 font-medium mb-1">
+                          Order Status
+                        </div>
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-blue-600" />
+                {/* Customer Information Section */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-600" />
                     Customer Information
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Full Name */}
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                        <User className="w-4 h-4" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Name Field */}
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-xs text-gray-600 mb-1">
                         Full Name
                       </div>
-                      <div className="font-semibold text-gray-900">
-                        {order.customerName || order.customer?.name || "N/A"}
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.customerName ||
+                          order.customer?.name ||
+                          "Not provided"}
                       </div>
                     </div>
 
-                    {/* Phone Number */}
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                        <Phone className="w-4 h-4" />
+                    {/* Phone Field */}
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-xs text-gray-600 mb-1">
                         Phone Number
                       </div>
-                      <div className="font-semibold text-gray-900">
-                        {order.customerPhone || order.customer?.phone || "N/A"}
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.customerPhone ||
+                          order.customer?.phone ||
+                          "Not provided"}
                       </div>
                     </div>
 
-                    {/* Email Address - spans full width on desktop */}
-                    <div className="p-4 bg-gray-50 rounded-xl md:col-span-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                        <Mail className="w-4 h-4" />
+                    {/* Email Field */}
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-xs text-gray-600 mb-1">
                         Email Address
                       </div>
-                      <div className="font-semibold text-gray-900">
-                        {order.customerEmail || order.customer?.email || "N/A"}
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {order.customerEmail ||
+                          order.customer?.email ||
+                          "Not provided"}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                    Order Details
+                {/* Financial Information Section */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-gray-600" />
+                    Financial Information
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Purchase Amount */}
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="text-sm text-gray-600 mb-1">
+                    <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                      <div className="text-xs text-gray-600 mb-2">
                         Purchase Amount
                       </div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        Rs.{" "}
-                        {parseFloat(
-                          order.purchaseAmount || order.amount || 0,
-                        ).toLocaleString()}
+                      <div className="text-xl font-semibold text-gray-900">
+                        {formatCurrency(order.purchaseAmount || order.amount)}
                       </div>
                     </div>
 
                     {/* Current Balance */}
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="text-sm text-gray-600 mb-1">
+                    <div className="p-4 bg-white rounded-lg border border-green-200 shadow-sm">
+                      <div className="text-xs text-green-600 mb-2">
                         Current Balance
                       </div>
-                      <div className="text-2xl font-bold text-green-600">
-                        Rs.{" "}
-                        {parseFloat(
-                          order.currentBalance || order.amount || 0,
-                        ).toLocaleString()}
+                      <div className="text-xl font-semibold text-green-700">
+                        {formatCurrency(order.currentBalance || order.amount)}
                       </div>
                     </div>
 
-                    {/* Bonus Amount - only shown if bonus exists */}
-                    {order.bonusAmount && parseFloat(order.bonusAmount) > 0 && (
-                      <div className="p-4 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
-                        <div className="text-sm text-orange-700 mb-1">
-                          Bonus Amount
+                    {/* Bonus Amount (conditional) */}
+                    {order.bonusAmount &&
+                      parseFloat(order.bonusAmount as string) > 0 && (
+                        <div className="p-4 bg-white rounded-lg border border-amber-200 shadow-sm">
+                          <div className="text-xs text-amber-600 mb-2">
+                            Bonus Amount
+                          </div>
+                          <div className="text-xl font-semibold text-amber-700">
+                            {formatCurrency(order.bonusAmount)}
+                          </div>
                         </div>
-                        <div className="text-xl font-bold text-orange-600">
-                          Rs. {parseFloat(order.bonusAmount).toLocaleString()}
-                        </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-purple-600" />
-                    Payment Information
-                  </h3>
+                {/* Payment and Timeline Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Payment Information */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-gray-600" />
+                      Payment Information
+                    </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Payment Method */}
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="text-sm text-gray-600 mb-1">
-                        Payment Method
+                    <div className="space-y-3">
+                      {/* Payment Method */}
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="text-xs text-gray-600 mb-1">
+                          Payment Method
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {order.paymentMethod || "Not specified"}
+                        </div>
                       </div>
-                      <div className="font-semibold text-gray-900">
-                        {order.paymentMethod || "N/A"}
-                      </div>
+
+                      {/* Transaction ID (conditional) */}
+                      {order.transactionId && (
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="text-xs text-blue-600 mb-1">
+                            Transaction ID
+                          </div>
+                          <div className="font-mono text-xs text-gray-800 break-all">
+                            {order.transactionId}
+                          </div>
+                        </div>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Transaction ID - only shown if transaction ID exists */}
-                    {order.transactionId && (
-                      <div className="p-4 bg-gray-50 rounded-xl">
-                        <div className="text-sm text-gray-600 mb-1">
-                          Transaction ID
+                  {/* Timeline Information */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-600" />
+                      Order Timeline
+                    </h3>
+
+                    <div className="space-y-3">
+                      {/* Created Date */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                          <div className="text-xs text-gray-600">Created</div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatDate(order.createdAt)}
+                          </div>
                         </div>
-                        <div className="font-mono text-sm text-gray-900">
-                          {order.transactionId}
-                        </div>
+                        <Calendar className="w-4 h-4 text-gray-400" />
                       </div>
-                    )}
+
+                      {/* Purchased Date (conditional) */}
+                      {order.purchasedAt && (
+                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div>
+                            <div className="text-xs text-blue-600">
+                              Purchased
+                            </div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatDate(order.purchasedAt)}
+                            </div>
+                          </div>
+                          <Receipt className="w-4 h-4 text-blue-400" />
+                        </div>
+                      )}
+
+                      {/* Expiry Date (conditional) */}
+                      {order.expiresAt && (
+                        <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <div>
+                            <div className="text-xs text-amber-600">
+                              Expires
+                            </div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatDate(order.expiresAt)}
+                            </div>
+                          </div>
+                          <Clock className="w-4 h-4 text-amber-400" />
+                        </div>
+                      )}
+
+                      {/* Used Date (conditional) */}
+                      {order.usedAt && (
+                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div>
+                            <div className="text-xs text-green-600">Used</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatDate(order.usedAt)}
+                            </div>
+                          </div>
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    Additional Information
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* QR Code */}
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="text-sm text-gray-600 mb-1">QR Code</div>
-                      <div className="font-mono text-sm text-gray-900 break-all">
-                        {order.qrCode || "N/A"}
+                {/* QR Code Section (conditional) */}
+                {order.qrCode && (
+                  <div className="mt-8">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <QrCode className="w-4 h-4 text-gray-600" />
+                      QR Code
+                    </h3>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="font-mono text-xs text-gray-700 break-all bg-white p-3 rounded border">
+                        {order.qrCode}
                       </div>
                     </div>
-
-                    {/* Purchase Date */}
-                    <div className="p-4 bg-gray-50 rounded-xl">
-                      <div className="text-sm text-gray-600 mb-1">
-                        Purchase Date
-                      </div>
-                      <div className="font-semibold text-gray-900">
-                        {new Date(
-                          order.purchasedAt || order.createdAt,
-                        ).toLocaleDateString("en-US", {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Expiry Date - only shown if expiry date exists */}
-                    {order.expiresAt && (
-                      <div className="p-4 bg-gray-50 rounded-xl">
-                        <div className="text-sm text-gray-600 mb-1">
-                          Expiry Date
-                        </div>
-                        <div className="font-semibold text-gray-900">
-                          {new Date(order.expiresAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "long",
-                              day: "numeric",
-                              year: "numeric",
-                            },
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Used Date - only shown if order has been used */}
-                    {order.usedAt && (
-                      <div className="p-4 bg-gray-50 rounded-xl">
-                        <div className="text-sm text-gray-600 mb-1">
-                          Used Date
-                        </div>
-                        <div className="font-semibold text-gray-900">
-                          {new Date(order.usedAt).toLocaleDateString("en-US", {
-                            month: "long",
-                            day: "numeric",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
+                )}
 
+                {/* Notes Section (conditional) */}
                 {order.notes && (
-                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                    <div className="text-sm text-blue-700 mb-2 font-semibold">
-                      Notes
+                  <div className="mt-8">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600" />
+                      Additional Notes
+                    </h3>
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {order.notes}
+                      </div>
                     </div>
-                    <div className="text-gray-700">{order.notes}</div>
                   </div>
                 )}
               </div>
 
+              {/* Footer with Close Button */}
               <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
                 <button
                   onClick={onClose}
-                  className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors font-medium"
+                  className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
                 >
                   Close
                 </button>

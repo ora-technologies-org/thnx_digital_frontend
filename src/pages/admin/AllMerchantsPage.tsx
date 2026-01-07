@@ -1240,7 +1240,7 @@ export const AllMerchantsPage: React.FC = () => {
                 onChange={(e) => handleLimitChange(Number(e.target.value))}
                 className="px-3 py-2 border-2 border-gray-200 rounded-lg text-sm font-semibold"
               >
-                <option value={6}>6 per page</option>
+                <option value={3}>3 per page</option>
                 <option value={12}>12 per page</option>
                 <option value={24}>24 per page</option>
                 <option value={48}>48 per page</option>

@@ -296,7 +296,7 @@ export const OTPModal: React.FC<OTPModalProps> = ({
           </div>
         </div>
 
-        {/* ========== STEP 1: OTP VERIFICATION ========== */}
+        {/* OTP VERIFICATION ========== */}
         {!otpVerified && (
           <div>
             {isRequestingOTP && (

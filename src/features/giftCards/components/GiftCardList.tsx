@@ -49,6 +49,7 @@ interface NotificationState {
   onConfirm?: () => void;
   showActions?: boolean;
   confirmText?: string;
+  autoClose?: boolean; // Added for auto-close functionality
 }
 
 interface DeleteConfirmState {
@@ -139,6 +140,7 @@ export const EnhancedGiftCardList: React.FC = () => {
     title: "",
     message: "",
     showActions: false,
+    autoClose: true, // Default to auto-close
   });
 
   const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({
@@ -158,6 +160,27 @@ export const EnhancedGiftCardList: React.FC = () => {
 
   // Capture current time once on mount (pure because it's a lazy initializer)
   const [currentTime] = useState(() => Date.now());
+  const closeNotification = () => {
+    setNotification((prev) => ({ ...prev, isOpen: false }));
+  };
+  // Auto-close notifications after 3 seconds
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (
+      notification.isOpen &&
+      notification.autoClose &&
+      !notification.showActions
+    ) {
+      timer = setTimeout(() => {
+        closeNotification();
+      }, 3000);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [notification.isOpen, notification.autoClose, notification.showActions]);
 
   // Extract gift cards from API response with memoization
   const giftCards = useMemo(
@@ -192,6 +215,7 @@ export const EnhancedGiftCardList: React.FC = () => {
    * @param showActions - Whether to show action buttons
    * @param onConfirm - Callback for confirm action
    * @param confirmText - Text for confirm button
+   * @param autoClose - Whether to auto-close the notification
    */
   const showNotification = (
     type: NotificationState["type"],
@@ -200,6 +224,7 @@ export const EnhancedGiftCardList: React.FC = () => {
     showActions: boolean = false,
     onConfirm?: () => void,
     confirmText: string = "OK",
+    autoClose: boolean = !showActions, // Auto-close by default for non-action notifications
   ) => {
     setNotification({
       isOpen: true,
@@ -209,15 +234,13 @@ export const EnhancedGiftCardList: React.FC = () => {
       showActions,
       onConfirm,
       confirmText,
+      autoClose,
     });
   };
 
   /**
    * Closes the notification modal
    */
-  const closeNotification = () => {
-    setNotification((prev) => ({ ...prev, isOpen: false }));
-  };
 
   /**
    * Shows delete confirmation modal
@@ -326,7 +349,10 @@ export const EnhancedGiftCardList: React.FC = () => {
             refetch();
           },
           "Continue",
+          true, // Auto-close
         );
+        createModal.close();
+        refetch();
       },
       onError: (error: AxiosError<{ message?: string }>) => {
         showNotification(
@@ -335,9 +361,10 @@ export const EnhancedGiftCardList: React.FC = () => {
           error.response?.data?.message ||
             error.message ||
             "Failed to create gift card. Please try again.",
-          true,
+          true, // Show actions for errors
           undefined,
           "Try Again",
+          false, // Don't auto-close error messages with actions
         );
       },
     });
@@ -374,7 +401,11 @@ export const EnhancedGiftCardList: React.FC = () => {
               refetch();
             },
             "Continue",
+            true, // Auto-close
           );
+          editModal.close();
+          setSelectedCard(null);
+          refetch();
         },
         onError: (error: AxiosError<{ message?: string }>) => {
           showNotification(
@@ -383,9 +414,10 @@ export const EnhancedGiftCardList: React.FC = () => {
             error.response?.data?.message ||
               error.message ||
               "Failed to update gift card. Please try again.",
-            true,
+            true, // Show actions for errors
             undefined,
             "Try Again",
+            false, // Don't auto-close error messages with actions
           );
         },
       },
@@ -408,7 +440,9 @@ export const EnhancedGiftCardList: React.FC = () => {
             refetch();
           },
           "OK",
+          true, // Auto-close
         );
+        refetch();
         closeDeleteConfirm();
       },
       onError: (error: AxiosError<{ message?: string }>) => {
@@ -418,9 +452,10 @@ export const EnhancedGiftCardList: React.FC = () => {
           error.response?.data?.message ||
             error.message ||
             "Failed to delete gift card. Please try again.",
-          true,
+          true, // Show actions for errors
           undefined,
           "Try Again",
+          false, // Don't auto-close error messages with actions
         );
         closeDeleteConfirm();
       },
@@ -450,7 +485,9 @@ export const EnhancedGiftCardList: React.FC = () => {
             refetch();
           },
           "OK",
+          true, // Auto-close
         );
+        refetch();
       },
       onError: (error: AxiosError<{ message?: string }>) => {
         showNotification(
@@ -459,9 +496,10 @@ export const EnhancedGiftCardList: React.FC = () => {
           error.response?.data?.message ||
             error.message ||
             "Failed to duplicate gift card. Please try again.",
-          true,
+          true, // Show actions for errors
           undefined,
           "Try Again",
+          false, // Don't auto-close error messages with actions
         );
       },
     });
@@ -502,6 +540,7 @@ export const EnhancedGiftCardList: React.FC = () => {
       false,
       undefined,
       "OK",
+      true, // Auto-close
     );
   };
 
@@ -997,6 +1036,18 @@ export const EnhancedGiftCardList: React.FC = () => {
       >
         <div className="text-center py-4">
           <p className="text-gray-700">{notification.message}</p>
+          {!notification.showActions && notification.autoClose && (
+            <div className="mt-4">
+              <div className="w-full bg-gray-200 rounded-full h-1">
+                <motion.div
+                  className="bg-blue-500 h-1 rounded-full"
+                  initial={{ width: "100%" }}
+                  animate={{ width: "0%" }}
+                  transition={{ duration: 3, ease: "linear" }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

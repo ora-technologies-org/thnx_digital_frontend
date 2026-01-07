@@ -9,12 +9,27 @@ export interface ContactMessage {
   phone?: string;
   message: string;
   createdAt: string;
+  updatedAt?: string;
   status?: "new" | "read" | "replied";
 }
 
 export interface ContactMessagesResponse {
-  messages?: ContactMessage[];
-  data?: ContactMessage[];
+  success: boolean;
+  message: string;
+  data: {
+    data: ContactMessage[];
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+    filters: {
+      search: string | null;
+      sortBy: string;
+      sortOrder: string;
+    };
+  };
 }
 
 export const contactUsService = {
@@ -23,6 +38,8 @@ export const contactUsService = {
       "/users/contact-us?order=asc",
     );
 
-    return response.data.messages || response.data.data || [];
+    // The response structure is: response.data.data.data
+    // Because api.get returns { data: ... }, and your API returns { data: { data: [...] } }
+    return response.data?.data?.data || [];
   },
 };

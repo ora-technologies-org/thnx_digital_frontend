@@ -306,6 +306,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const [notes, setNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [notesError, setNotesError] = useState("");
 
   const documents = React.useMemo(() => {
     const docs = [];
@@ -346,10 +347,18 @@ const DetailModal: React.FC<DetailModalProps> = ({
   }, [merchant]);
 
   const handleApprove = async () => {
-    await onApprove(merchant.id, notes || "All documents verified. Approved.");
+    // Validate notes before submission
+    if (!notes.trim() || notes.trim().length < 5) {
+      setNotesError("Verification notes must be at least 5 characters");
+      return;
+    }
+    setNotesError("");
+
+    await onApprove(merchant.id, notes);
     if (!isApproving) {
       onClose();
       setNotes("");
+      setNotesError("");
     }
   };
 
@@ -358,15 +367,19 @@ const DetailModal: React.FC<DetailModalProps> = ({
       alert("Please provide a rejection reason");
       return;
     }
-    await onReject(
-      merchant.id,
-      rejectionReason,
-      notes || "Rejected due to incomplete/invalid documents.",
-    );
+    // Validate notes before submission
+    if (!notes.trim() || notes.trim().length < 5) {
+      setNotesError("Verification notes must be at least 5 characters");
+      return;
+    }
+    setNotesError("");
+
+    await onReject(merchant.id, rejectionReason, notes);
     if (!isRejecting) {
       onClose();
       setRejectionReason("");
       setNotes("");
+      setNotesError("");
       setShowRejectForm(false);
     }
   };
@@ -533,15 +546,47 @@ const DetailModal: React.FC<DetailModalProps> = ({
                   {/* Notes Textarea */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Verification Notes
+                      Verification Notes <span className="text-red-600">*</span>
                     </label>
                     <textarea
                       value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Add notes about your verification process..."
+                      onChange={(e) => {
+                        setNotes(e.target.value);
+                        // Clear error when user starts typing and meets minimum length
+                        if (e.target.value.trim().length >= 5) {
+                          setNotesError("");
+                        } else if (e.target.value.trim().length > 0) {
+                          setNotesError(
+                            "Verification notes must be at least 5 characters",
+                          );
+                        }
+                      }}
+                      onBlur={() => {
+                        // Show error on blur if field is empty or too short
+                        if (!notes.trim() || notes.trim().length < 5) {
+                          setNotesError(
+                            "Verification notes must be at least 5 characters",
+                          );
+                        }
+                      }}
+                      placeholder="Add notes about your verification process... (minimum 5 characters)"
                       rows={3}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:ring focus:ring-amber-200 transition-all resize-none"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring transition-all resize-none ${
+                        notesError
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                          : "border-gray-200 focus:border-amber-500 focus:ring-amber-200"
+                      }`}
                     />
+                    {notesError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-red-600 text-sm mt-2 flex items-center gap-1"
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                        {notesError}
+                      </motion.p>
+                    )}
                   </div>
 
                   {/* Rejection Form */}
