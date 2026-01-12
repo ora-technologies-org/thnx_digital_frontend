@@ -39,6 +39,7 @@ import ContactUsPage from "@/pages/admin/ContactUsPage";
 import { ChangePasswordPage } from "@/pages/merchant/ChangePasswordPage";
 import NotificationsPage from "@/pages/merchant/NotificationsPage";
 import UpdateLandingPage from "@/pages/admin/UpdateLandingPage";
+import GiftCardRedemption from "@/pages/customer/Myredemption";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -49,7 +50,7 @@ const AppRoutes: React.FC = () => {
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.BROWSE} element={<BrowsePage />} />
       <Route path={ROUTES.PURCHASE} element={<PurchasePage />} />
-
+      <Route path="/balance/:qrCode" element={<GiftCardRedemption />} />
       {/* Password Reset Routes - Public */}
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
