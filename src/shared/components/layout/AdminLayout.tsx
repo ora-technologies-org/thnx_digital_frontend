@@ -89,6 +89,12 @@ const getNavigation = (pendingCount: number) => [
     icon: Activity,
     gradient: "from-cyan-500 to-cyan-600",
   },
+  {
+    name: "Update Landing",
+    href: "/admin/update",
+    icon: Activity,
+    gradient: "from-cyan-500 to-cyan-600",
+  },
 ];
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {

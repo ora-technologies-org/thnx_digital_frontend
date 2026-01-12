@@ -38,6 +38,7 @@ import { AdminSupportTicketPage } from "@/pages/admin/SupportTicket";
 import ContactUsPage from "@/pages/admin/ContactUsPage";
 import { ChangePasswordPage } from "@/pages/merchant/ChangePasswordPage";
 import NotificationsPage from "@/pages/merchant/NotificationsPage";
+import UpdateLandingPage from "@/pages/admin/UpdateLandingPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -177,6 +178,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <AdminDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/update"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <UpdateLandingPage />
           </ProtectedRoute>
         }
       />

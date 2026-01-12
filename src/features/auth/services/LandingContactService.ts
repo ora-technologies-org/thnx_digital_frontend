@@ -12,6 +12,15 @@ export interface ContactResponse {
   message: string;
 }
 
+export interface NewsletterSubscribeData {
+  email: string;
+}
+
+export interface NewsletterResponse {
+  success: boolean;
+  message: string;
+}
+
 export const submitContactForm = async (
   data: ContactFormData,
 ): Promise<ContactResponse> => {
@@ -46,6 +55,44 @@ export const submitContactForm = async (
     return {
       success: false,
       message: "Failed to send message. Please try again.",
+    };
+  }
+};
+export const subscribeToNewsletter = async (
+  email: string,
+): Promise<NewsletterResponse> => {
+  try {
+    const response = await api.post("/users/newsletter", { email });
+    return {
+      success: true,
+      message:
+        response.data.message || "Successfully subscribed to newsletter!",
+    };
+  } catch (error) {
+    console.error("Newsletter subscription error:", error);
+
+    // Check if it's an AxiosError
+    if (error instanceof AxiosError) {
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to subscribe. Please try again.",
+      };
+    }
+
+    // For other error types
+    if (error instanceof Error) {
+      return {
+        success: false,
+        message: error.message || "Failed to subscribe. Please try again.",
+      };
+    }
+
+    return {
+      success: false,
+      message: "Failed to subscribe. Please try again.",
     };
   }
 };

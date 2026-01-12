@@ -4,6 +4,7 @@ import giftCardReducer from "../features/giftCards/slices/giftCardSlice";
 import merchantReducer from "../features/admin/slices/MerchantCreateSlice";
 import profileReducer from "../features/auth/slices/profileSlice";
 import AdminprofileReducer from "../features/auth/slices/adminprofileSlice";
+import landingPageReducer from "../features/merchant/slices/LandingPageSlice";
 import giftCardSettingsReducer from "../features/merchant/slices/giftCardSlice";
 
 export const store = configureStore({
@@ -14,6 +15,7 @@ export const store = configureStore({
     profile: profileReducer,
     Adminprofile: AdminprofileReducer,
     giftCardSettings: giftCardSettingsReducer,
+    landingPage: landingPageReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

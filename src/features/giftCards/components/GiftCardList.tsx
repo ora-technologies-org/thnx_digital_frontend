@@ -963,9 +963,6 @@ export const EnhancedGiftCardList: React.FC = () => {
         {selectedCard && (
           <div className="space-y-6">
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <p className="text-sm text-gray-700">
-                <strong>ID:</strong> {selectedCard.id}
-              </p>
               <p className="text-sm text-gray-700 mt-1">
                 <strong>Created:</strong>{" "}
                 {new Date(selectedCard.createdAt).toLocaleDateString()}

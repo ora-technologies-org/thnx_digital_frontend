@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
+import { useWatch } from "react-hook-form";
 import {
   Building,
   MapPin,
@@ -33,6 +34,7 @@ import { DocumentUpload } from "../../shared/components/upload/DocumentUpload";
 import { staggerContainer } from "../../shared/utils/animations";
 import toast from "react-hot-toast";
 import { DashboardLayout } from "@/shared/components/layout/DashboardLayout";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 // Redux actions
 import { setProfile } from "@/features/auth/slices/profileSlice";
@@ -42,53 +44,53 @@ import { useProfileData } from "@/features/merchant/hooks/useProfileData";
 import { useSubmitProfile } from "@/features/merchant/hooks/useProfileComplete";
 import { RootState } from "@/app/store";
 
-// Zod Schema matching backend validation
-const profileSchema = z.object({
-  // Business Information
+// Zod Schema with proper validation groups
+const step1Schema = z.object({
+  // Business Information - Step 1
   businessName: z.string().min(1, "Business name is required").max(255),
   businessRegistrationNumber: z
     .string()
     .min(1, "Registration number is required")
     .max(100),
-  taxId: z.string().min(1, "Tax ID is required").max(100).optional(),
-  businessType: z.string().min(1, "Business type is required").optional(),
-  businessCategory: z
-    .string()
-    .min(1, "Business category is required")
-    .max(100)
-    .optional(),
+  taxId: z.string().max(100).optional(),
+  businessType: z.string().max(100).optional(),
+  businessCategory: z.string().max(100).optional(),
 
-  // Business Address
+  // Business Address - Step 1
   address: z.string().min(1, "Address is required").max(500),
   city: z.string().min(1, "City is required").max(100),
-  state: z.string().min(1, "State is required").max(100).optional(),
-  zipCode: z.string().min(1, "Zip code is required").max(20).optional(),
+  state: z.string().max(100).optional(),
+  zipCode: z.string().max(20).optional(),
   country: z.string().min(1, "Country is required").max(100),
 
-  // Business Contact
+  // Business Contact - Step 1
   businessPhone: z
     .string()
     .regex(
       /^\+?[1-9]\d{1,14}$/,
-      "Invalid phone number format. Use international format with optional + sign (e.g., +977-9841234567 or 9841234567)",
+      "Invalid phone number format. Use international format (e.g., +919876543210 or 9876543210)",
     )
     .optional(),
   businessEmail: z
     .string()
+    .min(1, "Business email is required")
     .email(
       "Invalid email format. Use standard email format (e.g., contact@business.com)",
     )
     .max(255),
   website: z
     .string()
-    .url(
-      "Invalid website URL. Must include protocol (e.g., https://www.example.com)",
-    )
+    .refine((val) => !val || /^https?:\/\/.+/.test(val), {
+      message:
+        "Invalid website URL. Must include protocol (e.g., https://www.example.com)",
+    })
     .max(255)
     .optional()
     .or(z.literal("")),
+});
 
-  // Bank Details (for payments)
+const step2Schema = z.object({
+  // Bank Details - Step 2
   bankName: z.string().min(1, "Bank name is required").max(255).optional(),
   accountNumber: z
     .string()
@@ -102,27 +104,32 @@ const profileSchema = z.object({
     .optional(),
   ifscCode: z
     .string()
-    .regex(
-      /^[A-Z]{4}0[A-Z0-9]{6}$/,
-      "Invalid IFSC code format. Must be 11 characters: 4 uppercase letters + 0 + 6 alphanumeric characters (e.g., SBIN0001234)",
-    )
+    .refine((val) => !val || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(val), {
+      message:
+        "Invalid IFSC code format. Must be 11 characters: 4 uppercase letters + 0 + 6 alphanumeric characters (e.g., SBIN0001234)",
+    })
     .optional()
     .or(z.literal("")),
   swiftCode: z
     .string()
-    .regex(
-      /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/,
-      "Invalid SWIFT code format. Must be 8 or 11 uppercase characters (e.g., SBININBB or SBININBB123)",
-    )
+    .refine((val) => !val || /^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(val), {
+      message:
+        "Invalid SWIFT code format. Must be 8 or 11 uppercase characters (e.g., SBININBB or SBININBB123)",
+    })
     .optional()
     .or(z.literal("")),
+});
 
-  // Additional Info
+const step3Schema = z.object({
+  // Additional Info - Step 3
   description: z
     .string()
     .max(2000, "Description too long. Maximum 2000 characters allowed")
     .optional(),
 });
+
+// Combined schema for final submission
+const profileSchema = step1Schema.merge(step2Schema).merge(step3Schema);
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
@@ -133,15 +140,35 @@ const wizardSteps: WizardStep[] = [
 ];
 
 export const CompleteProfilePage: React.FC = () => {
+  const { user } = useAuth();
+  const userId = user?.id || "anonymous";
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [currentStep, setCurrentStep] = useState(1);
+
+  // Create storage keys with useMemo to update when userId changes
+  const STORAGE_KEYS = useMemo(
+    () => ({
+      CURRENT_STEP: `profile_wizard_current_step_${userId}`,
+      FORM_DATA: `profile_wizard_form_data_${userId}`,
+      UPLOADED_FILES: `profile_wizard_uploaded_files_${userId}`,
+      LOGO_PREVIEW: `profile_wizard_logo_preview_${userId}`,
+    }),
+    [userId],
+  );
+
+  // Initialize state from localStorage to prevent data loss on refresh
+  const [currentStep, setCurrentStep] = useState(() => {
+    const savedStep = localStorage.getItem(STORAGE_KEYS.CURRENT_STEP);
+    return savedStep ? parseInt(savedStep, 10) : 1;
+  });
+
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(
     null,
   );
   const [validationAttempted, setValidationAttempted] = useState(false);
   const [isFormPrefilled, setIsFormPrefilled] = useState(false);
+  const [formKey, setFormKey] = useState(() => Date.now()); // Key to force form reinitialization
 
   // Get profile from Redux store
   const reduxProfile = useSelector((state: RootState) => state.profile);
@@ -178,14 +205,72 @@ export const CompleteProfilePage: React.FC = () => {
     return profileData?.id || reduxProfile?.id;
   }, [profileData?.id, reduxProfile?.id]);
 
-  // Document states
-  const [identityDoc, setIdentityDoc] = useState<File | null>(null);
-  const [registrationDoc, setRegistrationDoc] = useState<File | null>(null);
-  const [taxDoc, setTaxDoc] = useState<File | null>(null);
+  // Document states with localStorage persistence
+  const [identityDoc, setIdentityDoc] = useState<File | null>(() => {
+    const savedFiles = localStorage.getItem(STORAGE_KEYS.UPLOADED_FILES);
+    if (savedFiles) {
+      try {
+        const files = JSON.parse(savedFiles);
+        return files.identityDoc ? new File([], files.identityDoc.name) : null;
+      } catch (e) {
+        console.error("Failed to parse saved files:", e);
+        return null;
+      }
+    }
+    return null;
+  });
 
-  // Business Logo state
-  const [businessLogo, setBusinessLogo] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [registrationDoc, setRegistrationDoc] = useState<File | null>(() => {
+    const savedFiles = localStorage.getItem(STORAGE_KEYS.UPLOADED_FILES);
+    if (savedFiles) {
+      try {
+        const files = JSON.parse(savedFiles);
+        return files.registrationDoc
+          ? new File([], files.registrationDoc.name)
+          : null;
+      } catch (e) {
+        console.error("Failed to parse saved files:", e);
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const [taxDoc, setTaxDoc] = useState<File | null>(() => {
+    const savedFiles = localStorage.getItem(STORAGE_KEYS.UPLOADED_FILES);
+    if (savedFiles) {
+      try {
+        const files = JSON.parse(savedFiles);
+        return files.taxDoc ? new File([], files.taxDoc.name) : null;
+      } catch (e) {
+        console.error("Failed to parse saved files:", e);
+        return null;
+      }
+    }
+    return null;
+  });
+
+  // Business Logo state with localStorage persistence
+  const [businessLogo, setBusinessLogo] = useState<File | null>(() => {
+    const savedFiles = localStorage.getItem(STORAGE_KEYS.UPLOADED_FILES);
+    if (savedFiles) {
+      try {
+        const files = JSON.parse(savedFiles);
+        return files.businessLogo
+          ? new File([], files.businessLogo.name)
+          : null;
+      } catch (e) {
+        console.error("Failed to parse saved files:", e);
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const [logoPreview, setLogoPreview] = useState<string | null>(() => {
+    return localStorage.getItem(STORAGE_KEYS.LOGO_PREVIEW);
+  });
+
   const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
 
   const {
@@ -194,13 +279,72 @@ export const CompleteProfilePage: React.FC = () => {
     formState: { errors, isDirty, touchedFields },
     trigger,
     reset,
+    getValues,
+
+    control,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
-    mode: "onTouched", // This enables validation on blur
+    mode: "onTouched",
     defaultValues: {
       country: "India",
+      ...(() => {
+        // Try to load saved form data from localStorage
+        try {
+          const savedData = localStorage.getItem(STORAGE_KEYS.FORM_DATA);
+          if (savedData) {
+            return JSON.parse(savedData);
+          }
+        } catch (e) {
+          console.error("Failed to load saved form data:", e);
+        }
+        return {};
+      })(),
     },
   });
+
+  // Watch all form fields to save them to localStorage
+  const formValues = useWatch({ control });
+
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (Object.keys(formValues).length > 0) {
+      localStorage.setItem(STORAGE_KEYS.FORM_DATA, JSON.stringify(formValues));
+    }
+  }, [formValues, STORAGE_KEYS]);
+
+  // Save current step to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.CURRENT_STEP, currentStep.toString());
+  }, [currentStep, STORAGE_KEYS]);
+
+  // Save uploaded files info to localStorage
+  useEffect(() => {
+    const filesInfo = {
+      identityDoc: identityDoc
+        ? { name: identityDoc.name, size: identityDoc.size }
+        : null,
+      registrationDoc: registrationDoc
+        ? { name: registrationDoc.name, size: registrationDoc.size }
+        : null,
+      taxDoc: taxDoc ? { name: taxDoc.name, size: taxDoc.size } : null,
+      businessLogo: businessLogo
+        ? { name: businessLogo.name, size: businessLogo.size }
+        : null,
+    };
+    localStorage.setItem(
+      STORAGE_KEYS.UPLOADED_FILES,
+      JSON.stringify(filesInfo),
+    );
+  }, [identityDoc, registrationDoc, taxDoc, businessLogo, STORAGE_KEYS]);
+
+  // Save logo preview to localStorage
+  useEffect(() => {
+    if (logoPreview) {
+      localStorage.setItem(STORAGE_KEYS.LOGO_PREVIEW, logoPreview);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.LOGO_PREVIEW);
+    }
+  }, [logoPreview, STORAGE_KEYS]);
 
   const hasUnsavedChanges =
     isDirty ||
@@ -209,16 +353,44 @@ export const CompleteProfilePage: React.FC = () => {
     taxDoc !== null ||
     businessLogo !== null;
 
+  // Clear old localStorage data when user changes
+  useEffect(() => {
+    // Clean up any old localStorage data from previous anonymous sessions
+    const oldKeys = [
+      "profile_wizard_current_step",
+      "profile_wizard_form_data",
+      "profile_wizard_uploaded_files",
+      "profile_wizard_logo_preview",
+      "profile_wizard_current_step_anonymous",
+      "profile_wizard_form_data_anonymous",
+      "profile_wizard_uploaded_files_anonymous",
+      "profile_wizard_logo_preview_anonymous",
+    ];
+
+    oldKeys.forEach((key) => {
+      if (
+        key !== STORAGE_KEYS.CURRENT_STEP &&
+        key !== STORAGE_KEYS.FORM_DATA &&
+        key !== STORAGE_KEYS.UPLOADED_FILES &&
+        key !== STORAGE_KEYS.LOGO_PREVIEW
+      ) {
+        localStorage.removeItem(key);
+      }
+    });
+  }, [STORAGE_KEYS]);
+
   // Log edit mode status whenever it changes
   useEffect(() => {
     console.log("🔍 Current State:", {
+      userId,
+      storageKeys: STORAGE_KEYS,
       isEditMode,
       profileId,
       hasProfileData: !!profileData,
       hasReduxProfile: !!reduxProfile?.id,
       profileStatus: profileData?.profileStatus || reduxProfile?.profileStatus,
     });
-  }, [isEditMode, profileId, profileData, reduxProfile]);
+  }, [isEditMode, profileId, profileData, reduxProfile, userId, STORAGE_KEYS]);
 
   // Handle logo file selection
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,6 +426,7 @@ export const CompleteProfilePage: React.FC = () => {
   const handleRemoveLogo = () => {
     setBusinessLogo(null);
     setLogoPreview(null);
+    localStorage.removeItem(STORAGE_KEYS.LOGO_PREVIEW);
   };
 
   // Sync profile data to Redux when fetched from API
@@ -286,7 +459,7 @@ export const CompleteProfilePage: React.FC = () => {
         businessCategory: profileData.businessCategory || "",
         description: profileData.description || "",
         id: profileData.id,
-        status: profileData.profileStatus || "incomplete",
+        status: "pending",
         profileStatus: profileData.profileStatus,
         lastUpdated: profileData.updatedAt || new Date().toISOString(),
         submittedAt: profileData.submittedAt,
@@ -362,6 +535,12 @@ export const CompleteProfilePage: React.FC = () => {
       description: sourceData.description || "",
     };
 
+    // Clear localStorage before prefilling with API data
+    localStorage.removeItem(STORAGE_KEYS.FORM_DATA);
+    localStorage.removeItem(STORAGE_KEYS.UPLOADED_FILES);
+    localStorage.removeItem(STORAGE_KEYS.LOGO_PREVIEW);
+    localStorage.setItem(STORAGE_KEYS.CURRENT_STEP, "1");
+
     reset(formValues, {
       keepDirty: false,
       keepErrors: false,
@@ -370,11 +549,20 @@ export const CompleteProfilePage: React.FC = () => {
 
     if (sourceData.businessLogo) {
       setExistingLogoUrl(sourceData.businessLogo);
+      setLogoPreview(sourceData.businessLogo);
     }
 
     setIsFormPrefilled(true);
+    setFormKey(Date.now()); // Force form reinitialization
     console.log("✅ Form prefilled successfully");
-  }, [profileData, reduxProfile, isLoadingProfile, reset, isFormPrefilled]);
+  }, [
+    profileData,
+    reduxProfile,
+    isLoadingProfile,
+    reset,
+    isFormPrefilled,
+    STORAGE_KEYS,
+  ]);
 
   // Run prefill when data is available
   useEffect(() => {
@@ -408,30 +596,57 @@ export const CompleteProfilePage: React.FC = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges, submitProfileMutation.isPending]);
 
+  // Clean up localStorage on successful submission
+  const cleanupLocalStorage = useCallback(() => {
+    Object.values(STORAGE_KEYS).forEach((key) => {
+      localStorage.removeItem(key);
+    });
+  }, [STORAGE_KEYS]);
+
   const handleNext = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    let fieldsToValidate: (keyof ProfileFormData)[] = [];
+    setValidationAttempted(true);
 
+    let isValid = false;
+
+    // Validate based on current step
     if (currentStep === 1) {
-      fieldsToValidate = [
-        "businessName",
-        "address",
-        "city",
-        "country",
-        "businessPhone",
-        "businessEmail",
-      ];
+      isValid = await trigger(
+        Object.keys(step1Schema.shape) as (keyof ProfileFormData)[],
+      );
     } else if (currentStep === 2) {
-      fieldsToValidate = ["bankName", "accountNumber", "accountHolderName"];
-    }
+      // For bank info, we need to validate at least one field is filled
+      const bankFields = getValues([
+        "bankName",
+        "accountNumber",
+        "accountHolderName",
+      ]);
+      const hasBankInfo = bankFields.some(
+        (field) => field && field.trim() !== "",
+      );
 
-    const isValid = await trigger(fieldsToValidate);
+      if (hasBankInfo) {
+        // If any bank field is filled, validate all required ones
+        isValid = await trigger([
+          "bankName",
+          "accountNumber",
+          "accountHolderName",
+        ]);
+      } else {
+        // If no bank info, allow moving forward (bank info is optional)
+        isValid = true;
+      }
+    }
 
     if (isValid) {
       setCurrentStep(currentStep + 1);
       setValidationAttempted(false);
+    } else {
+      toast.error("Please fix all validation errors before continuing", {
+        duration: 3000,
+      });
     }
   };
 
@@ -457,18 +672,34 @@ export const CompleteProfilePage: React.FC = () => {
     console.log("📝 Form submission started", {
       hasProfileData: !!profileData,
       profileId: profileData?.id,
+      userId,
+      storageKeys: STORAGE_KEYS,
     });
 
     setValidationAttempted(true);
 
-    const currentProfileId = profileData?.id || reduxProfile?.id;
-    const isCurrentlyEditing = !!currentProfileId;
-
-    if (!isCurrentlyEditing && !identityDoc) {
+    // Validate step 3 documents if not in edit mode
+    if (!isEditMode && !identityDoc) {
       toast.error("Please upload an identity document to continue");
       setCurrentStep(3);
       return;
     }
+
+    // Validate that either IFSC or SWIFT code is provided if bank info is entered
+    const hasBankInfo =
+      data.bankName || data.accountNumber || data.accountHolderName;
+    const hasBankCode = data.ifscCode || data.swiftCode;
+
+    if (hasBankInfo && !hasBankCode) {
+      toast.error(
+        "Please provide either IFSC Code (for India) or SWIFT Code (for international)",
+      );
+      setCurrentStep(2);
+      return;
+    }
+
+    const currentProfileId = profileData?.id || reduxProfile?.id;
+    const isCurrentlyEditing = !!currentProfileId;
 
     const formData = new FormData();
 
@@ -522,6 +753,9 @@ export const CompleteProfilePage: React.FC = () => {
               updateSuccess: true,
             }),
           );
+
+          // Clean up localStorage on successful submission
+          cleanupLocalStorage();
 
           toast.success(
             isCurrentlyEditing
@@ -700,6 +934,7 @@ export const CompleteProfilePage: React.FC = () => {
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
+            key={formKey} // Add key to force reinitialization
           >
             <Card className="backdrop-blur-sm bg-white/90 border-2 border-gray-200/50 shadow-2xl p-6 md:p-8">
               <form onSubmit={handleSubmit(onSubmit)}>
@@ -808,7 +1043,8 @@ export const CompleteProfilePage: React.FC = () => {
                           label="Business Name *"
                           placeholder="Your Business Name"
                           error={
-                            touchedFields.businessName &&
+                            (touchedFields.businessName ||
+                              validationAttempted) &&
                             errors.businessName?.message
                           }
                           {...register("businessName")}
@@ -826,7 +1062,8 @@ export const CompleteProfilePage: React.FC = () => {
                           label="Street Address *"
                           placeholder="123 Main Street"
                           error={
-                            touchedFields.address && errors.address?.message
+                            (touchedFields.address || validationAttempted) &&
+                            errors.address?.message
                           }
                           {...register("address")}
                         />
@@ -835,7 +1072,10 @@ export const CompleteProfilePage: React.FC = () => {
                           <Input
                             label="City *"
                             placeholder="Mumbai"
-                            error={touchedFields.city && errors.city?.message}
+                            error={
+                              (touchedFields.city || validationAttempted) &&
+                              errors.city?.message
+                            }
                             {...register("city")}
                           />
                           <Input
@@ -859,7 +1099,8 @@ export const CompleteProfilePage: React.FC = () => {
                             label="Country *"
                             placeholder="India"
                             error={
-                              touchedFields.country && errors.country?.message
+                              (touchedFields.country || validationAttempted) &&
+                              errors.country?.message
                             }
                             {...register("country")}
                           />
@@ -875,7 +1116,7 @@ export const CompleteProfilePage: React.FC = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
-                            label="Business Phone *"
+                            label="Business Phone"
                             placeholder="+919876543210"
                             error={
                               touchedFields.businessPhone &&
@@ -888,7 +1129,8 @@ export const CompleteProfilePage: React.FC = () => {
                             type="email"
                             placeholder="business@example.com"
                             error={
-                              touchedFields.businessEmail &&
+                              (touchedFields.businessEmail ||
+                                validationAttempted) &&
                               errors.businessEmail?.message
                             }
                             {...register("businessEmail")}
@@ -908,7 +1150,7 @@ export const CompleteProfilePage: React.FC = () => {
                       {/* Optional Fields */}
                       <div className="space-y-4">
                         <h3 className="font-semibold text-gray-900">
-                          Additional Information (Optional)
+                          Additional Information
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -952,7 +1194,7 @@ export const CompleteProfilePage: React.FC = () => {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Description
+                            Description (Optional)
                           </label>
                           <textarea
                             className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
@@ -991,34 +1233,38 @@ export const CompleteProfilePage: React.FC = () => {
                         </h2>
                         <p className="text-gray-600">
                           Enter your bank details for receiving payments
+                          (Optional)
                         </p>
                       </div>
 
                       <div className="space-y-4">
                         <Input
-                          label="Bank Name *"
+                          label="Bank Name"
                           placeholder="HDFC Bank, ICICI Bank, etc."
                           error={
-                            touchedFields.bankName && errors.bankName?.message
+                            (touchedFields.bankName || validationAttempted) &&
+                            errors.bankName?.message
                           }
                           {...register("bankName")}
                         />
 
                         <Input
-                          label="Account Number *"
+                          label="Account Number"
                           placeholder="1234567890"
                           error={
-                            touchedFields.accountNumber &&
+                            (touchedFields.accountNumber ||
+                              validationAttempted) &&
                             errors.accountNumber?.message
                           }
                           {...register("accountNumber")}
                         />
 
                         <Input
-                          label="Account Holder Name *"
+                          label="Account Holder Name"
                           placeholder="As per bank records"
                           error={
-                            touchedFields.accountHolderName &&
+                            (touchedFields.accountHolderName ||
+                              validationAttempted) &&
                             errors.accountHolderName?.message
                           }
                           {...register("accountHolderName")}
@@ -1048,7 +1294,9 @@ export const CompleteProfilePage: React.FC = () => {
                       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                         <p className="text-sm text-yellow-800">
                           <strong>Note:</strong> Your bank details will be kept
-                          secure and used only for processing payments.
+                          secure and used only for processing payments. Bank
+                          information is optional but required for receiving
+                          payments.
                         </p>
                       </div>
                     </motion.div>

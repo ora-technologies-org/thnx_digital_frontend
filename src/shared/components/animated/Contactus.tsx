@@ -8,8 +8,10 @@ import {
   Send,
   CheckCircle2,
   Sparkles,
+  Loader2,
 } from "lucide-react";
-import { submitContactForm } from "@/features/auth/services/LandingContact";
+import { submitContactForm } from "@/features/auth/services/LandingContactService";
+import { useLandingPageData } from "@/features/merchant/hooks/useLanding";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -25,6 +27,9 @@ export const ContactSection = () => {
     threshold: 0.2,
     triggerOnce: true,
   });
+
+  // Fetch dynamic contact data
+  const { data: landingData, isLoading: isLoadingData } = useLandingPageData();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -72,26 +77,58 @@ export const ContactSection = () => {
     }
   };
 
-  const contactInfo = [
-    {
-      icon: Mail,
-      title: "Email",
-      detail: "support@thnxdigital.com",
-      gradient: "from-blue-500 to-cyan-500",
-    },
-    {
-      icon: Phone,
-      title: "Phone",
-      detail: "+977 98XXXXXXXX",
-      gradient: "from-purple-500 to-pink-500",
-    },
-    {
-      icon: MapPin,
-      title: "Location",
-      detail: "Bhaktapur, Nepal",
-      gradient: "from-orange-500 to-red-500",
-    },
-  ];
+  // Dynamic contact info using data from API
+  const contactInfo = landingData?.contact
+    ? [
+        {
+          icon: Mail,
+          title: "Email",
+          detail: landingData.contact.email,
+          gradient: "from-blue-500 to-cyan-500",
+        },
+        {
+          icon: Phone,
+          title: "Phone",
+          detail: landingData.contact.phone,
+          gradient: "from-purple-500 to-pink-500",
+        },
+        {
+          icon: MapPin,
+          title: "Location",
+          detail: landingData.contact.location,
+          gradient: "from-orange-500 to-red-500",
+        },
+      ]
+    : [];
+
+  // Dynamic text content with fallbacks
+  const content = {
+    badge: landingData?.contact?.title || "We'd Love to Hear From You",
+    heading: landingData?.contact?.heading || "Get in Touch",
+    subtitle:
+      landingData?.contact?.subtitle ||
+      "Questions or feedback? Drop us a message!",
+    responseTime: landingData?.contact?.responseTime || "2–4 hours",
+  };
+
+  // Loading state
+  if (isLoadingData) {
+    return (
+      <section className="py-16 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50" />
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // No data state
+  if (!landingData?.contact) {
+    return null;
+  }
 
   return (
     <section ref={ref} className="py-16 px-4 relative overflow-hidden">
@@ -99,7 +136,7 @@ export const ContactSection = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-purple-50/30 to-pink-50/50" />
 
       <div className="max-w-4xl mx-auto relative z-10">
-        {/* Compact Header */}
+        {/* Compact Header - Dynamic */}
         <motion.div
           initial="hidden"
           animate={inView ? "visible" : "hidden"}
@@ -112,19 +149,17 @@ export const ContactSection = () => {
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-600" />
             <span className="text-xs font-semibold text-blue-700">
-              We'd Love to Hear From You
+              {content.badge}
             </span>
           </motion.div>
 
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Get in{" "}
+            {content.heading.split(" ").slice(0, -1).join(" ")}{" "}
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Touch
+              {content.heading.split(" ").slice(-1)[0]}
             </span>
           </h2>
-          <p className="text-gray-600 max-w-xl mx-auto">
-            Questions or feedback? Drop us a message!
-          </p>
+          <p className="text-gray-600 max-w-xl mx-auto">{content.subtitle}</p>
         </motion.div>
 
         <div>
@@ -297,14 +332,14 @@ export const ContactSection = () => {
                   Message Sent! 🎉
                 </h3>
                 <p className="text-sm text-gray-600">
-                  We'll get back to you within 24 hours
+                  We'll get back to you within {content.responseTime}
                 </p>
               </motion.div>
             )}
           </motion.div>
         </div>
 
-        {/* Trust Badge */}
+        {/* Trust Badge with Dynamic Response Time */}
         <motion.div
           initial="hidden"
           animate={inView ? "visible" : "hidden"}
@@ -313,7 +348,9 @@ export const ContactSection = () => {
         >
           <p className="text-xs text-gray-500">
             ⚡ Average response time:{" "}
-            <span className="font-semibold text-gray-700">2-4 hours</span>
+            <span className="font-semibold text-gray-700">
+              {content.responseTime}
+            </span>
           </p>
         </motion.div>
       </div>
