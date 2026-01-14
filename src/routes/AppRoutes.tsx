@@ -40,16 +40,18 @@ import { ChangePasswordPage } from "@/pages/merchant/ChangePasswordPage";
 import NotificationsPage from "@/pages/merchant/NotificationsPage";
 import UpdateLandingPage from "@/pages/admin/UpdateLandingPage";
 import GiftCardRedemption from "@/pages/customer/Myredemption";
+import { UserHomePage } from "@/pages/merchant/userHomePage";
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
       {/* Public Routes - No authentication required */}
-      <Route path={ROUTES.HOME} element={<HomePage />} />
+      <Route path={ROUTES.HOME} element={<UserHomePage />} />
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.BROWSE} element={<BrowsePage />} />
       <Route path={ROUTES.PURCHASE} element={<PurchasePage />} />
+      <Route path="/merchants" element={<HomePage />} />
       <Route path="/balance/:qrCode" element={<GiftCardRedemption />} />
       {/* Password Reset Routes - Public */}
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

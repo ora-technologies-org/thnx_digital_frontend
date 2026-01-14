@@ -347,7 +347,6 @@ export const ContactSection = () => {
           className="text-center mt-6"
         >
           <p className="text-xs text-gray-500">
-            ⚡ Average response time:{" "}
             <span className="font-semibold text-gray-700">
               {content.responseTime}
             </span>

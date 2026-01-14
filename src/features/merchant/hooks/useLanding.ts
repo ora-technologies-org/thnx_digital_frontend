@@ -1,7 +1,7 @@
-// src/features/merchant/hooks/useLanding.ts
+// src/hooks/useLandingPage.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDispatch, useSelector } from "react-redux";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { toast } from "react-hot-toast";
 import {
   fetchLandingPageData,
@@ -11,97 +11,23 @@ import {
 import {
   landingPageService,
   UpdateLandingPageRequest,
-  LandingPageData,
 } from "../services/LandingService";
 import { RootState, AppDispatch } from "@/app/store";
 
 /**
- * Interface for wrapped array data from API
- * Some API endpoints return arrays wrapped in objects with these property names
- */
-interface ArrayWrapper<T> {
-  data?: T[];
-  items?: T[];
-}
-
-/**
- * Transform API data to ensure all arrays are properly formatted
- * Handles cases where arrays might be wrapped in objects or missing
- *
- * @param data - Raw data from API that may contain wrapped arrays
- * @returns Transformed LandingPageData with properly formatted arrays, or null if no data
- */
-const transformLandingData = (data: unknown): LandingPageData | null => {
-  if (!data) return null;
-
-  /**
-   * Ensures a value is returned as an array
-   * Unwraps arrays from common wrapper formats (data, items properties)
-   *
-   * @param value - Value that might be an array or wrapped array
-   * @returns Proper array or empty array if no valid data found
-   */
-  const ensureArray = <T>(value: unknown): T[] => {
-    if (Array.isArray(value)) return value;
-
-    // Type guard for wrapped arrays
-    if (value && typeof value === "object") {
-      const wrapper = value as ArrayWrapper<T>;
-      if (Array.isArray(wrapper.data)) return wrapper.data;
-      if (Array.isArray(wrapper.items)) return wrapper.items;
-    }
-
-    return [];
-  };
-
-  // Cast data to partial LandingPageData for transformation
-  const rawData = data as Partial<LandingPageData>;
-
-  const transformed: LandingPageData = {
-    ...rawData,
-    faqs: ensureArray(rawData.faqs),
-    testimonials: ensureArray(rawData.testimonials),
-    features: ensureArray(rawData.features),
-    steps: ensureArray(rawData.steps),
-    stats: ensureArray(rawData.stats),
-  } as LandingPageData;
-
-  return transformed;
-};
-
-/**
  * Hook to fetch landing page data using React Query
- * Provides caching, automatic refetching, and stale-while-revalidate behavior
- *
- * @returns Landing page data with loading and error states
  */
 export const useLandingPageData = () => {
-  const query = useQuery({
+  return useQuery({
     queryKey: ["landingPage"],
     queryFn: () => landingPageService.getLandingPageData(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
-
-  // Transform data to ensure arrays are properly formatted
-  const transformedData = useMemo(() => {
-    return transformLandingData(query.data);
-  }, [query.data]);
-
-  return {
-    data: transformedData,
-    isLoading: query.isLoading,
-    error: query.error,
-    isError: query.isError,
-    refetch: query.refetch,
-  };
 };
 
 /**
  * Hook to fetch landing page data using Redux
- * Alternative to React Query for projects preferring Redux state management
- *
- * @returns Landing page data from Redux store with loading states and actions
  */
 export const useLandingPageRedux = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -109,27 +35,16 @@ export const useLandingPageRedux = () => {
     (state: RootState) => state.landingPage,
   );
 
-  /**
-   * Fetches landing page data and stores in Redux
-   */
   const fetchData = useCallback(() => {
     dispatch(fetchLandingPageData());
   }, [dispatch]);
 
-  /**
-   * Clears all error states in Redux store
-   */
   const clearErrors = useCallback(() => {
     dispatch(clearError());
   }, [dispatch]);
 
-  // Transform Redux data to ensure consistent array formatting
-  const transformedData = useMemo(() => {
-    return transformLandingData(data);
-  }, [data]);
-
   return {
-    data: transformedData,
+    data,
     loading,
     error,
     updateLoading,
@@ -140,38 +55,27 @@ export const useLandingPageRedux = () => {
 };
 
 /**
- * Hook to update landing page section using Redux
- * Handles updates with automatic cache invalidation and toast notifications
- *
- * @returns Function to update a specific section of the landing page
+ * Hook to update landing page section using Redux - FIXED VERSION
  */
 export const useUpdateLandingPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const queryClient = useQueryClient();
 
-  /**
-   * Updates a specific section of the landing page
-   * Invalidates both Redux and React Query caches after update
-   *
-   * @param payload - Section name, data, and optional index for array updates
-   * @returns Success boolean indicating if update was successful
-   */
   const updateSection = async (payload: UpdateLandingPageRequest) => {
     try {
+      // First do the API call (don't do optimistic update first)
       await dispatch(updateLandingPageSection(payload)).unwrap();
 
-      // Invalidate React Query cache to trigger refetch
+      // Invalidate React Query cache
       queryClient.invalidateQueries({ queryKey: ["landingPage"] });
 
       toast.success("Landing page updated successfully!");
       return true;
     } catch (error) {
-      // Type guard for error handling
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Failed to update landing page";
-
       toast.error(errorMessage);
       return false;
     }
@@ -180,11 +84,24 @@ export const useUpdateLandingPage = () => {
   return { updateSection };
 };
 
+interface LandingPageData {
+  [key: string]: unknown;
+}
+
+interface MutationContext {
+  previousData?: LandingPageData;
+}
+
+interface ErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 /**
- * Hook to update landing page using React Query mutation
- * Implements optimistic updates with automatic rollback on error
- *
- * @returns Mutation object with mutate function and state
+ * Hook to update landing page using React Query - FIXED VERSION
  */
 export const useUpdateLandingPageMutation = () => {
   const queryClient = useQueryClient();
@@ -192,64 +109,53 @@ export const useUpdateLandingPageMutation = () => {
   return useMutation({
     mutationFn: (payload: UpdateLandingPageRequest) =>
       landingPageService.updateLandingPageSection(payload),
-
-    /**
-     * Optimistic update: Apply changes immediately before server confirms
-     * Stores previous data for potential rollback
-     */
     onMutate: async (newData) => {
-      // Cancel outgoing refetches to prevent overwriting optimistic update
+      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["landingPage"] });
-      const previousData = queryClient.getQueryData(["landingPage"]);
 
-      // Optimistically update cache
-      queryClient.setQueryData(["landingPage"], (old: unknown) => {
-        if (!old || typeof old !== "object") return old;
+      // Snapshot previous value
+      const previousData = queryClient.getQueryData<LandingPageData>([
+        "landingPage",
+      ]);
 
-        const updated = { ...old } as Record<string, unknown>;
-        const { section, data } = newData;
-        updated[section] = data;
+      // Optimistically update
+      queryClient.setQueryData<LandingPageData>(["landingPage"], (old) => {
+        if (!old) return old;
+
+        const updated = { ...old };
+        const { section, data, index } = newData;
+
+        if (index !== undefined && Array.isArray(updated[section])) {
+          // Update specific item in array
+          const newArray = [...(updated[section] as unknown[])];
+          newArray[index] = data;
+          updated[section] = newArray;
+        } else {
+          // Update entire section
+          updated[section] = data;
+        }
 
         return updated;
       });
 
       return { previousData };
     },
-
-    /**
-     * Rollback optimistic update on error
-     * Restores previous data and shows error toast
-     */
-    onError: (error: unknown, _newData, context) => {
-      // Rollback to previous data if available
+    onError: (
+      error: ErrorResponse,
+      _newData,
+      context: MutationContext | undefined,
+    ) => {
+      // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(["landingPage"], context.previousData);
       }
-
-      // Extract error message with proper type checking
-      let errorMessage = "Failed to update";
-      if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as {
-          response?: { data?: { message?: string } };
-        };
-        errorMessage = axiosError?.response?.data?.message || errorMessage;
-      }
-
-      toast.error(errorMessage);
+      toast.error(error?.response?.data?.message || "Failed to update");
     },
-
-    /**
-     * Show success notification when update completes
-     */
     onSuccess: () => {
       toast.success("Landing page updated successfully!");
     },
-
-    /**
-     * Refetch data after mutation completes (success or error)
-     * Ensures cache is in sync with server
-     */
     onSettled: () => {
+      // Always refetch after error or success to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ["landingPage"] });
     },
   });
@@ -257,87 +163,62 @@ export const useUpdateLandingPageMutation = () => {
 
 /**
  * Hook to subscribe to newsletter
- * Handles newsletter subscription with toast notifications
- *
- * @returns Mutation object for newsletter subscription
  */
 export const useNewsletterSubscription = () => {
   return useMutation({
     mutationFn: (email: string) =>
       landingPageService.subscribeNewsletter(email),
-    onSuccess: (data) => {
+    onSuccess: (data: { message?: string }) => {
       toast.success(data.message || "Successfully subscribed to newsletter!");
     },
-    onError: (error: unknown) => {
-      let errorMessage = "Failed to subscribe. Please try again.";
-
-      if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as {
-          response?: { data?: { message?: string } };
-        };
-        errorMessage = axiosError?.response?.data?.message || errorMessage;
-      }
-
+    onError: (error: ErrorResponse) => {
+      const errorMessage =
+        error?.response?.data?.message ||
+        "Failed to subscribe. Please try again.";
       toast.error(errorMessage);
     },
   });
 };
 
 /**
- * Contact form data interface
- */
-interface ContactFormData {
-  name: string;
-  email: string;
-  message: string;
-}
-
-/**
  * Hook to submit contact form
- * Handles contact form submission with validation and notifications
- *
- * @returns Mutation object for contact form submission
  */
 export const useContactForm = () => {
   return useMutation({
-    mutationFn: (data: ContactFormData) =>
+    mutationFn: (data: { name: string; email: string; message: string }) =>
       landingPageService.submitContactForm(data),
-    onSuccess: (data) => {
+    onSuccess: (data: { message?: string }) => {
       toast.success(
         data.message ||
           "Message sent successfully! We will get back to you soon.",
       );
     },
-    onError: (error: unknown) => {
-      let errorMessage = "Failed to send message. Please try again.";
-
-      if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as {
-          response?: { data?: { message?: string } };
-        };
-        errorMessage = axiosError?.response?.data?.message || errorMessage;
-      }
-
+    onError: (error: ErrorResponse) => {
+      const errorMessage =
+        error?.response?.data?.message ||
+        "Failed to send message. Please try again.";
       toast.error(errorMessage);
     },
   });
 };
 
+interface RawStats {
+  activeUsers: number;
+  merchants: number;
+  giftCardsSold: number;
+  satisfactionRate: number;
+}
+
+interface LandingPageDataWithStats {
+  rawStats?: RawStats;
+}
+
 /**
  * Hook to get formatted stats for display
- * Converts raw numbers into human-readable format (K, M suffixes)
- *
- * @returns Formatted statistics array with values, labels, and suffixes
  */
 export const useFormattedStats = () => {
   const { data, isLoading } = useLandingPageData();
 
-  /**
-   * Formats large numbers with K/M suffixes
-   *
-   * @param num - Number to format
-   * @returns Formatted string (e.g., "1.5K", "2.3M")
-   */
   const formatNumber = (num: number): string => {
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`;
@@ -348,37 +229,32 @@ export const useFormattedStats = () => {
     return num.toString();
   };
 
-  // Memoize formatted stats to prevent unnecessary recalculations
-  // Include the entire rawStats object as dependency to satisfy both ESLint and React Compiler
-  const formattedStats = useMemo(() => {
-    if (!data?.rawStats) return [];
+  const typedData = data as LandingPageDataWithStats | undefined;
 
-    const { activeUsers, merchants, giftCardsSold, satisfactionRate } =
-      data.rawStats;
-
-    return [
-      {
-        value: formatNumber(activeUsers),
-        label: "Active Users",
-        suffix: "+",
-      },
-      {
-        value: formatNumber(merchants),
-        label: "Merchants",
-        suffix: "+",
-      },
-      {
-        value: formatNumber(giftCardsSold),
-        label: "Gift Cards Sold",
-        suffix: "+",
-      },
-      {
-        value: satisfactionRate.toString(),
-        label: "Satisfaction Rate",
-        suffix: "%",
-      },
-    ];
-  }, [data?.rawStats]); // Use the parent object as dependency
+  const formattedStats = typedData?.rawStats
+    ? [
+        {
+          value: formatNumber(typedData.rawStats.activeUsers),
+          label: "Active Users",
+          suffix: "+",
+        },
+        {
+          value: formatNumber(typedData.rawStats.merchants),
+          label: "Merchants",
+          suffix: "+",
+        },
+        {
+          value: formatNumber(typedData.rawStats.giftCardsSold),
+          label: "Gift Cards Sold",
+          suffix: "+",
+        },
+        {
+          value: typedData.rawStats.satisfactionRate.toString(),
+          label: "Satisfaction Rate",
+          suffix: "%",
+        },
+      ]
+    : [];
 
   return {
     stats: formattedStats,

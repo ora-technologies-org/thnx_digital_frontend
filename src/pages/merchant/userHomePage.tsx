@@ -8,39 +8,39 @@ import {
   QrCode,
   Zap,
   Shield,
+  ArrowRight,
   Sparkles,
   Heart,
   Check,
-  ChevronRight,
 } from "lucide-react";
 
-import { GradientText } from "../shared/components/animated/GradientText";
-import { MagneticButton } from "../shared/components/animated/MagneticButton";
-import { TiltCard } from "../shared/components/animated/TiltCard";
-import { StatsCounter } from "../shared/components/animated/StatsCounter";
-import { FloatingGiftCard } from "../shared/components/animated/FloatingGiftCard";
-import { ScrollProgress } from "../shared/components/animated/ScrollProgress";
-import { FAQAccordion } from "../shared/components/animated/FAQAccordion";
-import { TestimonialsScroll } from "../shared/components/animated/TestimonialCard";
-import { NewsletterSignup } from "../shared/components/animated/NewsletterSignup";
-import { GiftCardBuilder } from "../shared/components/animated/GiftCardBuilder";
-import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  fadeInUp,
-  staggerContainer,
-  slideInLeft,
-  slideInRight,
-} from "../shared/utils/animations";
-import { FloatingChatButton } from "@/shared/components/animated";
-import { useAppSelector } from "@/app/hooks";
+  FAQAccordion,
+  FloatingChatButton,
+  FloatingGiftCard,
+  GradientText,
+  MagneticButton,
+  NewsletterSignup,
+  ScrollProgress,
+  StatsCounter,
+  TiltCard,
+} from "@/shared/components/animated";
 import { ContactSection } from "@/shared/components/animated/Contactus";
 import {
   useLandingPageData,
   useFormattedStats,
 } from "@/features/merchant/hooks/useLanding";
+import { TestimonialsScroll } from "@/shared/components/animated/TestimonialCard";
+import {
+  fadeInUp,
+  staggerContainer,
+  slideInLeft,
+  slideInRight,
+} from "@/shared/utils/animations";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAppSelector } from "@/app/hooks";
 import { Spinner } from "@/shared/components/ui/Spinner";
-
-export const HomePage: React.FC = () => {
+export const UserHomePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
@@ -99,7 +99,7 @@ export const HomePage: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
         <div className="text-center">
-          <Spinner size="lg" />
+          <Spinner />
           <p className="text-gray-600">Loading </p>
         </div>
       </div>
@@ -164,25 +164,29 @@ export const HomePage: React.FC = () => {
             </Link>
 
             <div className="flex items-center gap-3">
-              <Link to="/users">
+              {/* Browse Gift Cards - Navigates to /browse */}
+              <Link to="/merchants">
                 <motion.button
                   className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  For Users
+                  For Merchant
                 </motion.button>
               </Link>
-              {/* <Link to="/browse">
+
+              {/* Become a Merchant - Navigates to /register */}
+              {/* <Link to="/register">
                 <motion.button
                   className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  Browse
+                  Become a Merchant
                 </motion.button>
               </Link> */}
-              <Link to="/login">
+
+              {/* <Link to="/login">
                 <motion.button
                   className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
                   whileHover={{ scale: 1.05 }}
@@ -190,10 +194,10 @@ export const HomePage: React.FC = () => {
                 >
                   Login
                 </motion.button>
-              </Link>
-              <Link to="/register">
+              </Link> */}
+              <Link to="/browse">
                 <MagneticButton size="md" variant="primary">
-                  Get Started
+                  Browse Gift Cards
                 </MagneticButton>
               </Link>
             </div>
@@ -252,17 +256,17 @@ export const HomePage: React.FC = () => {
                 variants={fadeInUp}
                 className="flex flex-wrap gap-4 mb-8"
               >
-                {/* <Link to={landingData.hero.primaryCTA.link}>
+                <Link to={landingData.hero.primaryCTA.link}>
                   <MagneticButton size="lg" variant="primary">
                     {landingData.hero.primaryCTA.label}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </MagneticButton>
-                </Link> */}
-                <Link to={landingData.hero.secondaryCTA.link}>
+                </Link>
+                {/* <Link to={landingData.hero.secondaryCTA.link}>
                   <MagneticButton size="lg" variant="primary">
                     {landingData.hero.secondaryCTA.label}
                   </MagneticButton>
-                </Link>
+                </Link> */}
               </motion.div>
 
               <motion.div
@@ -413,13 +417,6 @@ export const HomePage: React.FC = () => {
               );
             })}
           </motion.div>
-        </div>
-      </section>
-
-      {/* ===== INTERACTIVE GIFT CARD BUILDER ===== */}
-      <section className="py-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          <GiftCardBuilder />
         </div>
       </section>
 
@@ -575,7 +572,7 @@ export const HomePage: React.FC = () => {
                 "Join thousands of happy customers and merchants using Thnx Digital today"}
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              {/* <Link
+              <Link
                 to={
                   landingData.finalCTA?.primaryCTA?.link ||
                   landingData.hero.primaryCTA.link
@@ -586,19 +583,23 @@ export const HomePage: React.FC = () => {
                     landingData.hero.primaryCTA.label}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </MagneticButton>
-              </Link> */}
-              <Link
+              </Link>
+              {/* <Link
                 to={
                   landingData.finalCTA?.secondaryCTA?.link ||
                   landingData.hero.secondaryCTA.link
                 }
               >
-                <MagneticButton size="lg" variant="secondary" className="">
+                <MagneticButton
+                  size="lg"
+                  variant="outline"
+                  className="bg-white text-blue-600 hover:bg-gray-100"
+                >
                   {landingData.finalCTA?.secondaryCTA?.label ||
                     landingData.hero.secondaryCTA.label}
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </MagneticButton>
-              </Link>
+              </Link> */}
             </div>
           </div>
         </motion.div>

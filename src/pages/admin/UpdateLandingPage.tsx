@@ -15,19 +15,23 @@ const LandingPageEditor = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({});
 
-  console.log("🔍 Landing Page Editor - Data:", landingData);
-  console.log("🔍 Landing Page Editor - Loading:", loading);
-
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const handleEdit = (section, index = null) => {
     const sectionData = landingData[section];
-    if (index !== null) {
-      setFormData(Array.isArray(sectionData) ? { ...sectionData[index] } : {});
+
+    // Handle sections with 'items' property (faqs, testimonials)
+    if (sectionData?.items && index !== null) {
+      setFormData({ ...sectionData.items[index] });
+      setEditingItem({ section, index });
+    } else if (Array.isArray(sectionData) && index !== null) {
+      // Handle simple array sections (stats, steps, features)
+      setFormData({ ...sectionData[index] });
       setEditingItem({ section, index });
     } else {
+      // Handle object sections (hero, contact, etc.)
       setFormData(typeof sectionData === "object" ? { ...sectionData } : {});
       setEditingItem({ section, index: null });
     }
@@ -44,7 +48,21 @@ const LandingPageEditor = () => {
     const sectionData = landingData[section];
 
     let updatedData;
-    if (Array.isArray(sectionData)) {
+
+    // Handle sections with 'items' property (faqs, testimonials)
+    if (sectionData?.items) {
+      const updatedItems = [...sectionData.items];
+      if (isNew) {
+        updatedItems.push(formData);
+      } else {
+        updatedItems[index] = formData;
+      }
+      updatedData = {
+        ...sectionData,
+        items: updatedItems,
+      };
+    } else if (Array.isArray(sectionData)) {
+      // Handle simple array sections
       updatedData = [...sectionData];
       if (isNew) {
         updatedData.push(formData);
@@ -52,6 +70,7 @@ const LandingPageEditor = () => {
         updatedData[index] = formData;
       }
     } else {
+      // Handle object sections
       updatedData = formData;
     }
 
@@ -66,10 +85,20 @@ const LandingPageEditor = () => {
   const handleDelete = async (section, index) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
 
-    const sectionData = [...landingData[section]];
-    sectionData.splice(index, 1);
+    const sectionData = landingData[section];
 
-    await updateSection({ section, data: sectionData });
+    // Handle sections with 'items' property
+    if (sectionData?.items) {
+      const updatedItems = sectionData.items.filter((_, i) => i !== index);
+      await updateSection({
+        section,
+        data: { ...sectionData, items: updatedItems },
+      });
+    } else {
+      // Handle simple array sections
+      const updatedArray = sectionData.filter((_, i) => i !== index);
+      await updateSection({ section, data: updatedArray });
+    }
   };
 
   const handleInputChange = (field, value) => {
@@ -122,7 +151,7 @@ const LandingPageEditor = () => {
   };
 
   const renderFormField = (key, value) => {
-    if (key === "step") return null;
+    if (key === "step" || key === "items") return null;
 
     if (Array.isArray(value)) {
       return (
@@ -223,6 +252,95 @@ const LandingPageEditor = () => {
     );
   };
 
+  // Render sections with 'items' property (faqs, testimonials)
+  const renderItemsSection = (sectionName, sectionData) => {
+    const items = sectionData.items || [];
+
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 capitalize">
+              {sectionName}
+            </h2>
+            {sectionData.title && (
+              <p className="text-sm text-gray-600 mt-1">{sectionData.title}</p>
+            )}
+            {sectionData.subtitle && (
+              <p className="text-xs text-gray-500">{sectionData.subtitle}</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleEdit(sectionName)}
+            >
+              <Edit2 size={14} className="mr-1" /> Edit Header
+            </Button>
+            <Button size="sm" onClick={() => handleAdd(sectionName)}>
+              <Plus size={16} className="mr-1" /> Add Item
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {items.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <p>No items yet. Click "Add Item" to get started!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {items.map((item, index) => (
+                <div
+                  key={index}
+                  className="group border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 space-y-1">
+                      {Object.entries(item).map(([key, value]) => (
+                        <div key={key} className="text-sm">
+                          <span className="font-medium text-gray-700 capitalize">
+                            {key}:{" "}
+                          </span>
+                          <span className="text-gray-600">
+                            {Array.isArray(value)
+                              ? value.join(", ")
+                              : typeof value === "object"
+                                ? Object.entries(value)
+                                    .map(([k, v]) => `${k}: ${v}`)
+                                    .join(", ")
+                                : value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(sectionName, index)}
+                      >
+                        <Edit2 size={14} />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDelete(sectionName, index)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderArraySection = (sectionName, sectionData) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -306,85 +424,87 @@ const LandingPageEditor = () => {
 
         <div className="p-6">
           <div className="space-y-3">
-            {Object.entries(sectionData).map(([key, value]) => {
-              if (
-                typeof value === "object" &&
-                value !== null &&
-                !Array.isArray(value)
-              ) {
+            {Object.entries(sectionData)
+              .filter(([key]) => key !== "items") // Exclude items from display
+              .map(([key, value]) => {
+                if (
+                  typeof value === "object" &&
+                  value !== null &&
+                  !Array.isArray(value)
+                ) {
+                  return (
+                    <div
+                      key={key}
+                      className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                    >
+                      <h4 className="font-medium text-gray-700 mb-2 capitalize">
+                        {key}
+                      </h4>
+                      <div className="space-y-1 pl-3">
+                        {Object.entries(value).map(([subKey, subValue]) => (
+                          <div
+                            key={subKey}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <span className="font-medium text-gray-600 capitalize">
+                              {subKey}:
+                            </span>
+                            <span className="text-gray-800">
+                              {typeof subValue === "string" ||
+                              typeof subValue === "number"
+                                ? subValue
+                                : JSON.stringify(subValue)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (Array.isArray(value)) {
+                  return (
+                    <div
+                      key={key}
+                      className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                    >
+                      <h4 className="font-medium text-gray-700 mb-2 capitalize">
+                        {key}
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {value.map((item, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-white border border-gray-300 rounded-full text-sm text-gray-700"
+                          >
+                            {typeof item === "object"
+                              ? JSON.stringify(item)
+                              : item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
                 return (
                   <div
                     key={key}
-                    className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <h4 className="font-medium text-gray-700 mb-2 capitalize">
-                      {key}
-                    </h4>
-                    <div className="space-y-1 pl-3">
-                      {Object.entries(value).map(([subKey, subValue]) => (
-                        <div
-                          key={subKey}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <span className="font-medium text-gray-600 capitalize">
-                            {subKey}:
-                          </span>
-                          <span className="text-gray-800">
-                            {typeof subValue === "string" ||
-                            typeof subValue === "number"
-                              ? subValue
-                              : JSON.stringify(subValue)}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-700 capitalize">
+                        {key}
+                      </span>
+                      <p className="text-gray-800 mt-0.5">
+                        {typeof value === "string" || typeof value === "number"
+                          ? value
+                          : JSON.stringify(value)}
+                      </p>
                     </div>
                   </div>
                 );
-              }
-
-              if (Array.isArray(value)) {
-                return (
-                  <div
-                    key={key}
-                    className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                  >
-                    <h4 className="font-medium text-gray-700 mb-2 capitalize">
-                      {key}
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {value.map((item, idx) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 bg-white border border-gray-300 rounded-full text-sm text-gray-700"
-                        >
-                          {typeof item === "object"
-                            ? JSON.stringify(item)
-                            : item}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={key}
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-700 capitalize">
-                      {key}
-                    </span>
-                    <p className="text-gray-800 mt-0.5">
-                      {typeof value === "string" || typeof value === "number"
-                        ? value
-                        : JSON.stringify(value)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+              })}
           </div>
         </div>
       </div>
@@ -460,13 +580,18 @@ const LandingPageEditor = () => {
           <div className="space-y-6">
             {Object.entries(landingData)
               .filter(([key]) => !["rawStats"].includes(key))
-              .map(([key, value]) => (
-                <div key={key}>
-                  {Array.isArray(value)
-                    ? renderArraySection(key, value)
-                    : renderObjectSection(key, value)}
-                </div>
-              ))}
+              .map(([key, value]) => {
+                // Sections with 'items' property
+                if (value?.items && ["faqs", "testimonials"].includes(key)) {
+                  return <div key={key}>{renderItemsSection(key, value)}</div>;
+                }
+                // Simple array sections
+                if (Array.isArray(value)) {
+                  return <div key={key}>{renderArraySection(key, value)}</div>;
+                }
+                // Object sections
+                return <div key={key}>{renderObjectSection(key, value)}</div>;
+              })}
           </div>
         </div>
       </div>

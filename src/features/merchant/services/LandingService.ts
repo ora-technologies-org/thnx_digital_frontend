@@ -1,12 +1,17 @@
 // src/services/landingPage.service.ts
-import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+import api from "@/shared/utils/api";
 
 // Types
 export interface FAQItem {
   question: string;
   answer: string;
+}
+
+export interface FAQSection {
+  title: string;
+  subtitle: string;
+  items: FAQItem[];
 }
 
 export interface HeroSection {
@@ -40,10 +45,16 @@ export interface FeaturePoint {
   points: string[];
 }
 
-export interface Testimonial {
+export interface TestimonialItem {
   name: string;
   role: string;
   message: string;
+}
+
+export interface TestimonialSection {
+  title: string;
+  subtitle: string;
+  items: TestimonialItem[];
 }
 
 export interface FooterLinks {
@@ -58,9 +69,9 @@ export interface Footer {
 }
 
 export interface Contact {
-  email: string;
-  phone: string;
-  location: string;
+  title: string;
+  heading: string;
+  subtitle: string;
   responseTime: string;
 }
 
@@ -72,33 +83,37 @@ export interface RawStats {
   satisfactionRate: number;
 }
 
+export interface Newsletter {
+  title: string;
+  subtitle: string;
+  privacyNote: string;
+}
+
+export interface FinalCTA {
+  title: string;
+  subtitle: string;
+  primaryCTA: {
+    link: string;
+    label: string;
+  };
+  secondaryCTA: {
+    link: string;
+    label: string;
+  };
+}
+
 export interface LandingPageData {
-  faqs: FAQItem[];
+  faqs: FAQSection;
   hero: HeroSection;
   stats: StatItem[];
   steps: StepItem[];
   footer: Footer;
   contact: Contact;
   features: FeaturePoint[];
-  testimonials: Testimonial[];
+  testimonials: TestimonialSection;
   rawStats: RawStats;
-  finalCTA: {
-    title: string;
-    subtitle: string;
-    primaryCTA: {
-      link: string;
-      label: string;
-    };
-    secondaryCTA: {
-      link: string;
-      label: string;
-    };
-  };
-  newsletter: {
-    title: string;
-    subtitle: string;
-    privacyNote: string;
-  };
+  finalCTA: FinalCTA;
+  newsletter: Newsletter;
 }
 
 /**
@@ -124,37 +139,41 @@ export type LandingPageSection =
   | "contact"
   | "features"
   | "testimonials"
-  | "rawStats";
+  | "rawStats"
+  | "finalCTA"
+  | "newsletter";
 
 /**
  * Type mapping for section data
- * Maps each section to its corresponding data type
  */
 type SectionDataMap = {
-  faqs: FAQItem[];
+  faqs: FAQSection;
   hero: HeroSection;
   stats: StatItem[];
   steps: StepItem[];
   footer: Footer;
   contact: Contact;
   features: FeaturePoint[];
-  testimonials: Testimonial[];
+  testimonials: TestimonialSection;
   rawStats: RawStats;
+  finalCTA: FinalCTA;
+  newsletter: Newsletter;
 };
 
 /**
  * Request payload for updating a landing page section
- * Uses mapped types to ensure data matches the section type
  */
-export interface UpdateLandingPageRequest {
-  section: LandingPageSection;
-  data: SectionDataMap[LandingPageSection];
-  index?: number; // Optional index for updating specific items in array sections
+export interface UpdateLandingPageRequest<
+  T extends LandingPageSection = LandingPageSection,
+> {
+  slug?: string;
+  section: T;
+  data: SectionDataMap[T];
+  index?: number;
 }
 
 /**
  * API response structure for landing page updates
- * Server returns updated document with nested content structure
  */
 interface UpdateLandingPageResponse {
   success: boolean;
@@ -178,26 +197,28 @@ interface ApiResponse {
 }
 
 /**
+ * Request payload interface for internal use
+ */
+interface RequestPayload {
+  slug: string;
+  section: LandingPageSection;
+  data: SectionDataMap[LandingPageSection];
+  index?: number;
+}
+
+/**
  * Landing Page Service
  * Handles all API interactions for landing page content management
  */
 export const landingPageService = {
   /**
    * Fetches complete landing page data from the server
-   * Handles multiple response structure formats for backward compatibility
-   *
-   * @returns Promise resolving to LandingPageData
-   * @throws Error if response structure is invalid or request fails
    */
   async getLandingPageData(): Promise<LandingPageData> {
     try {
-      const response = await axios.get<LandingPageResponse>(
-        `${API_BASE_URL}users/landing-page`,
-      );
+      const response = await api.get<LandingPageResponse>("users/landing-page");
       console.log("📥 Fetch response:", response.data);
 
-      // Handle different response structures from various API versions
-      // Try most nested structure first, then fall back to simpler structures
       if (response.data?.data?.data?.content) {
         return response.data.data.data.content;
       } else if (response.data?.data?.data) {
@@ -216,35 +237,48 @@ export const landingPageService = {
 
   /**
    * Updates a specific section of the landing page
-   * Supports both full section updates and individual item updates (via index)
    *
-   * @param payload - Section identifier, new data, and optional index for array items
-   * @returns Promise resolving to updated LandingPageData
-   * @throws Error if update fails or response structure is invalid
+   * Section formats based on backend:
    *
-   * @example
-   * // Update entire hero section
-   * updateLandingPageSection({ section: 'hero', data: newHeroData })
-   *
-   * // Update specific FAQ item at index 2
-   * updateLandingPageSection({ section: 'faqs', data: newFaqItem, index: 2 })
+   * - hero: { badge, title, subtitle, primaryCTA, secondaryCTA }
+   * - stats: [{ label, value }, ...]
+   * - rawStats: { activeUsers, merchants, giftCardsSold, revenue, satisfactionRate }
+   * - features: [{ title, description, points }, ...]
+   * - steps: [{ step, title, description }, ...]
+   * - testimonials: { title, subtitle, items: [{ name, role, message }, ...] }
+   * - faqs: { title, subtitle, items: [{ question, answer }, ...] }
+   * - contact: { title, heading, subtitle, responseTime }
+   * - newsletter: { title, subtitle, privacyNote }
+   * - finalCTA: { title, subtitle, primaryCTA, secondaryCTA }
+   * - footer: { copyright, links: { product, company, legal } }
    */
   async updateLandingPageSection(
     payload: UpdateLandingPageRequest,
   ): Promise<LandingPageData> {
     try {
-      console.log("📤 Sending update payload:", payload);
+      const requestPayload: RequestPayload = {
+        slug: payload.slug || "home",
+        section: payload.section,
+        data: payload.data,
+      };
 
-      const response = await axios.patch<UpdateLandingPageResponse>(
-        `${API_BASE_URL}users/landing-page`,
-        payload,
+      if (payload.index !== undefined && payload.index !== null) {
+        requestPayload.index = payload.index;
+      }
+
+      console.log(
+        "📤 Sending update payload:",
+        JSON.stringify(requestPayload, null, 2),
       );
 
-      console.log("📥 Update response:", response.data);
+      const response = await api.patch<UpdateLandingPageResponse>(
+        "users/landing-page",
+        requestPayload,
+      );
 
-      // The update returns {id, slug, content: {...}, updatedAt}
-      // We need to extract and return the content object
-      // Handle various nesting levels for different API response formats
+      console.log("✅ Update successful:", response.data);
+
+      // Extract content from response
       if (response.data?.data?.data?.content) {
         return response.data.data.data.content;
       } else if (response.data?.data?.content) {
@@ -261,25 +295,235 @@ export const landingPageService = {
       }
     } catch (error) {
       console.error("Error updating landing page data:", error);
+      if (error.response) {
+        console.error("Error response:", error.response.data);
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Adds a new FAQ item
+   */
+  async addFAQItem(faqItem: FAQItem): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedFAQs = {
+        ...currentData.faqs,
+        items: [...currentData.faqs.items, faqItem],
+      };
+
+      return await this.updateLandingPageSection({
+        section: "faqs",
+        data: updatedFAQs,
+      });
+    } catch (error) {
+      console.error("Error adding FAQ item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates a specific FAQ item by index
+   */
+  async updateFAQItem(
+    faqItem: FAQItem,
+    index: number,
+  ): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedItems = [...currentData.faqs.items];
+      updatedItems[index] = faqItem;
+
+      const updatedFAQs = {
+        ...currentData.faqs,
+        items: updatedItems,
+      };
+
+      return await this.updateLandingPageSection({
+        section: "faqs",
+        data: updatedFAQs,
+      });
+    } catch (error) {
+      console.error("Error updating FAQ item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a FAQ item by index
+   */
+  async deleteFAQItem(index: number): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedItems = currentData.faqs.items.filter((_, i) => i !== index);
+
+      const updatedFAQs = {
+        ...currentData.faqs,
+        items: updatedItems,
+      };
+
+      return await this.updateLandingPageSection({
+        section: "faqs",
+        data: updatedFAQs,
+      });
+    } catch (error) {
+      console.error("Error deleting FAQ item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Adds a new testimonial item
+   */
+  async addTestimonialItem(
+    testimonialItem: TestimonialItem,
+  ): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedTestimonials = {
+        ...currentData.testimonials,
+        items: [...currentData.testimonials.items, testimonialItem],
+      };
+
+      return await this.updateLandingPageSection({
+        section: "testimonials",
+        data: updatedTestimonials,
+      });
+    } catch (error) {
+      console.error("Error adding testimonial item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates a specific testimonial item by index
+   */
+  async updateTestimonialItem(
+    testimonialItem: TestimonialItem,
+    index: number,
+  ): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedItems = [...currentData.testimonials.items];
+      updatedItems[index] = testimonialItem;
+
+      const updatedTestimonials = {
+        ...currentData.testimonials,
+        items: updatedItems,
+      };
+
+      return await this.updateLandingPageSection({
+        section: "testimonials",
+        data: updatedTestimonials,
+      });
+    } catch (error) {
+      console.error("Error updating testimonial item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a testimonial item by index
+   */
+  async deleteTestimonialItem(index: number): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedItems = currentData.testimonials.items.filter(
+        (_, i) => i !== index,
+      );
+
+      const updatedTestimonials = {
+        ...currentData.testimonials,
+        items: updatedItems,
+      };
+
+      return await this.updateLandingPageSection({
+        section: "testimonials",
+        data: updatedTestimonials,
+      });
+    } catch (error) {
+      console.error("Error deleting testimonial item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Adds a new item to simple array sections (stats, steps, features)
+   */
+  async addItemToSection(
+    section: "stats" | "steps" | "features",
+    item: StatItem | StepItem | FeaturePoint,
+  ): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const currentArray = currentData[section];
+      const updatedArray = [...currentArray, item];
+
+      return await this.updateLandingPageSection({
+        section,
+        data: updatedArray,
+      });
+    } catch (error) {
+      console.error(`Error adding item to ${section}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates a specific item in simple array sections
+   */
+  async updateItemInSection(
+    section: "stats" | "steps" | "features",
+    item: StatItem | StepItem | FeaturePoint,
+    index: number,
+  ): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const currentArray = currentData[section];
+      const updatedArray = [...currentArray];
+      updatedArray[index] = item;
+
+      return await this.updateLandingPageSection({
+        section,
+        data: updatedArray,
+      });
+    } catch (error) {
+      console.error(`Error updating item in ${section}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes an item from simple array sections
+   */
+  async deleteItemFromSection(
+    section: "stats" | "steps" | "features",
+    index: number,
+  ): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const currentArray = currentData[section];
+      const updatedArray = currentArray.filter((_, i) => i !== index);
+
+      return await this.updateLandingPageSection({
+        section,
+        data: updatedArray,
+      });
+    } catch (error) {
+      console.error(`Error deleting item from ${section}:`, error);
       throw error;
     }
   },
 
   /**
    * Subscribes an email address to the newsletter
-   *
-   * @param email - Email address to subscribe
-   * @returns Promise with success status and message
-   * @throws Error if subscription fails
    */
   async subscribeNewsletter(email: string): Promise<ApiResponse> {
     try {
-      const response = await axios.post<ApiResponse>(
-        `${API_BASE_URL}/newsletter/subscribe`,
-        {
-          email,
-        },
-      );
+      const response = await api.post<ApiResponse>("/newsletter/subscribe", {
+        email,
+      });
       return response.data;
     } catch (error) {
       console.error("Error subscribing to newsletter:", error);
@@ -289,10 +533,6 @@ export const landingPageService = {
 
   /**
    * Submits a contact form message
-   *
-   * @param data - Contact form data including name, email, and message
-   * @returns Promise with success status and message
-   * @throws Error if submission fails
    */
   async submitContactForm(data: {
     name: string;
@@ -300,10 +540,7 @@ export const landingPageService = {
     message: string;
   }): Promise<ApiResponse> {
     try {
-      const response = await axios.post<ApiResponse>(
-        `${API_BASE_URL}/contact/submit`,
-        data,
-      );
+      const response = await api.post<ApiResponse>("/contact/submit", data);
       return response.data;
     } catch (error) {
       console.error("Error submitting contact form:", error);

@@ -1,6 +1,7 @@
 // src/pages/merchant/SettingsPage.tsx
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 import {
   User,
   Building,
@@ -50,7 +51,9 @@ const getUserVerificationStatus = () => {
 };
 
 export const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("profile");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab") || "profile";
+  const activeTab = tabFromUrl;
 
   // Get verification status from token
   const { isVerified, profileStatus } = getUserVerificationStatus();
@@ -176,7 +179,7 @@ export const SettingsPage: React.FC = () => {
                       key={tab.id}
                       onClick={() => {
                         if (!isLocked) {
-                          setActiveTab(tab.id);
+                          setSearchParams({ tab: tab.id });
                         }
                       }}
                       disabled={isLocked}
