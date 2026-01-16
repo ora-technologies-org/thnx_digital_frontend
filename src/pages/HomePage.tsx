@@ -49,29 +49,35 @@ export const HomePage: React.FC = () => {
   const { data: landingData, isLoading, error } = useLandingPageData();
   const { stats: formattedStats } = useFormattedStats();
 
+  // Trigger animations when hero section enters viewport
   const [heroRef, heroInView] = useInView({
-    threshold: 0.2,
-    triggerOnce: true,
+    threshold: 0.2, // Trigger when 20% of element is visible
+    triggerOnce: true, // Only trigger animation once (not on every scroll)
   });
+
+  // Trigger animations when features section enters viewport
   const [featuresRef, featuresInView] = useInView({
     threshold: 0.2,
     triggerOnce: true,
   });
+
+  // Trigger animations when stats section enters viewport
   const [statsRef] = useInView({
     threshold: 0.2,
     triggerOnce: true,
   });
-
   const { scrollY } = useScroll();
   const y1 = useTransform(scrollY, [0, 500], [0, 150]);
   const y2 = useTransform(scrollY, [0, 500], [0, -150]);
 
+  // Handle QR code deep linking from URL parameters
   useEffect(() => {
     const qrFromUrl = searchParams.get("qr");
 
     if (qrFromUrl) {
       console.log("🔍 QR code detected in URL:", qrFromUrl);
 
+      // Redirect authenticated merchants to scan page with QR code
       if (isAuthenticated && user?.role === "MERCHANT") {
         console.log(
           "✅ Authenticated merchant detected, redirecting to scan page",

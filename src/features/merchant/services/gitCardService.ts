@@ -43,7 +43,6 @@ export const giftCardSettingsService = {
 
   // Update existing settings
   updateSettings: async (
-    id: string,
     settings: GiftCardSettingsPayload,
   ): Promise<GiftCardSettingsResponse> => {
     const response = await api.put<GiftCardSettingsResponse>(
@@ -62,19 +61,7 @@ export const giftCardSettingsService = {
 
       console.log("🔍 getSettings response:", response.data);
 
-      if (response.data && typeof response.data === "object") {
-        return {
-          success: true,
-          data: response.data.data || response.data,
-          message: response.data.message,
-        };
-      }
-
-      return {
-        success: true,
-        data: null,
-        message: "Invalid response format",
-      };
+      return response.data; // ✅ Just return it
     } catch (error: unknown) {
       const err = error as ApiError;
 

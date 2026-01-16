@@ -12,7 +12,7 @@ import {
   Download,
   Search,
 } from "lucide-react";
-import { QRRedemptionHistoryItem } from "../services/QRRedemptionHistoryService";
+import { RedemptionHistoryItem } from "../services/QRRedemptionHistoryService";
 
 interface RedemptionHistoryModalProps {
   isOpen: boolean;
@@ -21,7 +21,7 @@ interface RedemptionHistoryModalProps {
   customerName: string;
   isLoading: boolean;
   error: string | null;
-  history: QRRedemptionHistoryItem[];
+  history: RedemptionHistoryItem[];
   onRefresh: () => void;
 }
 
@@ -50,7 +50,8 @@ export const RedemptionHistoryModal: React.FC<RedemptionHistoryModalProps> = ({
     return matchesSearch && matchesStatus;
   });
 
-  const formatCurrency = (amount: string | number) => {
+  const formatCurrency = (amount: string | number | undefined) => {
+    if (amount === undefined || amount === null) return "N/A";
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",

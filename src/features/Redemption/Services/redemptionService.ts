@@ -1,5 +1,6 @@
 import api from "@/shared/utils/api";
 
+// Complete redemption record with full gift card and user details
 export interface RedemptionHistory {
   id: string;
   purchasedGiftCardId: string;
@@ -41,6 +42,7 @@ export interface RedemptionHistory {
   };
 }
 
+// Pagination metadata for list responses
 export interface Pagination {
   total: number;
   page: number;
@@ -48,12 +50,14 @@ export interface Pagination {
   totalPages: number;
 }
 
+// Active filter state
 export interface Filters {
   search: string | null;
   sortBy: string;
   sortOrder: "asc" | "desc";
 }
 
+// Statistical summary of redemptions
 export interface Stats {
   totalRedemptions: number;
   totalRevenue: string;
@@ -62,6 +66,7 @@ export interface Stats {
   pageRevenue: string;
 }
 
+// Complete API response structure
 export interface RedemptionsResponse {
   data: RedemptionHistory[];
   pagination: Pagination;
@@ -69,6 +74,7 @@ export interface RedemptionsResponse {
   stats: Stats;
 }
 
+// Query parameters for filtering and pagination
 export interface FetchRedemptionsParams {
   page?: number;
   limit?: number;
@@ -80,6 +86,7 @@ export interface FetchRedemptionsParams {
 }
 
 export const redemptionService = {
+  // Fetch paginated list of redemptions with optional filtering
   async fetchRedemptions(
     params: FetchRedemptionsParams = {},
   ): Promise<RedemptionsResponse> {
@@ -87,6 +94,7 @@ export const redemptionService = {
     return response.data.data;
   },
 
+  // Export redemptions data as CSV/Excel file
   async exportRedemptions(params: FetchRedemptionsParams = {}): Promise<Blob> {
     const response = await api.get("/purchases/redemptions/export", {
       params,

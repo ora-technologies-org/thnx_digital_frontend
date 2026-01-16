@@ -11,14 +11,7 @@ import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useForgotPassword } from "@/features/merchant/hooks/useForgotPssword";
-
-// OTP must be exactly 6 characters
-const verifyOtpSchema = z.object({
-  otp: z
-    .string()
-    .min(6, "OTP must be at least 6 characters")
-    .max(6, "OTP must be 6 characters"),
-});
+import { verifyOtpSchema } from "@/shared/utils/merchant";
 
 type VerifyOtpFormData = z.infer<typeof verifyOtpSchema>;
 
@@ -148,7 +141,6 @@ export const VerifyOtpPage: React.FC = () => {
                   error={errors.otp?.message}
                   {...register("otp")}
                   className="transition-all focus:scale-[1.02] text-center text-2xl tracking-widest"
-                  icon={<ShieldCheck className="w-5 h-5 text-gray-400" />}
                   maxLength={6}
                 />
               </motion.div>

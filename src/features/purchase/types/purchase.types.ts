@@ -27,3 +27,27 @@ export interface PurchaseResponse {
   createdAt: string;
 }
 
+// ADD THIS NEW INTERFACE:
+export interface PurchasedGiftCard {
+  id: string;
+  qrCode: string;
+  qrCodeImage: string; // Base64 image data
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  currentBalance: number;
+  initialAmount: number;
+  expiresAt: string;
+  isRedeemed: boolean;
+  createdAt: string;
+  giftCard: {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+  };
+  merchant: {
+    id: string;
+    businessName: string;
+  };
+}

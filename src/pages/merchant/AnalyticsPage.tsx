@@ -244,13 +244,13 @@ export const AnalyticsPage: React.FC = () => {
                 <Button
                   variant="outline"
                   onClick={handleExport}
-                  disabled={exportMutation.isLoading}
+                  disabled={exportMutation.isPending}
                   className="flex items-center gap-2 flex-1 md:flex-none"
                   size="sm"
                 >
                   <Download className="w-4 h-4" />
                   <span className="hidden sm:inline">
-                    {exportMutation.isLoading ? "Exporting..." : "Export"}
+                    {exportMutation.isPending ? "Exporting..." : "Export"}
                   </span>
                 </Button>
               </div>

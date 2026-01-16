@@ -1,5 +1,3 @@
-// src/services/landingPage.service.ts
-
 import api from "@/shared/utils/api";
 
 // Types

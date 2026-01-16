@@ -3,9 +3,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'USER' | 'MERCHANT' | 'ADMIN';
+  role: "USER" | "MERCHANT" | "ADMIN";
   isVerified: boolean;
   merchantProfile?: MerchantProfile;
+  isFirstTime?: boolean;
 }
 
 export interface MerchantProfile {

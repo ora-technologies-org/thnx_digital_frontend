@@ -53,6 +53,10 @@ interface EndpointError {
   };
 }
 
+/**
+ * Type guard to validate profile data structure
+ * Ensures all required fields are present and non-empty
+ */
 function isValidProfileData(data: unknown): data is ProfileData {
   if (!data || typeof data !== "object") {
     return false;
@@ -60,6 +64,7 @@ function isValidProfileData(data: unknown): data is ProfileData {
 
   const obj = data as Record<string, unknown>;
 
+  // Required fields for a valid merchant profile
   const requiredFields = [
     "businessName",
     "address",
@@ -78,11 +83,17 @@ function isValidProfileData(data: unknown): data is ProfileData {
   );
 }
 
+/**
+ * Custom hook to fetch merchant profile data
+ * Tries multiple API endpoints in sequence, normalizes response structures,
+ * and handles various error scenarios including 404 (no profile exists)
+ */
 export const useProfileData = () => {
   return useQuery<ProfileData | null>({
     queryKey: ["merchant-profile"],
     queryFn: async (): Promise<ProfileData | null> => {
       try {
+        // Try multiple endpoints in case API structure changes
         const endpoints = ["/auth/me", "/merchants/profile"];
         let lastError: EndpointError | null = null;
 
@@ -99,7 +110,7 @@ export const useProfileData = () => {
 
               let profileData: unknown = response.data;
 
-              // Handle different response structures
+              // Handle API response with success wrapper
               if (
                 typeof profileData === "object" &&
                 profileData !== null &&
@@ -109,7 +120,7 @@ export const useProfileData = () => {
               ) {
                 const data = (profileData as { data: unknown }).data;
 
-                // Check if data has a profile property
+                // Extract profile from nested data.profile
                 if (
                   typeof data === "object" &&
                   data !== null &&
@@ -123,7 +134,7 @@ export const useProfileData = () => {
                 }
               }
 
-              // Handle direct profile response
+              // Handle direct profile property in response
               if (
                 typeof profileData === "object" &&
                 profileData !== null &&
@@ -136,10 +147,11 @@ export const useProfileData = () => {
                 );
               }
 
+              // Validate and process the extracted profile data
               if (isValidProfileData(profileData)) {
                 const formattedData = { ...profileData } as ProfileData;
 
-                // Normalize profileStatus
+                // Normalize profile status to standard values
                 if (formattedData.profileStatus) {
                   const status = formattedData.profileStatus.toLowerCase();
                   if (
@@ -166,7 +178,7 @@ export const useProfileData = () => {
                 return formattedData;
               } else {
                 console.log("❌ Invalid profile data structure:", profileData);
-                // Try to see what we actually got
+                // Diagnostic logging for debugging
                 if (typeof profileData === "object" && profileData !== null) {
                   console.log(
                     "🔍 Actual object keys:",
@@ -178,7 +190,7 @@ export const useProfileData = () => {
                     "businessName" in profileData,
                   );
                 }
-                continue;
+                continue; // Try next endpoint
               }
             }
           } catch (error: unknown) {
@@ -198,6 +210,7 @@ export const useProfileData = () => {
           }
         }
 
+        // Handle 404 specifically as "no profile exists" (not an error)
         if (lastError?.response?.status === 404) {
           console.log("📭 No existing profile found (404)");
           return null;
@@ -207,6 +220,7 @@ export const useProfileData = () => {
       } catch (error: unknown) {
         console.error("❌ Profile fetch error:", error);
 
+        // Gracefully handle missing profiles
         if (error instanceof AxiosError && error.response?.status === 404) {
           console.log("📭 No profile exists - returning null");
           return null;
@@ -218,13 +232,14 @@ export const useProfileData = () => {
         }
 
         console.error("Failed to fetch profile:", error);
-        return null;
+        return null; // Return null instead of throwing to prevent UI crashes
       }
     },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
-    retry: 1,
-    refetchOnWindowFocus: false,
+    // Cache configuration
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    retry: 1, // Single retry for transient failures
+    refetchOnWindowFocus: false, // Prevent refetch on tab focus
   });
 };
 

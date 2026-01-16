@@ -296,6 +296,15 @@ export function useContactMessages() {
 }
 
 // ==================== DASHBOARD DATA TYPES ====================
+
+export interface RecentActivityItem {
+  id: string;
+  type: "new" | "purchase" | "update" | string;
+  merchantName?: string;
+  title?: string;
+  description?: string;
+  timestamp: string;
+}
 export interface DashboardData {
   timeRange: string;
   dateRange: {
@@ -349,6 +358,7 @@ export interface DashboardData {
     count: number;
     percentage: number;
   }>;
+  recentActivity?: RecentActivityItem[];
 }
 
 export interface DashboardResponse {

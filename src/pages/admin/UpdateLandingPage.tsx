@@ -1,78 +1,88 @@
+// src/pages/LandingPageEditor.tsx - LANDING PAGE EDITOR! 📄
+
 import React, { useState, useEffect } from "react";
 import { Edit2, Plus, Trash2, Save } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
-
 import AdminLayout from "@/shared/components/layout/AdminLayout";
 import {
   useLandingPageRedux,
   useUpdateLandingPage,
 } from "@/features/merchant/hooks/useLanding";
 
-const LandingPageEditor = () => {
+import {
+  type SectionItem,
+  type SectionData,
+  getEmptyTemplate,
+  shouldUseTextarea,
+  hasItemsProperty,
+  isArraySection,
+  formatValueForDisplay,
+  shouldExcludeField,
+  capitalize,
+  getItemsFromSection,
+  updateSectionData,
+  deleteItemFromSection,
+} from "@/shared/utils/Landing";
+
+interface EditingState {
+  section: string;
+  index: number | null;
+  isNew?: boolean;
+}
+
+const LandingPageEditor: React.FC = () => {
   const { data: landingData, loading, fetchData } = useLandingPageRedux();
   const { updateSection } = useUpdateLandingPage();
-  const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({});
+  const [editingItem, setEditingItem] = useState<EditingState | null>(null);
+  const [formData, setFormData] = useState<SectionItem>({});
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleEdit = (section, index = null) => {
-    const sectionData = landingData[section];
+  const handleEdit = (section: string, index: number | null = null): void => {
+    if (!landingData) return;
+
+    const sectionData = landingData[section] as SectionData;
 
     // Handle sections with 'items' property (faqs, testimonials)
-    if (sectionData?.items && index !== null) {
+    if (hasItemsProperty(sectionData) && index !== null) {
       setFormData({ ...sectionData.items[index] });
       setEditingItem({ section, index });
-    } else if (Array.isArray(sectionData) && index !== null) {
+    } else if (isArraySection(sectionData) && index !== null) {
       // Handle simple array sections (stats, steps, features)
       setFormData({ ...sectionData[index] });
       setEditingItem({ section, index });
     } else {
       // Handle object sections (hero, contact, etc.)
-      setFormData(typeof sectionData === "object" ? { ...sectionData } : {});
+      setFormData(
+        typeof sectionData === "object" && sectionData !== null
+          ? { ...(sectionData as SectionItem) }
+          : {},
+      );
       setEditingItem({ section, index: null });
     }
   };
 
-  const handleAdd = (section) => {
-    const template = getEmptyTemplate(section);
+  const handleAdd = (section: string): void => {
+    if (!landingData) return;
+
+    const sectionData = landingData[section] as SectionData;
+    const currentLength = getItemsFromSection(sectionData).length;
+    const template = getEmptyTemplate(section, currentLength);
+
     setFormData(template);
     setEditingItem({ section, index: null, isNew: true });
   };
 
-  const handleSave = async () => {
-    const { section, index, isNew } = editingItem;
-    const sectionData = landingData[section];
+  const handleSave = async (): Promise<void> => {
+    if (!editingItem || !landingData) return;
 
-    let updatedData;
+    const { section, index, isNew = false } = editingItem;
+    const sectionData = landingData[section] as SectionData;
 
-    // Handle sections with 'items' property (faqs, testimonials)
-    if (sectionData?.items) {
-      const updatedItems = [...sectionData.items];
-      if (isNew) {
-        updatedItems.push(formData);
-      } else {
-        updatedItems[index] = formData;
-      }
-      updatedData = {
-        ...sectionData,
-        items: updatedItems,
-      };
-    } else if (Array.isArray(sectionData)) {
-      // Handle simple array sections
-      updatedData = [...sectionData];
-      if (isNew) {
-        updatedData.push(formData);
-      } else {
-        updatedData[index] = formData;
-      }
-    } else {
-      // Handle object sections
-      updatedData = formData;
-    }
+    const updatedData = updateSectionData(sectionData, formData, index, isNew);
 
     const success = await updateSection({ section, data: updatedData });
 
@@ -82,75 +92,73 @@ const LandingPageEditor = () => {
     }
   };
 
-  const handleDelete = async (section, index) => {
+  const handleDelete = async (
+    section: string,
+    index: number,
+  ): Promise<void> => {
     if (!confirm("Are you sure you want to delete this item?")) return;
+    if (!landingData) return;
 
-    const sectionData = landingData[section];
+    const sectionData = landingData[section] as SectionData;
+    const updatedData = deleteItemFromSection(sectionData, index);
 
-    // Handle sections with 'items' property
-    if (sectionData?.items) {
-      const updatedItems = sectionData.items.filter((_, i) => i !== index);
-      await updateSection({
-        section,
-        data: { ...sectionData, items: updatedItems },
-      });
-    } else {
-      // Handle simple array sections
-      const updatedArray = sectionData.filter((_, i) => i !== index);
-      await updateSection({ section, data: updatedArray });
-    }
+    await updateSection({ section, data: updatedData });
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: string, value: string): void => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNestedInputChange = (parentField, childField, value) => {
+  const handleNestedInputChange = (
+    parentField: string,
+    childField: string,
+    value: string,
+  ): void => {
     setFormData((prev) => ({
       ...prev,
-      [parentField]: { ...prev[parentField], [childField]: value },
+      [parentField]: {
+        ...(prev[parentField] as Record<string, unknown>),
+        [childField]: value,
+      },
     }));
   };
 
-  const handleArrayInputChange = (field, index, value) => {
+  const handleArrayInputChange = (
+    field: string,
+    index: number,
+    value: string,
+  ): void => {
     setFormData((prev) => {
-      const newArray = [...(prev[field] || [])];
+      const currentArray = prev[field];
+      const newArray = Array.isArray(currentArray) ? [...currentArray] : [];
       newArray[index] = value;
       return { ...prev, [field]: newArray };
     });
   };
 
-  const addArrayItem = (field) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: [...(prev[field] || []), ""],
-    }));
+  const addArrayItem = (field: string): void => {
+    setFormData((prev) => {
+      const currentArray = prev[field];
+      const newArray = Array.isArray(currentArray) ? [...currentArray] : [];
+      return { ...prev, [field]: [...newArray, ""] };
+    });
   };
 
-  const removeArrayItem = (field, index) => {
+  const removeArrayItem = (field: string, index: number): void => {
     setFormData((prev) => {
-      const newArray = [...prev[field]];
+      const currentArray = prev[field];
+      if (!Array.isArray(currentArray)) return prev;
+
+      const newArray = [...currentArray];
       newArray.splice(index, 1);
       return { ...prev, [field]: newArray };
     });
   };
 
-  const getEmptyTemplate = (section) => {
-    const templates = {
-      faqs: { question: "", answer: "" },
-      testimonials: { name: "", role: "", message: "" },
-      steps: {
-        step: (landingData?.steps?.length || 0) + 1,
-        title: "",
-        description: "",
-      },
-      features: { title: "", description: "", points: [""] },
-      stats: { label: "", value: "" },
-    };
-    return templates[section] || {};
-  };
-
-  const renderFormField = (key, value) => {
+  const renderFormField = (
+    key: string,
+    value: unknown,
+  ): React.ReactNode | null => {
     if (key === "step" || key === "items") return null;
 
     if (Array.isArray(value)) {
@@ -160,7 +168,7 @@ const LandingPageEditor = () => {
             {key}
           </label>
           <div className="space-y-2">
-            {value.map((item, idx) => (
+            {value.map((item: string, idx: number) => (
               <div key={idx} className="flex gap-2">
                 <input
                   type="text"
@@ -202,29 +210,30 @@ const LandingPageEditor = () => {
             {key}
           </label>
           <div className="space-y-3">
-            {Object.entries(value).map(([subKey, subValue]) => (
-              <div key={subKey}>
-                <label className="block text-xs font-medium mb-1 text-gray-600 capitalize">
-                  {subKey}
-                </label>
-                <input
-                  type="text"
-                  value={subValue}
-                  onChange={(e) =>
-                    handleNestedInputChange(key, subKey, e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                />
-              </div>
-            ))}
+            {Object.entries(value as Record<string, unknown>).map(
+              ([subKey, subValue]) => (
+                <div key={subKey}>
+                  <label className="block text-xs font-medium mb-1 text-gray-600 capitalize">
+                    {subKey}
+                  </label>
+                  <input
+                    type="text"
+                    value={String(subValue)}
+                    onChange={(e) =>
+                      handleNestedInputChange(key, subKey, e.target.value)
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  />
+                </div>
+              ),
+            )}
           </div>
         </div>
       );
     }
 
-    const isTextArea = ["description", "message", "subtitle", "answer"].some(
-      (k) => key.includes(k),
-    );
+    const isTextArea = shouldUseTextarea(key);
+    const stringValue = String(value ?? "");
 
     return (
       <div key={key} className="mb-4">
@@ -233,7 +242,7 @@ const LandingPageEditor = () => {
         </label>
         {isTextArea ? (
           <textarea
-            value={value}
+            value={stringValue}
             onChange={(e) => handleInputChange(key, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
             rows={4}
@@ -242,7 +251,7 @@ const LandingPageEditor = () => {
         ) : (
           <input
             type="text"
-            value={value}
+            value={stringValue}
             onChange={(e) => handleInputChange(key, e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
             placeholder={`Enter ${key}...`}
@@ -253,7 +262,12 @@ const LandingPageEditor = () => {
   };
 
   // Render sections with 'items' property (faqs, testimonials)
-  const renderItemsSection = (sectionName, sectionData) => {
+  const renderItemsSection = (
+    sectionName: string,
+    sectionData: SectionData,
+  ): React.ReactNode => {
+    if (!hasItemsProperty(sectionData)) return null;
+
     const items = sectionData.items || [];
 
     return (
@@ -291,7 +305,7 @@ const LandingPageEditor = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {items.map((item, index) => (
+              {items.map((item: SectionItem, index: number) => (
                 <div
                   key={index}
                   className="group border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
@@ -304,13 +318,7 @@ const LandingPageEditor = () => {
                             {key}:{" "}
                           </span>
                           <span className="text-gray-600">
-                            {Array.isArray(value)
-                              ? value.join(", ")
-                              : typeof value === "object"
-                                ? Object.entries(value)
-                                    .map(([k, v]) => `${k}: ${v}`)
-                                    .join(", ")
-                                : value}
+                            {formatValueForDisplay(value)}
                           </span>
                         </div>
                       ))}
@@ -341,7 +349,12 @@ const LandingPageEditor = () => {
     );
   };
 
-  const renderArraySection = (sectionName, sectionData) => {
+  const renderArraySection = (
+    sectionName: string,
+    sectionData: SectionData,
+  ): React.ReactNode => {
+    if (!isArraySection(sectionData)) return null;
+
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -360,7 +373,7 @@ const LandingPageEditor = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {sectionData.map((item, index) => (
+              {sectionData.map((item: SectionItem, index: number) => (
                 <div
                   key={index}
                   className="group border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
@@ -373,13 +386,7 @@ const LandingPageEditor = () => {
                             {key}:{" "}
                           </span>
                           <span className="text-gray-600">
-                            {Array.isArray(value)
-                              ? value.join(", ")
-                              : typeof value === "object"
-                                ? Object.entries(value)
-                                    .map(([k, v]) => `${k}: ${v}`)
-                                    .join(", ")
-                                : value}
+                            {formatValueForDisplay(value)}
                           </span>
                         </div>
                       ))}
@@ -410,7 +417,12 @@ const LandingPageEditor = () => {
     );
   };
 
-  const renderObjectSection = (sectionName, sectionData) => {
+  const renderObjectSection = (
+    sectionName: string,
+    sectionData: SectionData,
+  ): React.ReactNode => {
+    if (typeof sectionData !== "object" || sectionData === null) return null;
+
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
@@ -425,7 +437,7 @@ const LandingPageEditor = () => {
         <div className="p-6">
           <div className="space-y-3">
             {Object.entries(sectionData)
-              .filter(([key]) => key !== "items") // Exclude items from display
+              .filter(([key]) => !shouldExcludeField(key))
               .map(([key, value]) => {
                 if (
                   typeof value === "object" &&
@@ -441,22 +453,21 @@ const LandingPageEditor = () => {
                         {key}
                       </h4>
                       <div className="space-y-1 pl-3">
-                        {Object.entries(value).map(([subKey, subValue]) => (
-                          <div
-                            key={subKey}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <span className="font-medium text-gray-600 capitalize">
-                              {subKey}:
-                            </span>
-                            <span className="text-gray-800">
-                              {typeof subValue === "string" ||
-                              typeof subValue === "number"
-                                ? subValue
-                                : JSON.stringify(subValue)}
-                            </span>
-                          </div>
-                        ))}
+                        {Object.entries(value as Record<string, unknown>).map(
+                          ([subKey, subValue]) => (
+                            <div
+                              key={subKey}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <span className="font-medium text-gray-600 capitalize">
+                                {subKey}:
+                              </span>
+                              <span className="text-gray-800">
+                                {formatValueForDisplay(subValue)}
+                              </span>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </div>
                   );
@@ -472,14 +483,12 @@ const LandingPageEditor = () => {
                         {key}
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {value.map((item, idx) => (
+                        {value.map((item: unknown, idx: number) => (
                           <span
                             key={idx}
                             className="px-3 py-1 bg-white border border-gray-300 rounded-full text-sm text-gray-700"
                           >
-                            {typeof item === "object"
-                              ? JSON.stringify(item)
-                              : item}
+                            {formatValueForDisplay(item)}
                           </span>
                         ))}
                       </div>
@@ -497,9 +506,7 @@ const LandingPageEditor = () => {
                         {key}
                       </span>
                       <p className="text-gray-800 mt-0.5">
-                        {typeof value === "string" || typeof value === "number"
-                          ? value
-                          : JSON.stringify(value)}
+                        {formatValueForDisplay(value)}
                       </p>
                     </div>
                   </div>
@@ -551,7 +558,7 @@ const LandingPageEditor = () => {
               setEditingItem(null);
               setFormData({});
             }}
-            title={`${editingItem?.isNew ? "Add" : "Edit"} ${editingItem?.section}`}
+            title={`${editingItem?.isNew ? "Add" : "Edit"} ${capitalize(editingItem?.section || "")}`}
             size="lg"
           >
             <div className="space-y-1">
@@ -579,18 +586,29 @@ const LandingPageEditor = () => {
 
           <div className="space-y-6">
             {Object.entries(landingData)
-              .filter(([key]) => !["rawStats"].includes(key))
+              .filter(([key]) => !shouldExcludeField(key))
               .map(([key, value]) => {
+                const sectionData = value as SectionData;
+
                 // Sections with 'items' property
-                if (value?.items && ["faqs", "testimonials"].includes(key)) {
-                  return <div key={key}>{renderItemsSection(key, value)}</div>;
+                if (
+                  hasItemsProperty(sectionData) &&
+                  ["faqs", "testimonials"].includes(key)
+                ) {
+                  return (
+                    <div key={key}>{renderItemsSection(key, sectionData)}</div>
+                  );
                 }
                 // Simple array sections
-                if (Array.isArray(value)) {
-                  return <div key={key}>{renderArraySection(key, value)}</div>;
+                if (isArraySection(sectionData)) {
+                  return (
+                    <div key={key}>{renderArraySection(key, sectionData)}</div>
+                  );
                 }
                 // Object sections
-                return <div key={key}>{renderObjectSection(key, value)}</div>;
+                return (
+                  <div key={key}>{renderObjectSection(key, sectionData)}</div>
+                );
               })}
           </div>
         </div>

@@ -107,7 +107,6 @@ const MerchantDetailsModal: React.FC<{
         return null;
     }
   };
-
   const isVerified = currentMerchant.profileStatus === "VERIFIED";
 
   return (

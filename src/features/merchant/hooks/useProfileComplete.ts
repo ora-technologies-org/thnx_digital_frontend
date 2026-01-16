@@ -39,7 +39,7 @@ interface FormDataEntry {
   isEdit: boolean;
   profileId?: string | number;
 }
-
+// Custom hook for submitting or updating merchant profile
 export const useSubmitProfile = () => {
   const queryClient = useQueryClient();
 

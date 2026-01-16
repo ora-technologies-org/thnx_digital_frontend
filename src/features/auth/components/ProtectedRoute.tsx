@@ -53,13 +53,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       fullLocation: location,
     });
 
-    return (
-      <Navigate
-        to="/login"
-        state={{ from: location }} // 👈 THIS IS CRITICAL
-        replace
-      />
-    );
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Check role if required

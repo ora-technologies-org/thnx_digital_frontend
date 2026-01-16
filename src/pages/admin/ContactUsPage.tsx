@@ -5,16 +5,31 @@ import { ContactMessage } from "@/features/admin/services/contactusService";
 import { useState } from "react";
 import { Spinner } from "@/shared/components/ui/Spinner";
 
+/**
+ * ContactUsPage Component
+ *
+ * Displays all contact form submissions from users with detailed information
+ * and allows viewing full message content in a modal.
+ */
 export default function ContactUsPage() {
   const { data, isLoading, error } = useContactMessages();
 
   // Handle different response structures
-  const messages = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.messages)
-      ? data.messages
-      : [];
+  // The API might return data directly as array or wrapped in an object with 'messages' property
+  const messages: ContactMessage[] = (() => {
+    if (Array.isArray(data)) {
+      return data;
+    }
+    if (data && typeof data === "object" && "messages" in data) {
+      const messagesData = (data as { messages?: unknown }).messages;
+      if (Array.isArray(messagesData)) {
+        return messagesData as ContactMessage[];
+      }
+    }
+    return [];
+  })();
 
+  // Loading state
   if (isLoading) {
     return (
       <AdminLayout>
@@ -25,6 +40,7 @@ export default function ContactUsPage() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <AdminLayout>
@@ -46,6 +62,7 @@ export default function ContactUsPage() {
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
+          {/* Page Header */}
           <div className="mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
               Contact Messages
@@ -65,6 +82,7 @@ export default function ContactUsPage() {
             </div>
           </div>
 
+          {/* Messages List or Empty State */}
           {messages.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm p-8 sm:p-12 text-center">
               <MessageSquare className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
@@ -88,14 +106,30 @@ export default function ContactUsPage() {
   );
 }
 
+/**
+ * Props for ContactCard component
+ */
 interface ContactCardProps {
   message: ContactMessage;
 }
 
+/**
+ * ContactCard Component
+ *
+ * Displays a single contact message card with preview
+ * and expandable modal for full message content.
+ *
+ * @param message - The contact message data to display
+ */
 function ContactCard({ message }: ContactCardProps) {
   const [showFullMessage, setShowFullMessage] = useState(false);
 
-  const getStatusColor = (status?: string) => {
+  /**
+   * Returns appropriate color classes based on message status
+   * @param status - The status of the message (new, read, replied)
+   * @returns Tailwind CSS classes for status badge styling
+   */
+  const getStatusColor = (status?: string): string => {
     switch (status) {
       case "new":
         return "bg-green-100 text-green-800";
@@ -110,7 +144,9 @@ function ContactCard({ message }: ContactCardProps) {
 
   return (
     <>
+      {/* Message Card */}
       <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 p-4 sm:p-6 border border-gray-200">
+        {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -143,6 +179,7 @@ function ContactCard({ message }: ContactCardProps) {
           )}
         </div>
 
+        {/* Contact Information */}
         <div className="space-y-2 mb-4">
           <div className="flex items-center gap-2 text-gray-700 min-w-0">
             <Mail className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -170,6 +207,14 @@ function ContactCard({ message }: ContactCardProps) {
         <div
           className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
           onClick={() => setShowFullMessage(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setShowFullMessage(true);
+            }
+          }}
         >
           <div className="flex items-start gap-2 mb-2">
             <MessageSquare className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
@@ -193,11 +238,20 @@ function ContactCard({ message }: ContactCardProps) {
           <div
             className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
             onClick={() => setShowFullMessage(false)}
+            role="button"
+            tabIndex={0}
+            aria-label="Close modal"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setShowFullMessage(false);
+              }
+            }}
           />
 
           {/* Modal panel */}
           <div className="relative bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              {/* Modal Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -215,12 +269,15 @@ function ContactCard({ message }: ContactCardProps) {
                 <button
                   onClick={() => setShowFullMessage(false)}
                   className="text-gray-400 hover:text-gray-500 flex-shrink-0"
+                  aria-label="Close modal"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
+              {/* Modal Content */}
               <div className="space-y-4">
+                {/* Contact Information Section */}
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-1">
                     Contact Information
@@ -249,6 +306,7 @@ function ContactCard({ message }: ContactCardProps) {
                   </div>
                 </div>
 
+                {/* Submission Date Section */}
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-1">
                     Submitted On
@@ -266,6 +324,7 @@ function ContactCard({ message }: ContactCardProps) {
                   </div>
                 </div>
 
+                {/* Full Message Section */}
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
@@ -280,6 +339,7 @@ function ContactCard({ message }: ContactCardProps) {
               </div>
             </div>
 
+            {/* Modal Footer */}
             <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
               <button
                 type="button"

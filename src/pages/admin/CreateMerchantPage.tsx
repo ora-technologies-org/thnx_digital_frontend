@@ -33,13 +33,16 @@ import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
 
+// Types
 interface ValidationErrorItem {
   message?: string;
   field?: keyof CreateMerchantForm;
 }
+
 interface ValidationError {
   errors: Array<ValidationErrorItem | string>;
 }
+
 type FieldValue = string | number | boolean | File | null | undefined;
 
 interface CreateMerchantForm {
@@ -72,11 +75,16 @@ interface CreateMerchantForm {
   identityDocument?: File | string;
 }
 
+// Update ApiResponse interface to match CreateMerchantResponse
 interface ApiResponse {
   success: boolean;
   message: string;
   data?: {
-    user: {
+    merchantId?: string;
+    email?: string;
+    name?: string;
+    businessName?: string;
+    user?: {
       id: string;
       email: string;
       name: string;
@@ -104,12 +112,7 @@ interface ResponseModalData {
   type: "success" | "error" | "info";
   title: string;
   message: string;
-  details?: {
-    merchantId?: string;
-    email?: string;
-    name?: string;
-    businessName?: string;
-  };
+  details?: Record<string, unknown>; // Use Record<string, unknown> instead of specific type
   onConfirm?: () => void;
   confirmText?: string;
 }
@@ -493,7 +496,7 @@ const FileField: React.FC<{
   );
 };
 
-// Validation function
+// Validation function - validates individual form fields
 const validateField = (
   name: keyof CreateMerchantForm,
   value: FieldValue,
@@ -536,7 +539,7 @@ const validateField = (
   return null;
 };
 
-// Helper function to extract error messages
+// Helper function to extract error messages from API responses
 const extractErrorMessage = (
   error: unknown,
 ): { title: string; message: string; details?: Record<string, unknown> } => {
@@ -548,15 +551,15 @@ const extractErrorMessage = (
   };
 
   if (typeof error === "object" && error !== null) {
-    // Type the error object properly
     const errorObj = error as Record<string, unknown>;
 
-    // 1. Check for errors array in the error object (your API format)
+    // Check for errors array in the error object
     if (errorObj.errors && Array.isArray(errorObj.errors)) {
       console.log("Found errors array in error object:", errorObj.errors);
 
       // Create summary message for modal
-      const validationError = errorObj as ValidationError;
+      // Type assertion for ValidationError to handle API response format
+      const validationError = errorObj as unknown as ValidationError;
       const errorMessages = validationError.errors.map((err) =>
         typeof err === "object" && "message" in err && err.message
           ? err.message
@@ -572,7 +575,7 @@ const extractErrorMessage = (
       };
     }
 
-    // 2. Check for Axios response data
+    // Check for Axios response data
     if (errorObj.response && typeof errorObj.response === "object") {
       const responseData = (errorObj.response as { data?: unknown }).data;
       if (responseData && typeof responseData === "object") {
@@ -582,8 +585,9 @@ const extractErrorMessage = (
         if (responseObj.errors && Array.isArray(responseObj.errors)) {
           console.log("Found errors array in response:", responseObj.errors);
 
-          // Create summary message for modal
-          const errorMessages = responseObj.errors.map((err: unknown) =>
+          // Type assertion for ValidationError to handle API response format
+          const validationError = responseObj as unknown as ValidationError;
+          const errorMessages = validationError.errors.map((err: unknown) =>
             typeof err === "object" && (err as { message?: string }).message
               ? (err as { message: string }).message
               : String(err),
@@ -593,7 +597,7 @@ const extractErrorMessage = (
           return {
             title: "Validation Failed",
             message: errorMessage,
-            details: { errors: responseObj.errors },
+            details: { errors: validationError.errors },
           };
         }
 
@@ -602,13 +606,13 @@ const extractErrorMessage = (
           return {
             title: "Operation Failed",
             message: responseObj.message,
-            details: responseData,
+            details: responseObj as Record<string, unknown>,
           };
         }
       }
     }
 
-    // 3. Direct message
+    // Direct message from error object
     if (typeof errorObj.message === "string") {
       return {
         title: "Error",
@@ -616,7 +620,7 @@ const extractErrorMessage = (
       };
     }
 
-    // Generic error
+    // Generic Error object
     if (error instanceof Error) {
       return {
         title: "Error",
@@ -635,15 +639,18 @@ export const CreateMerchantPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const isEditMode = !!id;
+  const isEditMode = !!id; // Determine if we're in edit mode
 
+  // Get form data and errors from Redux store
   const formData = useSelector((state: RootState) => state.merchant.formData);
   const errors = useSelector((state: RootState) => state.merchant.errors);
 
+  // API mutation hooks
   const { mutate: createMerchant, isPending: isCreating } = useCreateMerchant();
   const { mutate: updateMerchant, isPending: isUpdating } = useUpdateMerchant();
   const isPending = isCreating || isUpdating;
 
+  // State for modal and form tracking
   const [responseModal, setResponseModal] = useState<ResponseModalData>({
     isOpen: false,
     type: "success",
@@ -656,7 +663,7 @@ export const CreateMerchantPage: React.FC = () => {
     Set<keyof CreateMerchantForm>
   >(new Set());
 
-  // Calculate missing fields
+  // Calculate missing fields count for validation summary
   const missingFieldCount = useMemo(() => {
     let count = 0;
 
@@ -695,14 +702,14 @@ export const CreateMerchantPage: React.FC = () => {
     return count;
   }, [formData, isEditMode]);
 
-  // Effects
+  // Clean up form on unmount
   useEffect(() => {
     return () => {
       dispatch(resetForm());
     };
   }, [dispatch]);
 
-  // Handlers
+  // Handle field blur event for validation
   const handleFieldBlur = useCallback(
     (fieldName: keyof CreateMerchantForm) => {
       setTouchedFields((prev) => new Set(prev).add(fieldName));
@@ -714,10 +721,8 @@ export const CreateMerchantPage: React.FC = () => {
         const error = validateField(fieldName, value, rule);
 
         if (!error) {
-          // Clear just this field's error
           dispatch(setError({ field: fieldName, message: "" }));
         } else if (error !== errors[fieldName]) {
-          // Update error if it's different
           dispatch(setError({ field: fieldName, message: error }));
         }
       } else {
@@ -734,8 +739,8 @@ export const CreateMerchantPage: React.FC = () => {
     [dispatch, formData, errors],
   );
 
+  // Scroll to first missing field for better UX
   const scrollToMissingField = useCallback(() => {
-    // Find all missing fields
     const missingFields: { field: string; element: HTMLElement | null }[] = [];
 
     Object.entries(validationRules).forEach(([field, rule]) => {
@@ -753,7 +758,6 @@ export const CreateMerchantPage: React.FC = () => {
       }
     });
 
-    // Scroll to first missing field
     if (missingFields.length > 0) {
       missingFields[0].element?.scrollIntoView({
         behavior: "smooth",
@@ -761,7 +765,7 @@ export const CreateMerchantPage: React.FC = () => {
       });
       missingFields[0].element?.focus();
 
-      // Highlight all missing fields
+      // Highlight all missing fields temporarily
       missingFields.forEach(({ field }) => {
         const element = document.querySelector(`[name="${field}"]`);
         if (element) {
@@ -774,6 +778,7 @@ export const CreateMerchantPage: React.FC = () => {
     }
   }, [formData]);
 
+  // Open response modal helper function
   const openResponseModal = (
     type: "success" | "error" | "info",
     title: string,
@@ -791,15 +796,17 @@ export const CreateMerchantPage: React.FC = () => {
     });
   };
 
+  // Close response modal
   const closeResponseModal = () => {
     setResponseModal((prev) => ({ ...prev, isOpen: false }));
   };
 
+  // Handle form submission
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      // Mark all fields as touched
+      // Mark all fields as touched for validation
       const allFields = Object.keys(validationRules) as Array<
         keyof CreateMerchantForm
       >;
@@ -811,6 +818,7 @@ export const CreateMerchantPage: React.FC = () => {
       Object.entries(validationRules).forEach(([field, rule]) => {
         const fieldName = field as keyof CreateMerchantForm;
 
+        // Skip validation for optional fields in edit mode
         if (isEditMode && field === "password" && !formData.password) {
           return;
         }
@@ -833,9 +841,8 @@ export const CreateMerchantPage: React.FC = () => {
         }
       });
 
-      // If there are validation errors, scroll to first one and show message
+      // Handle validation errors
       if (Object.keys(validationErrors).length > 0) {
-        // Set errors in Redux
         Object.entries(validationErrors).forEach(([field, error]) => {
           dispatch(
             setError({
@@ -845,12 +852,10 @@ export const CreateMerchantPage: React.FC = () => {
           );
         });
 
-        // Scroll to first error
         setTimeout(() => {
           scrollToMissingField();
         }, 100);
 
-        // Show modal with guidance
         openResponseModal(
           "info",
           "Complete Required Fields",
@@ -859,32 +864,37 @@ export const CreateMerchantPage: React.FC = () => {
         return;
       }
 
-      // Clear any previous errors
+      // Clear previous errors
       dispatch(clearErrors());
 
-      // Submit form
+      // Submit form based on mode
       if (isEditMode) {
         updateMerchant(
           { merchantId: id!, formData },
           {
-            onSuccess: (response: ApiResponse) => {
-              openResponseModal("success", "Success", response.message, () => {
-                dispatch(resetForm());
-                navigate("/admin/merchants");
-              });
+            onSuccess: (response: unknown) => {
+              // Type assertion to handle API response format
+              const apiResponse = response as ApiResponse;
+              openResponseModal(
+                "success",
+                "Success",
+                apiResponse.message,
+                () => {
+                  dispatch(resetForm());
+                  navigate("/admin/merchants");
+                },
+              );
             },
-            // In your handleSubmit function, update the error handler with detailed logging:
             onError: (error: unknown) => {
               const errorDetails = extractErrorMessage(error);
 
-              // Show modal with summary
               openResponseModal(
                 "error",
                 errorDetails.title,
                 errorDetails.message,
               );
 
-              // Scroll to first error field
+              // Scroll to first error field if available
               if (
                 errorDetails.details?.errors &&
                 Array.isArray(errorDetails.details.errors)
@@ -907,7 +917,6 @@ export const CreateMerchantPage: React.FC = () => {
                       });
                       (element as HTMLElement).focus();
 
-                      // Highlight the field
                       element.classList.add("border-red-500", "bg-red-50");
                       setTimeout(() => {
                         element.classList.remove("border-red-500", "bg-red-50");
@@ -921,8 +930,10 @@ export const CreateMerchantPage: React.FC = () => {
         );
       } else {
         createMerchant(formData, {
-          onSuccess: (response: ApiResponse) => {
-            openResponseModal("success", "Success", response.message, () => {
+          onSuccess: (response: unknown) => {
+            // Type assertion to handle API response format
+            const apiResponse = response as ApiResponse;
+            openResponseModal("success", "Success", apiResponse.message, () => {
               dispatch(resetForm());
               navigate("/admin/merchants");
             });
@@ -977,6 +988,7 @@ export const CreateMerchantPage: React.FC = () => {
     ],
   );
 
+  // Handle back navigation with unsaved changes warning
   const handleBack = useCallback(() => {
     const hasUnsavedChanges = Object.keys(formData).some(
       (key) => formData[key as keyof CreateMerchantForm],
@@ -998,7 +1010,7 @@ export const CreateMerchantPage: React.FC = () => {
     }
   }, [formData, dispatch, navigate]);
 
-  // Helper functions for form fields
+  // Form field change handlers
   const handleInputChange = useCallback(
     (field: keyof CreateMerchantForm, value: string) => {
       dispatch(setField({ field, value }));
@@ -1017,7 +1029,7 @@ export const CreateMerchantPage: React.FC = () => {
     <AdminLayout>
       <div className="min-h-screen bg-gray-50">
         <div className="p-6 max-w-4xl mx-auto">
-          {/* Header */}
+          {/* Header Section */}
           <div className="mb-8">
             <button
               onClick={handleBack}
@@ -1050,14 +1062,14 @@ export const CreateMerchantPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Form */}
+          {/* Form Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Personal Information */}
+              {/* Personal Information Section */}
               <FormSection title="Personal Information" icon={User}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField
@@ -1114,7 +1126,7 @@ export const CreateMerchantPage: React.FC = () => {
                 </div>
               </FormSection>
 
-              {/* Gift Card Limit (Edit only) */}
+              {/* Gift Card Limit Section (Edit mode only) */}
               {isEditMode && (
                 <FormSection title="Gift Card Settings" icon={Gift}>
                   <div className="max-w-xs">
@@ -1141,7 +1153,7 @@ export const CreateMerchantPage: React.FC = () => {
                 </FormSection>
               )}
 
-              {/* Documents */}
+              {/* Business Documents Section */}
               <FormSection title="Business Documents" icon={FileText}>
                 <div className="space-y-4">
                   <FileField
@@ -1211,7 +1223,7 @@ export const CreateMerchantPage: React.FC = () => {
                 </div>
               </FormSection>
 
-              {/* Business Information */}
+              {/* Business Information Section */}
               <FormSection title="Business Information" icon={Building}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField
@@ -1332,7 +1344,7 @@ export const CreateMerchantPage: React.FC = () => {
                 />
               </FormSection>
 
-              {/* Banking Information */}
+              {/* Banking Information Section */}
               <FormSection title="Banking Information" icon={CreditCard}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField
@@ -1397,7 +1409,7 @@ export const CreateMerchantPage: React.FC = () => {
                 </div>
               </FormSection>
 
-              {/* Location Information */}
+              {/* Location Information Section */}
               <FormSection title="Location Information" icon={MapPin}>
                 <div className="space-y-4">
                   <InputField
@@ -1459,7 +1471,7 @@ export const CreateMerchantPage: React.FC = () => {
                 </div>
               </FormSection>
 
-              {/* Submit Section */}
+              {/* Form Submission Section */}
               <div className="pt-6 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-600">
@@ -1554,4 +1566,5 @@ export const CreateMerchantPage: React.FC = () => {
     </AdminLayout>
   );
 };
+
 export default CreateMerchantPage;

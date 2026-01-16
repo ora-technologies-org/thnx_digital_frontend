@@ -1,39 +1,22 @@
+// src/pages/ChangePasswordPage.tsx - CHANGE PASSWORD PAGE! 🔐
+
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, CheckCircle, Shield, Eye, EyeOff, Check } from "lucide-react";
+import { CheckCircle, Shield, Eye, EyeOff, Check } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
-
 import { useChangePassword } from "@/features/merchant/hooks/usechangePassword";
 
-// Password validation with strength requirements
-const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  })
-  .refine((data) => data.currentPassword !== data.newPassword, {
-    message: "New password must be different from current password",
-    path: ["newPassword"],
-  });
-
-type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+import {
+  changePasswordSchema,
+  passwordRequirements,
+  type ChangePasswordFormData,
+} from "@/shared/utils/merchant";
 
 /**
  * Change password page for authenticated users
@@ -51,26 +34,6 @@ export const ChangePasswordPage: React.FC = () => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [newPasswordValue, setNewPasswordValue] = useState("");
-
-  // Password strength requirements for visual feedback
-  const requirements = [
-    {
-      label: "At least 8 characters long",
-      test: (pwd: string) => pwd.length >= 8,
-    },
-    {
-      label: "Contains at least one uppercase letter",
-      test: (pwd: string) => /[A-Z]/.test(pwd),
-    },
-    {
-      label: "Contains at least one lowercase letter",
-      test: (pwd: string) => /[a-z]/.test(pwd),
-    },
-    {
-      label: "Contains at least one number",
-      test: (pwd: string) => /[0-9]/.test(pwd),
-    },
-  ];
 
   const {
     register,
@@ -201,7 +164,6 @@ export const ChangePasswordPage: React.FC = () => {
                     error={errors.currentPassword?.message}
                     {...register("currentPassword")}
                     className="transition-all focus:scale-[1.02] pr-12"
-                    icon={<Lock className="w-5 h-5 text-gray-400" />}
                   />
                   <button
                     type="button"
@@ -230,7 +192,6 @@ export const ChangePasswordPage: React.FC = () => {
                     error={errors.newPassword?.message}
                     {...register("newPassword")}
                     className="transition-all focus:scale-[1.02] pr-12"
-                    icon={<Lock className="w-5 h-5 text-gray-400" />}
                   />
                   <button
                     type="button"
@@ -259,7 +220,6 @@ export const ChangePasswordPage: React.FC = () => {
                     error={errors.confirmPassword?.message}
                     {...register("confirmPassword")}
                     className="transition-all focus:scale-[1.02] pr-12"
-                    icon={<Lock className="w-5 h-5 text-gray-400" />}
                   />
                   <button
                     type="button"
@@ -283,7 +243,7 @@ export const ChangePasswordPage: React.FC = () => {
                 >
                   <p className="font-medium mb-3">New password requirements:</p>
                   <ul className="space-y-2">
-                    {requirements.map((req, index) => {
+                    {passwordRequirements.map((req, index) => {
                       const isMet = req.test(newPasswordValue);
                       return (
                         <motion.li

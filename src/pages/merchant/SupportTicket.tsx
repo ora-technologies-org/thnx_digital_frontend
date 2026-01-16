@@ -4,11 +4,12 @@ import { Send, Loader2, HelpCircle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
 import { Card } from "@/shared/components/ui/Card";
-import { Modal } from "@/shared/components/ui/Modal"; // Import the Modal component
+import { Modal } from "@/shared/components/ui/Modal";
 import { createSupportTicket } from "@/features/giftCards/services/SuportTicketService";
 import { DashboardLayout } from "@/shared/components/layout/DashboardLayout";
 
 export const SupportTicketPage: React.FC = () => {
+  // Form state management
   const [formData, setFormData] = useState({
     title: "",
     query: "",
@@ -19,6 +20,7 @@ export const SupportTicketPage: React.FC = () => {
   }>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  // Handle ticket submission with success/error states
   const mutation = useMutation({
     mutationFn: createSupportTicket,
     onSuccess: () => {
@@ -38,6 +40,7 @@ export const SupportTicketPage: React.FC = () => {
     },
   });
 
+  // Validate form fields before submission
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
 
@@ -57,6 +60,7 @@ export const SupportTicketPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Clear errors as user types
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {

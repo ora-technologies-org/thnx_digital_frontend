@@ -12,34 +12,7 @@ import {
   X,
   CheckCircle,
 } from "lucide-react";
-
-interface RedemptionHistory {
-  id: string;
-  amount: string;
-  balanceBefore: string;
-  balanceAfter: string;
-  redeemedAt: string;
-  redeemedBy: {
-    name: string;
-    email: string;
-  };
-  locationName?: string;
-  locationAddress?: string;
-  notes?: string;
-  purchasedGiftCard: {
-    qrCode: string;
-    purchaseAmount: string;
-    currentBalance: string;
-    status: "ACTIVE" | "FULLY_REDEEMED" | "EXPIRED";
-    customerName: string;
-    customerEmail: string;
-    customerPhone: string;
-    paymentMethod: string;
-    giftCard: {
-      title: string;
-    };
-  };
-}
+import { RedemptionHistory } from "@/features/Redemption/Services/redemptionService";
 
 interface RedemptionDetailsModalProps {
   isOpen: boolean;
@@ -138,7 +111,7 @@ export const RedemptionDetailsModal: React.FC<RedemptionDetailsModalProps> = ({
                 {/* Status Section */}
                 <div className="mb-6 flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                   <div className="flex items-center gap-3">
-                    {getStatusIcon(redemption.purchasedGiftCard.status)}
+                    {getStatusIcon()}
                     <div>
                       <div className="text-sm text-gray-600">
                         Gift Card Status

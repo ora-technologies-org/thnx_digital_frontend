@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import {
   Mail,
@@ -13,7 +13,40 @@ import {
 import { submitContactForm } from "@/features/auth/services/LandingContactService";
 import { useLandingPageData } from "@/features/merchant/hooks/useLanding";
 
-const fadeInUp = {
+// Type definitions
+interface ContactFormData {
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+}
+
+interface ContactInfo {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  detail: string;
+  gradient: string;
+}
+
+interface ContactContent {
+  badge: string;
+  heading: string;
+  subtitle: string;
+  responseTime: string;
+}
+
+// Extended Contact type with all required properties
+interface ExtendedContact {
+  email?: string;
+  phone?: string;
+  location?: string;
+  title?: string;
+  heading?: string;
+  subtitle?: string;
+  responseTime?: string;
+}
+
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
@@ -31,7 +64,7 @@ export const ContactSection = () => {
   // Fetch dynamic contact data
   const { data: landingData, isLoading: isLoadingData } = useLandingPageData();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
     phone: "",
@@ -42,7 +75,9 @@ export const ContactSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -78,37 +113,46 @@ export const ContactSection = () => {
   };
 
   // Dynamic contact info using data from API
-  const contactInfo = landingData?.contact
+  const contactInfo: ContactInfo[] = landingData?.contact
     ? [
         {
           icon: Mail,
           title: "Email",
-          detail: landingData.contact.email,
+          detail:
+            (landingData.contact as ExtendedContact).email ||
+            "contact@example.com",
           gradient: "from-blue-500 to-cyan-500",
         },
         {
           icon: Phone,
           title: "Phone",
-          detail: landingData.contact.phone,
+          detail:
+            (landingData.contact as ExtendedContact).phone || "+1 234 567 890",
           gradient: "from-purple-500 to-pink-500",
         },
         {
           icon: MapPin,
           title: "Location",
-          detail: landingData.contact.location,
+          detail:
+            (landingData.contact as ExtendedContact).location ||
+            "Your Location",
           gradient: "from-orange-500 to-red-500",
         },
       ]
     : [];
 
   // Dynamic text content with fallbacks
-  const content = {
-    badge: landingData?.contact?.title || "We'd Love to Hear From You",
-    heading: landingData?.contact?.heading || "Get in Touch",
+  const content: ContactContent = {
+    badge:
+      (landingData?.contact as ExtendedContact)?.title ||
+      "We'd Love to Hear From You",
+    heading:
+      (landingData?.contact as ExtendedContact)?.heading || "Get in Touch",
     subtitle:
-      landingData?.contact?.subtitle ||
+      (landingData?.contact as ExtendedContact)?.subtitle ||
       "Questions or feedback? Drop us a message!",
-    responseTime: landingData?.contact?.responseTime || "2–4 hours",
+    responseTime:
+      (landingData?.contact as ExtendedContact)?.responseTime || "2–4 hours",
   };
 
   // Loading state

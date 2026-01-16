@@ -42,7 +42,7 @@ export interface UserData {
   phone: string;
   bio: string;
 }
-
+// Fetches the authenticated user's data
 export const useAuthMe = () => {
   return useQuery<UserData>({
     queryKey: ["auth-me"],

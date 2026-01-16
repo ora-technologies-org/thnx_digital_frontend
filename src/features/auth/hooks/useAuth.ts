@@ -48,7 +48,7 @@ export const useAuth = () => {
         return;
       }
 
-      // 🎯 NEW: Check if there's a saved location from ProtectedRoute
+      //  Check if there's a saved location from ProtectedRoute
       const savedLocation = location.state?.from;
 
       console.log("🔍 Checking for saved location:", {

@@ -63,7 +63,7 @@ export const useUpdateMerchant = () => {
       console.log("✅ Update Success:", data);
       console.log("✅ Updated Merchant ID:", variables.merchantId);
 
-      const updatedMerchant = data?.data?.merchant || data?.merchant;
+      const updatedMerchant = data?.data?.merchantId || data?.merchant;
 
       if (updatedMerchant) {
         console.log("✅ Updated Merchant Data:", updatedMerchant);

@@ -6,11 +6,13 @@ import useChangePassword from "@/features/merchant/hooks/usePassword";
 import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/Button";
 
+// Interface for API error response structure
 interface ApiErrorResponse {
   message: string;
   errors?: Record<string, string[]>;
 }
 
+// Interface for password form data
 interface PasswordData {
   password: string;
   newPassword: string;
@@ -18,19 +20,24 @@ interface PasswordData {
 }
 
 export const ChangePassword = () => {
+  // State for form data with initial empty values
   const [formData, setFormData] = useState<PasswordData>({
     password: "",
     newPassword: "",
     confirmPassword: "",
   });
+
+  // State for form validation errors
   const [errors, setErrors] = useState<Partial<PasswordData>>({});
+
+  // State for toggling password visibility for each field
   const [showPassword, setShowPassword] = useState({
     current: false,
     new: false,
     confirm: false,
   });
 
-  // Modal state
+  // Modal state management
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [modalMessage, setModalMessage] = useState("");
@@ -38,9 +45,10 @@ export const ChangePassword = () => {
     "success" | "error" | "info" | "warning"
   >("info");
 
+  // Custom hook for password change mutation (uses React Query under the hood)
   const changePasswordMutation = useChangePassword();
 
-  // Show modal helper function
+  // Helper function to display modal with appropriate type and message
   const showResponseModal = (
     title: string,
     message: string,
@@ -52,19 +60,21 @@ export const ChangePassword = () => {
     setShowModal(true);
   };
 
+  // Handler to close modal
   const handleModalClose = () => {
     setShowModal(false);
   };
 
+  // Form validation function - returns true if form is valid
   const validateForm = (): boolean => {
     const newErrors: Partial<PasswordData> = {};
 
-    // Current password validation
+    // Current password validation - required field
     if (!formData.password.trim()) {
       newErrors.password = "Current password is required";
     }
 
-    // New password validation
+    // New password validation - multiple criteria
     if (!formData.newPassword.trim()) {
       newErrors.newPassword = "New password is required";
     } else if (formData.newPassword.length < 8) {
@@ -78,14 +88,14 @@ export const ChangePassword = () => {
         "Password must contain uppercase, lowercase, number, and special character";
     }
 
-    // Confirm password validation
+    // Confirm password validation - must match new password
     if (!formData.confirmPassword.trim()) {
       newErrors.confirmPassword = "Please confirm your password";
     } else if (formData.newPassword !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
-    // Check if new password is same as current
+    // Additional validation: new password must be different from current
     if (
       formData.password &&
       formData.newPassword &&
@@ -95,22 +105,29 @@ export const ChangePassword = () => {
         "New password must be different from current password";
     }
 
+    // Update errors state
     setErrors(newErrors);
+
+    // Form is valid if there are no errors
     return Object.keys(newErrors).length === 0;
   };
 
+  // Form submission handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate form before submission
     if (validateForm()) {
+      // Trigger password change mutation
       changePasswordMutation.mutate(formData, {
         onSuccess: () => {
+          // Success handler: show success modal and reset form
           showResponseModal(
             "Success!",
             "Your password has been changed successfully.",
             "success",
           );
-          // Reset form
+          // Reset form fields
           setFormData({
             password: "",
             newPassword: "",
@@ -118,12 +135,14 @@ export const ChangePassword = () => {
           });
         },
         onError: (error: AxiosError<ApiErrorResponse>) => {
+          // Error handler: extract error message from API response
           const errorMessage =
             error.response?.data?.message || "Failed to change password";
           showResponseModal("Password Change Failed", errorMessage, "error");
         },
       });
     } else {
+      // Show warning modal if form validation fails
       showResponseModal(
         "Validation Error",
         "Please fix the errors in the form before submitting.",
@@ -132,16 +151,18 @@ export const ChangePassword = () => {
     }
   };
 
+  // Input change handler - updates form data and clears field-specific errors
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Clear error for this field
+    // Clear error for the current field when user starts typing
     if (errors[name as keyof PasswordData]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
+  // Toggle password visibility for specific field
   const togglePasswordVisibility = (field: "current" | "new" | "confirm") => {
     setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
   };
@@ -150,7 +171,7 @@ export const ChangePassword = () => {
     <>
       <div className="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-          {/* Current Password */}
+          {/* Current Password Field */}
           <div>
             <label
               htmlFor="password"
@@ -159,6 +180,7 @@ export const ChangePassword = () => {
               Current Password <span className="text-red-500">*</span>
             </label>
             <div className="relative">
+              {/* Lock icon for visual consistency */}
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type={showPassword.current ? "text" : "password"}
@@ -173,6 +195,7 @@ export const ChangePassword = () => {
                 }`}
                 placeholder="Enter current password"
               />
+              {/* Toggle password visibility button */}
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility("current")}
@@ -185,6 +208,7 @@ export const ChangePassword = () => {
                 )}
               </button>
             </div>
+            {/* Display error message if validation fails */}
             {errors.password && (
               <p className="mt-1 text-xs sm:text-sm text-red-600">
                 {errors.password}
@@ -192,7 +216,7 @@ export const ChangePassword = () => {
             )}
           </div>
 
-          {/* New Password */}
+          {/* New Password Field */}
           <div>
             <label
               htmlFor="newPassword"
@@ -227,18 +251,20 @@ export const ChangePassword = () => {
                 )}
               </button>
             </div>
+            {/* Display error message if validation fails */}
             {errors.newPassword && (
               <p className="mt-1 text-xs sm:text-sm text-red-600">
                 {errors.newPassword}
               </p>
             )}
+            {/* Password requirements helper text */}
             <p className="mt-1 text-xs text-gray-500">
               Must be at least 8 characters with uppercase, lowercase, number,
               and special character
             </p>
           </div>
 
-          {/* Confirm Password */}
+          {/* Confirm New Password Field */}
           <div>
             <label
               htmlFor="confirmPassword"
@@ -273,6 +299,7 @@ export const ChangePassword = () => {
                 )}
               </button>
             </div>
+            {/* Display error message if validation fails */}
             {errors.confirmPassword && (
               <p className="mt-1 text-xs sm:text-sm text-red-600">
                 {errors.confirmPassword}
@@ -297,7 +324,7 @@ export const ChangePassword = () => {
         </form>
       </div>
 
-      {/* Response Modal */}
+      {/* Response Modal - shown after form submission */}
       <Modal
         isOpen={showModal}
         onClose={handleModalClose}
@@ -310,11 +337,13 @@ export const ChangePassword = () => {
       >
         <div className="text-center">
           <p className="text-gray-700 mb-2">{modalMessage}</p>
+          {/* Success-specific additional message */}
           {modalType === "success" && (
             <p className="text-sm text-gray-500 mt-4">
               Please use your new password for future logins.
             </p>
           )}
+          {/* Error-specific additional message */}
           {modalType === "error" && (
             <p className="text-sm text-gray-500 mt-4">
               Please try again or contact support if the problem persists.

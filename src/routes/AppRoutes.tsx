@@ -12,7 +12,7 @@ import { BrowsePage } from "../pages/customer/BrowsePage";
 import { PurchasePage } from "../pages/customer/PurchasePage";
 import { DashboardPage } from "../pages/merchant/DashboardPage";
 import { GiftCardsPage } from "../pages/merchant/GiftCardsPage";
-import { RedemptionsPage } from "../pages/merchant/RedemptionsPage";
+// import { RedemptionsPage } from "../pages/merchant/RedemptionsPage";
 import { OrdersPage } from "../pages/merchant/OrdersPage";
 import { ScanPage } from "../pages/merchant/ScanPage";
 import { AnalyticsPage } from "../pages/merchant/AnalyticsPage";
@@ -130,14 +130,14 @@ const AppRoutes: React.FC = () => {
         }
       />
 
-      <Route
+      {/* <Route
         path="/merchant/redemptions"
         element={
           <ProtectedRoute requiredRole="MERCHANT">
             <RedemptionsPage />
           </ProtectedRoute>
         }
-      />
+      /> */}
 
       <Route
         path="/merchant/settings"

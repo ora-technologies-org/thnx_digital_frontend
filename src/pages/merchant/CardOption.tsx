@@ -1,3 +1,5 @@
+// src/components/GiftCardBuilder.tsx - GIFT CARD BUILDER! 🎁
+
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,66 +12,23 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "../../shared/components/ui/Button";
-import { GradientDirection } from "@/features/merchant/slices/giftCardSlice";
+import type { GradientDirection } from "@/features/merchant/slices/giftCardSlice";
 import { useGiftCardSettings } from "@/features/merchant/hooks/useGiftCardSetting";
 import type { RootState } from "@/app/store";
 import { useAppSelector } from "@/app/hooks";
 
-const FONT_OPTIONS = [
-  { value: "Inter", label: "Inter" },
-  { value: "Roboto", label: "Roboto" },
-  { value: "Poppins", label: "Poppins" },
-  { value: "Montserrat", label: "Montserrat" },
-  { value: "Open Sans", label: "Open Sans" },
-  { value: "Lato", label: "Lato" },
-];
-
-const COLOR_PALETTES = [
-  { primary: "#F54927", secondary: "#46368A", name: "Sunset" },
-  { primary: "#3B82F6", secondary: "#8B5CF6", name: "Ocean" },
-  { primary: "#10B981", secondary: "#059669", name: "Forest" },
-  { primary: "#F59E0B", secondary: "#EF4444", name: "Fire" },
-  { primary: "#EC4899", secondary: "#8B5CF6", name: "Berry" },
-  { primary: "#06B6D4", secondary: "#3B82F6", name: "Sky" },
-  { primary: "#8B5CF6", secondary: "#EC4899", name: "Grape" },
-  { primary: "#EF4444", secondary: "#F97316", name: "Crimson" },
-];
-
-const GRADIENT_DIRECTIONS: {
-  value: GradientDirection;
-  label: string;
-  class: string;
-}[] = [
-  { value: "TOP_RIGHT", label: "Top Right", class: "to-br" },
-  { value: "LEFT_RIGHT", label: "Top Left", class: "to-tr" },
-  { value: "TOP_BOTTOM", label: "Bottom Right", class: "to-tl" },
-  { value: "BOTTOM_LEFT", label: "Bottom Left", class: "to-bl" },
-];
-
-const PRESET_COLORS = [
-  "#F54927",
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EC4899",
-  "#8B5CF6",
-  "#EF4444",
-  "#06B6D4",
-  "#F97316",
-  "#14B8A6",
-  "#8B5CF6",
-  "#F43F5E",
-  "#84CC16",
-  "#EAB308",
-  "#A855F7",
-  "#6366F1",
-  "#059669",
-  "#DC2626",
-  "#7C3AED",
-  "#0EA5E9",
-  "#22C55E",
-  "#F59E0B",
-];
+import {
+  FONT_OPTIONS,
+  COLOR_PALETTES,
+  GRADIENT_DIRECTIONS,
+  PRESET_COLORS,
+  QUICK_AMOUNTS,
+  AMOUNT_SLIDER_CONFIG,
+  loadGoogleFonts,
+  isPaletteMatch,
+  generateGradient,
+  formatCurrency,
+} from "@/shared/utils/giftcard";
 
 interface ColorPickerModalProps {
   isOpen: boolean;
@@ -219,7 +178,7 @@ export const GiftCardBuilder: React.FC = () => {
         secondaryColor: "#46368A",
         gradientDirection: "TOP_RIGHT" as GradientDirection,
         fontFamily: "Inter",
-        amount: 500,
+        amount: AMOUNT_SLIDER_CONFIG.default,
       }
     );
   }, [giftCardSettings?.settings]);
@@ -232,22 +191,9 @@ export const GiftCardBuilder: React.FC = () => {
   const [showPrimaryPicker, setShowPrimaryPicker] = useState(false);
   const [showSecondaryPicker, setShowSecondaryPicker] = useState(false);
 
+  // Load Google Fonts on mount
   useEffect(() => {
-    const fonts = [
-      "Inter",
-      "Roboto",
-      "Poppins",
-      "Montserrat",
-      "Open Sans",
-      "Lato",
-    ];
-    const link = document.createElement("link");
-    link.href = `https://fonts.googleapis.com/css2?${fonts.map((font) => `family=${font.replace(" ", "+")}`).join("&")}&display=swap`;
-    link.rel = "stylesheet";
-
-    if (!document.querySelector(`link[href="${link.href}"]`)) {
-      document.head.appendChild(link);
-    }
+    loadGoogleFonts(FONT_OPTIONS.map((font) => font.value));
   }, []);
 
   // Sync local settings when saved settings change (e.g., after save or load)
@@ -337,9 +283,13 @@ export const GiftCardBuilder: React.FC = () => {
               </label>
               <div className="grid grid-cols-4 gap-2 sm:gap-3">
                 {COLOR_PALETTES.map((palette, index) => {
-                  const isSelected =
-                    localSettings.primaryColor === palette.primary &&
-                    localSettings.secondaryColor === palette.secondary;
+                  const isSelected = isPaletteMatch(
+                    {
+                      primary: localSettings.primaryColor,
+                      secondary: localSettings.secondaryColor,
+                    },
+                    palette,
+                  );
 
                   return (
                     <motion.button
@@ -517,20 +467,20 @@ export const GiftCardBuilder: React.FC = () => {
             {/* Amount Slider */}
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 sm:mb-3">
-                Gift Amount: ₹{localSettings.amount.toLocaleString()}
+                Gift Amount: {formatCurrency(localSettings.amount)}
               </label>
               <input
                 type="range"
-                min="100"
-                max="10000"
-                step="100"
+                min={AMOUNT_SLIDER_CONFIG.min}
+                max={AMOUNT_SLIDER_CONFIG.max}
+                step={AMOUNT_SLIDER_CONFIG.step}
                 value={localSettings.amount}
                 onChange={(e) => handleAmountChange(Number(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>₹100</span>
-                <span>₹10,000</span>
+                <span>{formatCurrency(AMOUNT_SLIDER_CONFIG.min)}</span>
+                <span>{formatCurrency(AMOUNT_SLIDER_CONFIG.max)}</span>
               </div>
             </div>
 
@@ -540,7 +490,7 @@ export const GiftCardBuilder: React.FC = () => {
                 Quick Select
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[500, 1000, 2000, 5000].map((value) => {
+                {QUICK_AMOUNTS.map((value) => {
                   const isSelected = localSettings.amount === value;
 
                   return (
@@ -555,7 +505,7 @@ export const GiftCardBuilder: React.FC = () => {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      ₹{value.toLocaleString()}
+                      {formatCurrency(value)}
                     </motion.button>
                   );
                 })}
@@ -600,15 +550,11 @@ export const GiftCardBuilder: React.FC = () => {
               <div
                 className="absolute inset-0 rounded-xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 flex flex-col justify-between text-white"
                 style={{
-                  background: `linear-gradient(${
-                    localSettings.gradientDirection === "TOP_RIGHT"
-                      ? "to top right"
-                      : localSettings.gradientDirection === "LEFT_RIGHT"
-                        ? "to top left"
-                        : localSettings.gradientDirection === "TOP_BOTTOM"
-                          ? "to bottom right"
-                          : "to bottom left"
-                  }, ${localSettings.primaryColor}, ${localSettings.secondaryColor})`,
+                  background: generateGradient(
+                    localSettings.primaryColor,
+                    localSettings.secondaryColor,
+                    localSettings.gradientDirection,
+                  ),
                   fontFamily: localSettings.fontFamily,
                 }}
               >
@@ -652,7 +598,7 @@ export const GiftCardBuilder: React.FC = () => {
                     animate={{ scale: 1, opacity: 1 }}
                     className="text-2xl sm:text-3xl lg:text-4xl font-bold"
                   >
-                    ₹{localSettings.amount.toLocaleString()}
+                    {formatCurrency(localSettings.amount)}
                   </motion.p>
                 </div>
 

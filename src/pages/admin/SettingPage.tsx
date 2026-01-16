@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
 import { jwtDecode } from "jwt-decode";
-import { passwordService } from "@/features/admin/services/resetPasswordService";
+import { changePassword } from "@/features/admin/services/resetPasswordService";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
@@ -372,7 +372,8 @@ export const AdminSettingPage: React.FC = () => {
         confirmPassword: String(passwordData.confirmPassword),
       };
 
-      const response = await passwordService.changePassword(payload);
+      // Use changePassword function directly instead of passwordService
+      const response = await changePassword(payload);
 
       openResponseModal("success", "Success!", response.message, () => {
         setPasswordData({

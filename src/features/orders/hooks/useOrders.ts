@@ -1,5 +1,3 @@
-// src/features/orders/hooks/useOrders.ts - ORDERS DATA HOOK 🎣
-
 import { useQuery } from "@tanstack/react-query";
 import { ordersApi, OrdersQueryParams } from "../api/orders.api";
 import type { OrdersResponse } from "../types/order.types";
@@ -9,8 +7,8 @@ export const useOrders = (params?: OrdersQueryParams) => {
     queryKey: ["orders", params], // Include params in the key so it refetches when they change
     queryFn: () => ordersApi.getOrders(params),
     staleTime: 0, // Always consider data stale
-    cacheTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes (replaces cacheTime)
     refetchOnWindowFocus: false,
-    keepPreviousData: true, // Keep showing old data while new data loads (smooth transitions)
+    placeholderData: (previousData) => previousData, // Replaces keepPreviousData
   });
 };

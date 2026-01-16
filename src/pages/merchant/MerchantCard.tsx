@@ -6,8 +6,6 @@ import {
   MapPin,
   Mail,
   Phone,
-  CheckCircle,
-  XCircle,
   Eye,
   Edit,
   Trash2,
@@ -15,7 +13,6 @@ import {
   Calendar,
   Globe,
   ShieldX,
-  Clock,
   ExternalLink,
   AlertTriangle,
   Building2,
@@ -26,6 +23,13 @@ import { Badge } from "../../shared/components/ui/Badge";
 import { Button } from "../../shared/components/ui/Button";
 import type { MerchantUser } from "../../features/admin/api/admin.api";
 import { useDeleteMerchant } from "../../features/admin/hooks/useAdmin";
+import {
+  getStatusConfig,
+  formatDate,
+  getBusinessInitials,
+  formatLocation,
+  canEditMerchant,
+} from "@/shared/utils/merchant";
 
 interface MerchantCardProps {
   merchant: MerchantUser;
@@ -46,57 +50,8 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
 
   const deleteMutation = useDeleteMerchant();
 
-  // Status configuration with gradients
-  const getStatusConfig = () => {
-    switch (merchant.profileStatus) {
-      case "VERIFIED":
-        return {
-          label: "Verified",
-          icon: CheckCircle,
-          bgBadge: "bg-emerald-100",
-          textBadge: "text-emerald-700",
-          borderBadge: "border-emerald-200",
-          gradient: "from-emerald-500 to-teal-500",
-          avatarBg: "from-emerald-500 to-teal-600",
-          glow: "shadow-emerald-500/20",
-        };
-      case "REJECTED":
-        return {
-          label: "Rejected",
-          icon: XCircle,
-          bgBadge: "bg-red-100",
-          textBadge: "text-red-700",
-          borderBadge: "border-red-200",
-          gradient: "from-red-500 to-rose-500",
-          avatarBg: "from-red-500 to-rose-600",
-          glow: "shadow-red-500/20",
-        };
-      case "PENDING_VERIFICATION":
-        return {
-          label: "Pending",
-          icon: Clock,
-          bgBadge: "bg-amber-100",
-          textBadge: "text-amber-700",
-          borderBadge: "border-amber-200",
-          gradient: "from-amber-500 to-orange-500",
-          avatarBg: "from-amber-500 to-orange-600",
-          glow: "shadow-amber-500/20",
-        };
-      default:
-        return {
-          label: "Incomplete",
-          icon: AlertTriangle,
-          bgBadge: "bg-slate-100",
-          textBadge: "text-slate-600",
-          borderBadge: "border-slate-200",
-          gradient: "from-slate-400 to-slate-500",
-          avatarBg: "from-slate-400 to-slate-600",
-          glow: "shadow-slate-500/20",
-        };
-    }
-  };
-
-  const statusConfig = getStatusConfig();
+  // Get status configuration
+  const statusConfig = getStatusConfig(merchant.profileStatus);
   const StatusIcon = statusConfig.icon;
 
   const handleDelete = async () => {
@@ -109,14 +64,6 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
     } catch (error) {
       console.error("Failed to delete merchant:", error);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
   };
 
   return (
@@ -160,7 +107,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                         />
                       ) : (
                         <span className="text-white font-bold text-lg">
-                          {merchant.businessName.substring(0, 2).toUpperCase()}
+                          {getBusinessInitials(merchant.businessName)}
                         </span>
                       )}
                     </div>
@@ -231,7 +178,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                           </button>
 
                           {/* Conditional Edit Button */}
-                          {merchant.profileStatus === "VERIFIED" ? (
+                          {canEditMerchant(merchant.profileStatus) ? (
                             <button
                               onClick={() => {
                                 if (onEdit) {
@@ -322,9 +269,11 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                     <MapPin className="w-4 h-4 text-orange-600" />
                   </div>
                   <span className="text-sm text-gray-600 truncate">
-                    {[merchant.city, merchant.state, merchant.country]
-                      .filter(Boolean)
-                      .join(", ")}
+                    {formatLocation(
+                      merchant.city,
+                      merchant.state,
+                      merchant.country,
+                    )}
                   </span>
                 </div>
               )}
@@ -365,13 +314,6 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
               >
                 View Profile
               </motion.button>
-              {/* <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors"
-              >
-                <Mail className="w-4 h-4" />
-              </motion.button> */}
             </div>
           </CardContent>
         </Card>

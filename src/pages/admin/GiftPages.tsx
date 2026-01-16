@@ -14,52 +14,36 @@ import {
   ChevronRight,
   Sparkles,
   RefreshCw,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Users,
 } from "lucide-react";
 import { merchantService } from "@/features/admin/services/merchantService";
 import { AdminLayout } from "@/shared/components/layout/AdminLayout";
 import { Button } from "@/shared/components/ui/Button";
 
-// Status Configuration
-const statusConfig = {
-  VERIFIED: {
-    bg: "from-emerald-100 to-emerald-50",
-    text: "text-emerald-800",
-    border: "border-emerald-200",
-    icon: <CheckCircle className="w-3.5 h-3.5" />,
-    label: "Verified",
-    gradient: "from-emerald-500 to-green-600",
-  },
-  PENDING_VERIFICATION: {
-    bg: "from-amber-100 to-amber-50",
-    text: "text-amber-800",
-    border: "border-amber-200",
-    icon: <Clock className="w-3.5 h-3.5" />,
-    label: "Pending",
-    gradient: "from-amber-500 to-amber-600",
-  },
-  REJECTED: {
-    bg: "from-rose-100 to-rose-50",
-    text: "text-rose-800",
-    border: "border-rose-200",
-    icon: <XCircle className="w-3.5 h-3.5" />,
-    label: "Rejected",
-    gradient: "from-rose-500 to-red-600",
-  },
-};
+import {
+  statusConfig,
+  statsConfig,
+  calculateDaysUntilExpiry,
+  formatDate,
+  formatCurrency,
+  getDisplayName,
+  getInitial,
+  calculatePercentage,
+  getDefaultCardSettings,
+  filterCardsByPrice,
+  getPaginationNumbers,
+  getStatsData,
+} from "@/shared/utils/admin";
 
 // Status Badge Component
 const StatusBadge = ({ status, className = "" }) => {
-  const config = statusConfig[status] || statusConfig.INCOMPLETE;
+  const config = statusConfig[status] || statusConfig.VERIFIED;
+  const IconComponent = config.icon;
 
   return (
     <span
       className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold border flex items-center gap-1.5 shadow-sm ${config.bg} ${config.text} ${config.border} ${className}`}
     >
-      {config.icon}
+      <IconComponent className="w-3.5 h-3.5" />
       {config.label}
     </span>
   );
@@ -80,34 +64,7 @@ const ActiveBadge = ({ isActive }) => (
 
 // Pagination Component
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  const getPageNumbers = () => {
-    const pages = [];
-    const showPages = 5;
-
-    if (totalPages <= showPages) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push("...");
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push("...");
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push("...");
-        pages.push(currentPage - 1);
-        pages.push(currentPage);
-        pages.push(currentPage + 1);
-        pages.push("...");
-        pages.push(totalPages);
-      }
-    }
-
-    return pages;
-  };
+  const pageNumbers = getPaginationNumbers(currentPage, totalPages);
 
   return (
     <div className="flex items-center justify-center gap-2 mt-8">
@@ -119,7 +76,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         <ChevronLeft className="w-5 h-5" />
       </button>
 
-      {getPageNumbers().map((page, index) =>
+      {pageNumbers.map((page, index) =>
         page === "..." ? (
           <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-400">
             ...
@@ -201,9 +158,8 @@ const ErrorMessage = ({ message, onRetry }) => (
 
 // Merchant Card Component
 const MerchantCard = ({ merchant, onClick }) => {
-  const displayName =
-    merchant.businessName || merchant.user?.name || "Unnamed Merchant";
-  const initial = displayName.charAt(0).toUpperCase();
+  const displayName = getDisplayName(merchant);
+  const initial = getInitial(displayName);
   const status = merchant.profileStatus || "INCOMPLETE";
 
   return (
@@ -214,7 +170,6 @@ const MerchantCard = ({ merchant, onClick }) => {
       onClick={onClick}
       className="bg-gradient-to-br from-white to-purple-50/30 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 cursor-pointer border-2 border-purple-100 hover:border-purple-300 transition-all shadow-sm hover:shadow-xl flex flex-col h-full"
     >
-      {/* Header Section - Fixed Height */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-12 h-12 sm:w-13 sm:h-13 lg:w-14 lg:h-14 rounded-xl bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 flex items-center justify-center text-white text-lg sm:text-xl lg:text-2xl font-bold shadow-lg flex-shrink-0 ring-4 ring-purple-100">
           {initial}
@@ -233,7 +188,6 @@ const MerchantCard = ({ merchant, onClick }) => {
         </div>
       </div>
 
-      {/* Content Section - Grows to fill space */}
       <div className="flex-1 flex flex-col justify-between">
         <div className="space-y-3 mb-4">
           <p className="text-xs sm:text-sm text-gray-600 truncate flex items-center gap-1.5">
@@ -249,7 +203,6 @@ const MerchantCard = ({ merchant, onClick }) => {
             </span>
           )}
 
-          {/* Description with fixed height and ellipsis */}
           <div className="h-10 sm:h-11">
             <p className="text-xs sm:text-sm text-gray-700 line-clamp-2">
               {merchant.description || "No description available"}
@@ -257,7 +210,6 @@ const MerchantCard = ({ merchant, onClick }) => {
           </div>
         </div>
 
-        {/* Footer Section - Fixed at Bottom */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-3 sm:pt-4 border-t border-purple-100 gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={status} />
@@ -272,19 +224,8 @@ const MerchantCard = ({ merchant, onClick }) => {
 
 // Gift Card Display Component
 const GiftCardDisplay = ({ giftCard, settings, onClick }) => {
-  const cardSettings = settings || {
-    primaryColor: "#8B5CF6",
-    secondaryColor: "#6366F1",
-    gradientDirection: "TOP_RIGHT",
-    fontFamily: "Inter",
-  };
+  const cardSettings = settings || getDefaultCardSettings();
 
-  const expiryDate = new Date(giftCard.expiryDate);
-  const today = new Date();
-  const daysUntilExpiry = Math.ceil(
-    (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
-  console.log("", daysUntilExpiry);
   return (
     <motion.div
       whileHover={{ scale: 1.03, y: -3 }}
@@ -312,7 +253,7 @@ const GiftCardDisplay = ({ giftCard, settings, onClick }) => {
         <div>
           <p className="text-xs sm:text-sm opacity-80">Balance</p>
           <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mt-1">
-            ₹{parseFloat(giftCard.price).toLocaleString()}
+            {formatCurrency(giftCard.price)}
           </p>
         </div>
 
@@ -322,12 +263,7 @@ const GiftCardDisplay = ({ giftCard, settings, onClick }) => {
               {giftCard.title}
             </p>
             <p className="text-xs mt-0.5">
-              Exp:{" "}
-              {expiryDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "2-digit",
-              })}
+              Exp: {formatDate(giftCard.expiryDate, "short")}
             </p>
           </div>
           <p className="text-xs whitespace-nowrap ml-2">
@@ -343,11 +279,7 @@ const GiftCardDisplay = ({ giftCard, settings, onClick }) => {
 const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
   if (!card) return null;
 
-  const expiryDate = new Date(card.expiryDate);
-  const today = new Date();
-  const daysUntilExpiry = Math.ceil(
-    (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const daysUntilExpiry = calculateDaysUntilExpiry(card.expiryDate);
 
   return (
     <AnimatePresence>
@@ -393,7 +325,7 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
                   <span className="text-sm font-medium opacity-90">Price</span>
                 </div>
                 <div className="text-4xl font-bold">
-                  ₹{parseFloat(card.price).toLocaleString()}
+                  {formatCurrency(card.price)}
                 </div>
               </div>
 
@@ -404,11 +336,7 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
                     <span className="text-sm font-medium">Expiry Date</span>
                   </div>
                   <div className="text-gray-900 font-semibold text-sm sm:text-base">
-                    {expiryDate.toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {formatDate(card.expiryDate)}
                   </div>
                   <div className="mt-2">
                     {daysUntilExpiry > 0 ? (
@@ -455,121 +383,54 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
 
 // Stats Cards Component
 const StatsCards = ({ statusCounts, total }) => {
-  const stats = {
-    total: total || 0,
-    verified: statusCounts?.VERIFIED || 0,
-    pending: statusCounts?.PENDING_VERIFICATION || 0,
-    rejected: statusCounts?.REJECTED || 0,
-    incomplete: statusCounts?.INCOMPLETE || 0,
-  };
+  const stats = getStatsData(statusCounts, total);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5 mb-6 sm:mb-8">
-      {/* Total Merchants */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="p-4 sm:p-5 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl sm:rounded-2xl border border-blue-200 hover:border-blue-300 transition-all shadow-sm hover:shadow-md"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs sm:text-sm text-blue-600 font-semibold mb-1 sm:mb-2">
-              Total Merchants
-            </p>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-blue-900">
-              {stats.total}
-            </p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </div>
-        </div>
-      </motion.div>
+      {statsConfig.map((config, index) => {
+        const IconComponent = config.icon;
+        const value = stats[config.key] || 0;
+        const percentage = config.showPercentage
+          ? calculatePercentage(value, stats.total)
+          : null;
 
-      {/* Verified */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="p-4 sm:p-5 bg-gradient-to-br from-emerald-50 to-teal-100 rounded-xl sm:rounded-2xl border border-emerald-200 hover:border-emerald-300 transition-all shadow-sm hover:shadow-md"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs sm:text-sm text-emerald-600 font-semibold mb-1 sm:mb-2">
-              Verified
-            </p>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-emerald-900">
-              {stats.verified}
-            </p>
-            <p className="text-xs text-emerald-700 font-medium mt-0.5 sm:mt-1">
-              {stats.total > 0
-                ? `${Math.round((stats.verified / stats.total) * 100)}%`
-                : "0%"}{" "}
-              of total
-            </p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
-            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Pending */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="p-4 sm:p-5 bg-gradient-to-br from-amber-50 to-orange-100 rounded-xl sm:rounded-2xl border border-amber-200 hover:border-amber-300 transition-all shadow-sm hover:shadow-md"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs sm:text-sm text-amber-600 font-semibold mb-1 sm:mb-2">
-              Pending
-            </p>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-amber-900">
-              {stats.pending}
-            </p>
-            <p className="text-xs text-amber-700 font-medium mt-0.5 sm:mt-1">
-              {stats.total > 0
-                ? `${Math.round((stats.pending / stats.total) * 100)}%`
-                : "0%"}{" "}
-              of total
-            </p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-md">
-            <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Rejected */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="p-4 sm:p-5 bg-gradient-to-br from-rose-50 to-red-100 rounded-xl sm:rounded-2xl border border-rose-200 hover:border-rose-300 transition-all shadow-sm hover:shadow-md"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs sm:text-sm text-rose-600 font-semibold mb-1 sm:mb-2">
-              Rejected
-            </p>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-rose-900">
-              {stats.rejected}
-            </p>
-            <p className="text-xs text-rose-700 font-medium mt-0.5 sm:mt-1">
-              {stats.total > 0
-                ? `${Math.round((stats.rejected / stats.total) * 100)}%`
-                : "0%"}{" "}
-              of total
-            </p>
-          </div>
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-rose-500 to-rose-600 rounded-xl flex items-center justify-center shadow-md">
-            <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </div>
-        </div>
-      </motion.div>
+        return (
+          <motion.div
+            key={config.key}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 * (index + 1) }}
+            className={`p-4 sm:p-5 bg-gradient-to-br ${config.gradient} rounded-xl sm:rounded-2xl border ${config.border} ${config.hoverBorder} transition-all shadow-sm hover:shadow-md`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p
+                  className={`text-xs sm:text-sm ${config.textColor} font-semibold mb-1 sm:mb-2`}
+                >
+                  {config.label}
+                </p>
+                <p
+                  className={`text-2xl sm:text-3xl lg:text-4xl font-bold ${config.valueColor}`}
+                >
+                  {value}
+                </p>
+                {percentage && (
+                  <p
+                    className={`text-xs ${config.percentColor} font-medium mt-0.5 sm:mt-1`}
+                  >
+                    {percentage} of total
+                  </p>
+                )}
+              </div>
+              <div
+                className={`w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br ${config.iconBg} rounded-xl flex items-center justify-center shadow-md`}
+              >
+                <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };
@@ -636,7 +497,6 @@ const MerchantsPage = () => {
     <AdminLayout>
       <div className="pb-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -677,7 +537,6 @@ const MerchantsPage = () => {
               </motion.button>
             </div>
 
-            {/* Stats Cards */}
             {data?.statusCounts && (
               <StatsCards
                 statusCounts={data.statusCounts}
@@ -685,10 +544,8 @@ const MerchantsPage = () => {
               />
             )}
 
-            {/* Search and Filters */}
             <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl sm:rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 shadow-sm">
               <div className="flex flex-col gap-4">
-                {/* Search Bar */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Search Merchants
@@ -705,7 +562,6 @@ const MerchantsPage = () => {
                   </div>
                 </div>
 
-                {/* Filter Row */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                     <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 flex-shrink-0" />
@@ -745,7 +601,6 @@ const MerchantsPage = () => {
             </div>
           </motion.div>
 
-          {/* Pagination Info */}
           {data && (
             <div className="mb-4 text-xs sm:text-sm text-gray-600">
               Showing {(currentPage - 1) * itemsPerPage + 1}-
@@ -754,7 +609,6 @@ const MerchantsPage = () => {
             </div>
           )}
 
-          {/* Merchants Grid */}
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
               {[...Array(itemsPerPage)].map((_, i) => (
@@ -782,7 +636,6 @@ const MerchantsPage = () => {
             </div>
           )}
 
-          {/* Pagination */}
           {data && data.pagination.totalPages > 1 && (
             <Pagination
               currentPage={currentPage}
@@ -808,19 +661,7 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
     enabled: !!merchant.userId,
   });
 
-  const filterCards = (cards) => {
-    if (!cards) return [];
-    if (priceFilter === "all") return cards;
-    return cards.filter((card) => {
-      const price = parseFloat(card.price || "0");
-      if (priceFilter === "low") return price < 1000;
-      if (priceFilter === "medium") return price >= 1000 && price <= 5000;
-      if (priceFilter === "high") return price > 5000;
-      return true;
-    });
-  };
-
-  const filteredCards = filterCards(data?.giftCards || []);
+  const filteredCards = filterCardsByPrice(data?.giftCards || [], priceFilter);
 
   if (error) {
     return (

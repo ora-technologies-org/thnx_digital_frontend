@@ -14,26 +14,13 @@ import { Button } from "../../shared/components/ui/Button";
 import { CreateOrderModal } from "../../features/orders/components/CreateOrderModal";
 import { useCreateOrder } from "../../features/orders/hooks/useCreateOrder";
 import { useOrders } from "../../features/orders/hooks/useOrders";
-import type { CreateOrderData } from "../../features/orders/types/order.types";
+import type {
+  CreateOrderData,
+  Order,
+} from "../../features/orders/types/order.types";
 import { OrderDetailModal } from "@/features/orders/components/OrderModal";
 
-interface Order {
-  id: string;
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  customer?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-  };
-  purchaseAmount?: number;
-  amount?: number;
-  currentBalance?: number;
-  status?: "ACTIVE" | "USED" | "EXPIRED";
-  qrCode?: string;
-}
-
+// Decode JWT token to extract user verification status
 const decodeToken = (token: string) => {
   try {
     const base64Url = token.split(".")[1];
@@ -52,20 +39,21 @@ const decodeToken = (token: string) => {
 };
 
 export const OrdersPage: React.FC = () => {
+  // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // Filter states
+  // Filter and pagination states
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Debounced search
+  // Debounced search to avoid excessive API calls
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Debounce search input
+  // Debounce search input (500ms delay)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -77,7 +65,7 @@ export const OrdersPage: React.FC = () => {
 
   const createOrderMutation = useCreateOrder();
 
-  // Fetch orders with filters
+  // Fetch orders with applied filters and pagination
   const {
     data: ordersData,
     isLoading,
@@ -92,7 +80,8 @@ export const OrdersPage: React.FC = () => {
     sortOrder: "desc",
   });
 
-  const [isVerified, setIsVerified] = useState<boolean>(() => {
+  // Check if merchant account is verified
+  const [isVerified] = useState<boolean>(() => {
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) return false;
     const decoded = decodeToken(accessToken);
@@ -100,34 +89,35 @@ export const OrdersPage: React.FC = () => {
       ? decoded.isVerified
       : false;
   });
-  console.log("", setIsVerified);
+
+  // Handle order creation submission
   const handleCreateOrder = async (formData: CreateOrderData) => {
-    try {
-      await createOrderMutation.mutateAsync(formData);
-      setShowCreateModal(false);
-      refetch(); // Refresh orders list
-    } catch (error) {
-      console.error("Failed to create order:", error);
-      throw error;
-    }
+    const result = await createOrderMutation.mutateAsync(formData);
+    setShowCreateModal(false);
+    refetch(); // Refresh orders list
+    return result;
   };
 
+  // Open order detail modal
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
     setShowDetailModal(true);
   };
 
+  // Close order detail modal
   const handleCloseDetailModal = () => {
     setShowDetailModal(false);
     setSelectedOrder(null);
   };
 
+  // Only allow verified merchants to create orders
   const handleCreateOrderClick = () => {
     if (isVerified) {
       setShowCreateModal(true);
     }
   };
 
+  // Get status badge color based on order status
   const getStatusColor = (status: string) => {
     switch (status) {
       case "ACTIVE":
@@ -141,12 +131,12 @@ export const OrdersPage: React.FC = () => {
     }
   };
 
-  // Get orders and pagination info
+  // Extract data from API response
   const orders: Order[] = ordersData?.orders || [];
-  const totalPages = ordersData?.totalPages || 1;
-  const totalOrders = ordersData?.total || 0;
+  const totalPages = ordersData?.pagination?.totalPages || 1;
+  const totalOrders = ordersData?.pagination?.total || 0;
 
-  // Calculate stats (we'll need to fetch all orders for accurate stats, or get from API)
+  // Calculate statistics for current page
   const stats = {
     total: totalOrders,
     active: orders.filter((o: Order) => o.status === "ACTIVE").length,
@@ -154,7 +144,7 @@ export const OrdersPage: React.FC = () => {
     expired: orders.filter((o: Order) => o.status === "EXPIRED").length,
   };
 
-  // Pagination handlers
+  // Pagination navigation handlers
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
@@ -171,7 +161,7 @@ export const OrdersPage: React.FC = () => {
     setCurrentPage(page);
   };
 
-  // Generate page numbers to display
+  // Generate visible page numbers for pagination UI
   const getPageNumbers = () => {
     const pages = [];
     const maxPagesToShow = 5;
@@ -197,6 +187,7 @@ export const OrdersPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
+          {/* Page Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <motion.div
@@ -239,6 +230,7 @@ export const OrdersPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Verification Warning Banner */}
           {!isVerified && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -258,6 +250,7 @@ export const OrdersPage: React.FC = () => {
             </motion.div>
           )}
 
+          {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -308,6 +301,7 @@ export const OrdersPage: React.FC = () => {
             </motion.div>
           </div>
 
+          {/* Search and Filter Controls */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -338,7 +332,7 @@ export const OrdersPage: React.FC = () => {
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
-                  setCurrentPage(1); // Reset to first page
+                  setCurrentPage(1);
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
               >
@@ -365,6 +359,7 @@ export const OrdersPage: React.FC = () => {
           </motion.div>
         </motion.div>
 
+        {/* Results Count */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -385,6 +380,7 @@ export const OrdersPage: React.FC = () => {
           </p>
         </motion.div>
 
+        {/* Loading State */}
         {isLoading && (
           <div className="bg-white rounded-2xl shadow-sm p-16 text-center border border-gray-200">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -392,6 +388,7 @@ export const OrdersPage: React.FC = () => {
           </div>
         )}
 
+        {/* Error State */}
         {error && (
           <div className="bg-red-50 rounded-2xl shadow-sm p-8 text-center border border-red-200">
             <p className="text-red-600">
@@ -400,6 +397,7 @@ export const OrdersPage: React.FC = () => {
           </div>
         )}
 
+        {/* Empty State - No Orders */}
         {!isLoading && !error && orders.length === 0 && totalOrders === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -433,6 +431,7 @@ export const OrdersPage: React.FC = () => {
           </motion.div>
         )}
 
+        {/* Empty State - No Results */}
         {!isLoading && !error && orders.length === 0 && totalOrders > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -459,6 +458,7 @@ export const OrdersPage: React.FC = () => {
           </motion.div>
         )}
 
+        {/* Orders Table */}
         {!isLoading && !error && orders.length > 0 && (
           <>
             <motion.div
@@ -614,11 +614,12 @@ export const OrdersPage: React.FC = () => {
           </>
         )}
 
+        {/* Modals */}
         <CreateOrderModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSubmit={handleCreateOrder}
-          isLoading={createOrderMutation.isLoading}
+          isLoading={createOrderMutation.isPending}
         />
 
         <OrderDetailModal

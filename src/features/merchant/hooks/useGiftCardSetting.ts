@@ -78,7 +78,7 @@ export const useGiftCardSettings = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnMount: true,
   });
-
+  // Create Mutation
   const createMutation = useMutation({
     mutationFn: (settingsData: GiftCardSettingsPayload) =>
       giftCardSettingsService.createSettings(settingsData),
@@ -119,7 +119,7 @@ export const useGiftCardSettings = () => {
       toast.error(message);
     },
   });
-
+  // Update Mutation
   const updateMutation = useMutation({
     mutationFn: (settingsData: GiftCardSettingsPayload) => {
       if (!settings.id) {
@@ -156,7 +156,7 @@ export const useGiftCardSettings = () => {
       toast.error(error.response?.data?.message || "Failed to update settings");
     },
   });
-
+  // Save Settings Function
   const saveSettings = (settingsData: GiftCardSettingsPayload) => {
     console.log("💾 Saving settings...", {
       isExistingSettings,

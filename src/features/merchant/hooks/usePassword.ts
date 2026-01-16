@@ -12,7 +12,7 @@ interface ChangePasswordPayload {
 interface ChangePasswordError {
   message: string;
 }
-
+// Mutation hook for changing password
 export const useChangePassword = () => {
   return useMutation({
     mutationFn: async (data: ChangePasswordPayload) => {

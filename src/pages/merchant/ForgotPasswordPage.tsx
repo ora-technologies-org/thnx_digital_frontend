@@ -11,11 +11,9 @@ import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useForgotPassword } from "@/features/merchant/hooks/useForgotPssword";
+import { forgotPasswordSchema } from "@/shared/utils/merchant";
 
 // Email validation schema
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
-});
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
@@ -118,7 +116,6 @@ export const ForgotPasswordPage: React.FC = () => {
                   error={errors.email?.message}
                   {...register("email")}
                   className="transition-all focus:scale-[1.02]"
-                  icon={<Mail className="w-5 h-5 text-gray-400" />}
                 />
               </motion.div>
 

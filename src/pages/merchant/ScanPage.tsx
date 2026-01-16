@@ -25,6 +25,7 @@ import { useAppSelector } from "@/app/hooks";
 import { useRedemptionHistory } from "@/features/Redemption/Hooks/useQRRedemption";
 import { RedemptionHistoryModal } from "@/features/Redemption/Components/RedemptionHistoryModal";
 
+// Complete purchase/gift card data structure
 interface PurchaseData {
   id: string;
   qrCode: string;
@@ -80,6 +81,7 @@ export const ScanPage: React.FC = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   // ==================== HOOKS ====================
+  // OTP verification and redemption flow management
   const {
     isRequestingOTP,
     isVerifyingOTP,
@@ -93,9 +95,9 @@ export const ScanPage: React.FC = () => {
     verifyOTP,
     redeemGiftCard,
     resetOTPFlow,
-    refreshPurchaseData,
   } = useOTPRedeem();
 
+  // Redemption history data management
   const {
     history,
     isLoading: isHistoryLoading,
@@ -105,6 +107,7 @@ export const ScanPage: React.FC = () => {
   } = useRedemptionHistory();
 
   // ==================== MANUAL QR CODE VERIFICATION ====================
+  // Verify QR code entered manually by user
   const handleVerify = async () => {
     if (!qrCode.trim()) {
       setError("Please enter QR code");
@@ -139,6 +142,7 @@ export const ScanPage: React.FC = () => {
   };
 
   // ==================== REDEEM FLOW ====================
+  // Initiate redemption process and request OTP
   const handleRedeemClick = async () => {
     if (!purchaseData) return;
 
@@ -150,6 +154,7 @@ export const ScanPage: React.FC = () => {
     await requestOTP(purchaseData.id);
   };
 
+  // Process redemption after OTP verification
   const handleOTPVerified = async (
     amount: string,
     locationName: string,
@@ -175,15 +180,21 @@ export const ScanPage: React.FC = () => {
     );
 
     if (success) {
+      // Refresh purchase data and history after successful redemption
       setTimeout(async () => {
-        const refreshedData = await refreshPurchaseData(purchaseData.qrCode);
-        if (refreshedData) {
-          setPurchaseData(refreshedData);
+        // Re-verify the QR code to get updated purchase data
+        try {
+          const result = await VerifyService.verifyQRCode(purchaseData.qrCode);
+          if (result.success && result.data) {
+            setPurchaseData(result.data);
 
-          // Refresh redemption history after successful redemption
-          if (purchaseData.qrCode) {
-            await getRecentRedemptions(purchaseData.qrCode);
+            // Refresh redemption history after successful redemption
+            if (purchaseData.qrCode) {
+              await getRecentRedemptions(purchaseData.qrCode);
+            }
           }
+        } catch (err) {
+          console.error("Failed to refresh purchase data:", err);
         }
 
         setShowOTPModal(false);
@@ -195,6 +206,7 @@ export const ScanPage: React.FC = () => {
   };
 
   // ==================== HISTORY HANDLERS ====================
+  // Open redemption history modal
   const handleViewHistory = async () => {
     if (!purchaseData?.qrCode) return;
 
@@ -202,6 +214,7 @@ export const ScanPage: React.FC = () => {
   };
 
   // ==================== RESET HANDLER ====================
+  // Clear all state and return to initial scan page
   const handleReset = () => {
     setQrCode("");
     setPurchaseData(null);
@@ -215,6 +228,7 @@ export const ScanPage: React.FC = () => {
   };
 
   // ==================== FORMATTING FUNCTIONS ====================
+  // Format amount as Indian Rupee currency
   const formatCurrency = (amount: string | number) => {
     const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
     if (isNaN(numAmount)) return "₹0.00";
@@ -227,6 +241,7 @@ export const ScanPage: React.FC = () => {
     }).format(numAmount);
   };
 
+  // Format date in Indian format
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -240,6 +255,7 @@ export const ScanPage: React.FC = () => {
     }
   };
 
+  // Format date with time
   const formatDateTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -263,6 +279,7 @@ export const ScanPage: React.FC = () => {
       : purchaseData?.recentRedemptions?.slice(0, 3) || [];
 
   // ==================== AUTO-VERIFY QR FROM URL ====================
+  // Automatically verify QR code when passed via URL parameter
   useEffect(() => {
     console.log("🔍 ScanPage mounted:", {
       qrCodeParam,

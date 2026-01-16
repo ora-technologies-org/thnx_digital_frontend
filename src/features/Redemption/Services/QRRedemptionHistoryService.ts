@@ -1,6 +1,7 @@
 // src/features/purchase/services/QRRedemptionHistoryService.ts
 import api from "@/shared/utils/api";
 
+// Represents a single redemption transaction
 export interface RedemptionHistoryItem {
   id: string;
   purchaseId?: string;
@@ -22,6 +23,7 @@ export interface RedemptionHistoryItem {
   paymentMethod?: string;
 }
 
+// API response structure for redemption history
 export interface RedemptionHistoryResponse {
   success: boolean;
   message: string;
@@ -34,6 +36,7 @@ export interface RedemptionHistoryResponse {
   };
 }
 
+// Query parameters for filtering redemption history
 export interface RedemptionHistoryParams {
   qrCode?: string;
   purchaseId?: string;
@@ -44,12 +47,12 @@ export interface RedemptionHistoryParams {
   status?: string;
 }
 
-// Use GET method with query parameters
+// Fetch redemption history with flexible filtering options
 export const fetchRedemptionHistory = async (
   params: RedemptionHistoryParams,
 ): Promise<RedemptionHistoryResponse> => {
   try {
-    // Filter out undefined values to avoid sending them as query params
+    // Remove undefined/null values from query params
     const queryParams = Object.fromEntries(
       Object.entries({
         qrCode: params.qrCode,
@@ -59,10 +62,10 @@ export const fetchRedemptionHistory = async (
         startDate: params.startDate,
         endDate: params.endDate,
         status: params.status,
-      }).filter(([value]) => value !== undefined && value !== null),
+      }).filter(([, value]) => value !== undefined && value !== null),
     );
 
-    console.log("Query params being sent:", queryParams); // Debug log
+    console.log("Query params being sent:", queryParams);
 
     const response = await api.get("/purchases/redemptions/history", {
       params: queryParams,
@@ -82,6 +85,7 @@ export const fetchRedemptionHistory = async (
   }
 };
 
+// Fetch paginated redemption history for a specific QR code
 export const fetchRedemptionHistoryByQRCode = async (
   qrCode: string,
   page: number = 1,
@@ -94,6 +98,7 @@ export const fetchRedemptionHistoryByQRCode = async (
   });
 };
 
+// Fetch recent redemptions for a QR code (useful for dashboards)
 export const fetchRecentRedemptionsByQRCode = async (
   qrCode: string,
   limit: number = 5,
@@ -105,6 +110,7 @@ export const fetchRecentRedemptionsByQRCode = async (
   });
 };
 
+// Fetch redemption history for a specific purchase ID
 export const fetchRedemptionHistoryByPurchaseId = async (
   purchaseId: string,
   page: number = 1,
@@ -117,7 +123,6 @@ export const fetchRedemptionHistoryByPurchaseId = async (
   });
 };
 
-// Export all functions
 export default {
   fetchRedemptionHistory,
   fetchRedemptionHistoryByQRCode,
