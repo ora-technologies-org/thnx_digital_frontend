@@ -199,35 +199,66 @@ export const merchantService = {
     if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
     if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
 
-    const url = `${API_BASE_URL}merchants/?${queryParams.toString()}`;
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}merchants/?${queryParams.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) throw new Error("Failed to fetch merchants");
-
-    const data = await response.json();
-    return data.data;
+      return response.data.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch merchants",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 
   // Get merchant by ID
   getMerchantById: async (merchantId: string): Promise<Merchant> => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}merchants/${merchantId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
 
-    if (!response.ok) throw new Error("Failed to fetch merchant");
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}merchants/${merchantId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
-    const data = await response.json();
-    return data.data.merchant;
+      return response.data.data.merchant;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch merchant",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 
   // Create new merchant
@@ -485,35 +516,71 @@ export const merchantService = {
   // Get merchant's gift cards
   MerchantGiftCard: async (
     userId: string,
+    params?: { page?: number; limit?: number },
   ): Promise<{ giftCards: GiftCard[]; setting: MerchantSetting }> => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}merchants/cards/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
 
-    if (!response.ok) throw new Error("Failed to fetch gift cards");
+    const queryParams = new URLSearchParams();
+    queryParams.append("page", (params?.page || 1).toString());
+    queryParams.append("limit", (params?.limit || 100).toString());
 
-    const data = await response.json();
-    return data.data;
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}merchants/cards/${userId}?${queryParams.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      return response.data.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch gift cards",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 
   // Get gift card details
   getGiftCardDetails: async (cardId: string): Promise<GiftCard> => {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}cards/${cardId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
 
-    if (!response.ok) throw new Error("Failed to fetch gift card details");
+    try {
+      const response = await axios.get(`${API_BASE_URL}cards/${cardId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-    const data = await response.json();
-    return data.data;
+      return response.data.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch gift card details",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 
   // Create gift card
@@ -720,19 +787,33 @@ export const merchantService = {
     if (params?.isActive !== undefined)
       queryParams.append("isActive", params.isActive.toString());
 
-    const url = `${API_BASE_URL}cards/?${queryParams.toString()}`;
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}cards/?${queryParams.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) throw new Error("Failed to fetch gift cards");
-
-    const data = await response.json();
-    return data.data;
+      return response.data.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch gift cards",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 
   // ==================== MERCHANT SETTINGS SERVICES ====================
@@ -740,20 +821,34 @@ export const merchantService = {
   // Get merchant settings
   async getMerchantSettings(merchantId: string): Promise<MerchantSetting> {
     const token = getAuthToken();
-    const response = await fetch(
-      `${API_BASE_URL}merchants/${merchantId}/settings`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}merchants/${merchantId}/settings`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      },
-    );
+      );
 
-    if (!response.ok) throw new Error("Failed to fetch merchant settings");
-
-    const data = await response.json();
-    return data.data;
+      return response.data.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch merchant settings",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 
   // Update merchant settings
@@ -803,20 +898,34 @@ export const merchantService = {
     totalRevenue: number;
   }> {
     const token = getAuthToken();
-    const response = await fetch(
-      `${API_BASE_URL}merchants/${merchantId}/stats`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}merchants/${merchantId}/stats`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      },
-    );
+      );
 
-    if (!response.ok) throw new Error("Failed to fetch merchant statistics");
-
-    const data = await response.json();
-    return data.data;
+      return response.data.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch merchant statistics",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 
   // Get dashboard analytics (admin)
@@ -828,16 +937,33 @@ export const merchantService = {
     recentActivity: unknown[];
   }> {
     const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}admin/analytics/dashboard`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
 
-    if (!response.ok) throw new Error("Failed to fetch dashboard analytics");
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}admin/analytics/dashboard`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
 
-    const data = await response.json();
-    return data.data;
+      return response.data.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data;
+        throw {
+          message: data?.message || "Failed to fetch dashboard analytics",
+          errors: data?.errors,
+          statusCode: error.response?.status || 500,
+        } as ApiError;
+      } else {
+        throw {
+          message: "An unexpected error occurred",
+          statusCode: 500,
+        } as ApiError;
+      }
+    }
   },
 };

@@ -5,7 +5,7 @@ import {
   RedemptionHistoryResponse,
   RedemptionHistoryParams,
   fetchRedemptionHistory,
-} from "../services/QRRedemptionHistoryService";
+} from "../Services/QRCodeRedemptionHistoryService";
 
 export const useRedemptionHistory = () => {
   const [history, setHistory] = useState<RedemptionHistoryItem[]>([]);

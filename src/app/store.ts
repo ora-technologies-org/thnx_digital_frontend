@@ -3,7 +3,7 @@ import authReducer from "../features/auth/slices/authSlice";
 import giftCardReducer from "../features/giftCards/slices/giftCardSlice";
 import merchantReducer from "../features/admin/slices/MerchantCreateSlice";
 import profileReducer from "../features/auth/slices/profileSlice";
-import AdminprofileReducer from "../features/auth/slices/adminprofileSlice";
+import adminprofileReducer from "../features/auth/slices/adminprofileSlice";
 import landingPageReducer from "../features/merchant/slices/LandingPageSlice";
 import giftCardSettingsReducer from "../features/merchant/slices/giftCardSlice";
 
@@ -13,7 +13,7 @@ export const store = configureStore({
     giftCards: giftCardReducer,
     merchant: merchantReducer,
     profile: profileReducer,
-    Adminprofile: AdminprofileReducer,
+    Adminprofile: adminprofileReducer,
     giftCardSettings: giftCardSettingsReducer,
     landingPage: landingPageReducer,
   },

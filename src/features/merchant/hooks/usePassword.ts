@@ -1,7 +1,8 @@
 // src/features/merchant/hooks/useChangePassword.ts
 import { useMutation } from "@tanstack/react-query";
-import api from "@/shared/utils/api";
+
 import { AxiosError } from "axios";
+import { changePasswordService } from "../services/forgotPasswordService";
 
 interface ChangePasswordPayload {
   password: string;
@@ -12,12 +13,16 @@ interface ChangePasswordPayload {
 interface ChangePasswordError {
   message: string;
 }
+
 // Mutation hook for changing password
 export const useChangePassword = () => {
   return useMutation({
     mutationFn: async (data: ChangePasswordPayload) => {
-      const response = await api.post("/auth/change-password", data);
-      return response.data;
+      return await changePasswordService.changePassword(
+        data.password,
+        data.newPassword,
+        data.confirmPassword,
+      );
     },
     onSuccess: () => {
       console.log("Password changed successfully");

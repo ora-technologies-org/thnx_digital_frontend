@@ -1,23 +1,39 @@
 // src/services/otpService.ts
+import axios, { AxiosError } from "axios";
 import { getToken } from "@/shared/utils/auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 // ==================== TYPE DEFINITIONS ====================
+
+/**
+ * OTP request payload structure
+ */
 export interface OTPRequestPayload {
   purchaseId: string;
 }
+
+/**
+ * Redeem response data structure
+ */
 export interface RedeemResponseData {
   transactionId: string;
   redeemedAmount: number;
   remainingBalance: number;
   redeemedAt: string;
 }
+
+/**
+ * OTP verify payload structure
+ */
 export interface OTPVerifyPayload {
   otp: string;
   purchaseId: string;
 }
 
+/**
+ * OTP response structure
+ */
 export interface OTPResponse {
   success: boolean;
   message?: string;
@@ -26,6 +42,9 @@ export interface OTPResponse {
   };
 }
 
+/**
+ * Redeem payload structure
+ */
 export interface RedeemPayload {
   qrCode: string;
   amount: number;
@@ -34,10 +53,29 @@ export interface RedeemPayload {
   notes: string;
 }
 
+/**
+ * Redeem service response structure
+ */
+export interface RedeemServiceResponse {
+  success: boolean;
+  message: string;
+  data?: RedeemResponseData;
+}
+
+/**
+ * API response wrapper
+ */
+interface ApiResponse<T> {
+  message: string;
+  data?: T;
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 /**
  * Extract purchase ID from QR code
+ * @param {string} qrCode - The QR code string
+ * @returns {string} Extracted purchase ID
  */
 const extractPurchaseIdFromQR = (qrCode: string): string => {
   console.log("🔍 [OTP Service] Extracting purchaseId from QR:", qrCode);
@@ -47,11 +85,39 @@ const extractPurchaseIdFromQR = (qrCode: string): string => {
   return purchaseId;
 };
 
+/**
+ * Handle Axios errors and return formatted response
+ * @param {unknown} error - The error object
+ * @param {string} defaultMessage - Default error message
+ * @returns {OTPResponse} Formatted error response
+ */
+const handleAxiosError = (
+  error: unknown,
+  defaultMessage: string,
+): OTPResponse => {
+  console.error("💥 [OTP Service] Error:", error);
+
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<ApiResponse<unknown>>;
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || defaultMessage,
+    };
+  }
+
+  return {
+    success: false,
+    message: "Network error. Please try again.",
+  };
+};
+
 // ==================== API FUNCTIONS ====================
 
 /**
  * Request OTP to be sent to customer
  * Sends OTP via email and SMS
+ * @param {string} purchaseId - The purchase ID to request OTP for
+ * @returns {Promise<OTPResponse>} Response indicating success or failure
  */
 export const requestOTP = async (purchaseId: string): Promise<OTPResponse> => {
   console.log("📤 [OTP Service] Requesting OTP for purchase:", purchaseId);
@@ -64,46 +130,37 @@ export const requestOTP = async (purchaseId: string): Promise<OTPResponse> => {
     console.log("🌐 [OTP Service] URL:", url);
     console.log("📦 [OTP Service] Payload:", { purchaseId });
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const response = await axios.post<ApiResponse<{ expiresAt?: string }>>(
+      url,
+      { purchaseId },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       },
-      body: JSON.stringify({ purchaseId }),
-    });
+    );
 
     console.log("📥 [OTP Service] Response status:", response.status);
-
-    const data = await response.json();
-    console.log("📥 [OTP Service] Response data:", data);
-
-    if (!response.ok) {
-      console.error("❌ [OTP Service] Request failed:", data.message);
-      return {
-        success: false,
-        message: data.message || "Failed to request OTP",
-      };
-    }
-
+    console.log("📥 [OTP Service] Response data:", response.data);
     console.log("✅ [OTP Service] OTP sent successfully");
+
     return {
       success: true,
-      message: data.message || "OTP sent successfully",
-      data: data.data,
+      message: response.data.message || "OTP sent successfully",
+      data: response.data.data,
     };
   } catch (error) {
-    console.error("💥 [OTP Service] Request Error:", error);
-    return {
-      success: false,
-      message: "Network error. Please try again.",
-    };
+    return handleAxiosError(error, "Failed to request OTP");
   }
 };
 
 /**
  * Verify OTP entered by user
  * Validates OTP against purchase ID
+ * @param {string} otp - The OTP code to verify
+ * @param {string} purchaseId - The purchase ID associated with the OTP
+ * @returns {Promise<OTPResponse>} Response indicating verification success or failure
  */
 export const verifyOTP = async (
   otp: string,
@@ -123,61 +180,48 @@ export const verifyOTP = async (
     console.log("🌐 [OTP Service] URL:", url);
     console.log("📦 [OTP Service] Payload:", { otp, purchaseId });
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const response = await axios.post<ApiResponse<unknown>>(
+      url,
+      { otp, purchaseId },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       },
-      body: JSON.stringify({ otp, purchaseId }),
-    });
+    );
 
     console.log("📥 [OTP Service] Response status:", response.status);
-
-    const data = await response.json();
-    console.log("📥 [OTP Service] Response data:", data);
-
-    if (!response.ok) {
-      console.error("❌ [OTP Service] Verification failed:", data.message);
-      return {
-        success: false,
-        message: data.message || "OTP verification failed",
-      };
-    }
-
+    console.log("📥 [OTP Service] Response data:", response.data);
     console.log("✅ [OTP Service] OTP verified successfully");
+
     return {
       success: true,
-      message: data.message || "OTP verified successfully",
+      message: response.data.message || "OTP verified successfully",
     };
   } catch (error) {
-    console.error("💥 [OTP Service] Verification Error:", error);
-    return {
-      success: false,
-      message: "Network error. Please try again.",
-    };
+    return handleAxiosError(error, "OTP verification failed");
   }
 };
 
 /**
  * Complete redemption with OTP verification
  * Two-step process: Verify OTP, then redeem amount
+ * @param {RedeemPayload} redeemPayload - The redemption details
+ * @param {string} otp - The OTP code for verification
+ * @returns {Promise<RedeemServiceResponse>} Response with redemption details
  */
 export const redeemWithOTP = async (
   redeemPayload: RedeemPayload,
   otp: string,
-): Promise<{
-  success: boolean;
-  message: string;
-  data?: RedeemResponseData;
-}> => {
+): Promise<RedeemServiceResponse> => {
   console.log("📤 [OTP Service] Redeeming with OTP:", otp);
   console.log("📦 [OTP Service] Redeem payload:", redeemPayload);
 
   try {
     const token = getToken();
 
-    //  Verify OTP
+    // Step 1: Verify OTP
     const purchaseId = extractPurchaseIdFromQR(redeemPayload.qrCode);
     console.log("🔍 [OTP Service] Extracted purchaseId:", purchaseId);
 
@@ -191,40 +235,41 @@ export const redeemWithOTP = async (
       };
     }
 
-    //  Proceed with redemption
+    // Step 2: Proceed with redemption
     const url = `${API_URL}purchases/redeem`;
     console.log("🌐 [OTP Service] Redeem URL:", url);
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+    const response = await axios.post<ApiResponse<RedeemResponseData>>(
+      url,
+      redeemPayload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       },
-      body: JSON.stringify(redeemPayload),
-    });
+    );
 
     console.log("📥 [OTP Service] Redeem response status:", response.status);
-
-    const data = await response.json();
-    console.log("📥 [OTP Service] Redeem response data:", data);
-
-    if (!response.ok) {
-      console.error("❌ [OTP Service] Redemption failed:", data.message);
-      return {
-        success: false,
-        message: data.message || "Failed to redeem",
-      };
-    }
-
+    console.log("📥 [OTP Service] Redeem response data:", response.data);
     console.log("✅ [OTP Service] Redeemed successfully");
+
     return {
       success: true,
       message: "Amount redeemed successfully",
-      data: data.data,
+      data: response.data.data,
     };
   } catch (error) {
     console.error("💥 [OTP Service] Redeem Error:", error);
+
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError<ApiResponse<unknown>>;
+      return {
+        success: false,
+        message: axiosError.response?.data?.message || "Failed to redeem",
+      };
+    }
+
     return {
       success: false,
       message: "Network error. Please try again.",
@@ -233,7 +278,10 @@ export const redeemWithOTP = async (
 };
 
 // ==================== DEFAULT EXPORT ====================
-// Export all functions as a single object for backward compatibility
+
+/**
+ * Export all functions as a single object for backward compatibility
+ */
 const OTPService = {
   requestOTP,
   verifyOTP,

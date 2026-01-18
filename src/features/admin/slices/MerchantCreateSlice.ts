@@ -74,7 +74,7 @@ const initialFormData: CreateMerchantForm = {
   businessRegistrationNumber: "",
   taxId: "",
   businessType: "",
-  merchant: "", // ✅ FIXED: Added missing field
+  merchant: "",
   businessCategory: "",
 
   // Business Address

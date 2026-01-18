@@ -75,13 +75,13 @@ export const fetchSupportTickets = async (params?: FetchTicketsParams) => {
 
 /**
  * Fetches a single support ticket by merchant ID
- * @param merchantid - The merchant's unique identifier
+ * @param merchaId - The merchant's unique identifier
  * @returns Promise with support ticket details
  * @throws Error if the ticket is not found or request fails
  */
-export const fetchSupportTicketById = async (merchantid: string) => {
+export const fetchSupportTicketById = async (merchantId: string) => {
   try {
-    const response = await api.get(`/merchants/support-ticket/${merchantid}`);
+    const response = await api.get(`/merchants/support-ticket/${merchantId}`);
     return response.data;
   } catch (error) {
     const err = error as AxiosError<ApiErrorResponse>;

@@ -1,9 +1,14 @@
 // src/services/VerifyService.ts
+import axios, { AxiosError } from "axios";
 import { getToken } from "@/shared/utils/auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 // ==================== TYPE DEFINITIONS ====================
+
+/**
+ * Purchase data structure returned from API
+ */
 export interface PurchaseData {
   id: string;
   qrCode: string;
@@ -45,33 +50,58 @@ export interface PurchaseData {
   redemptionCount: number;
 }
 
+/**
+ * API response wrapper interface
+ */
+interface ApiResponse<T> {
+  data: {
+    purchase: T;
+  };
+}
+
+/**
+ * Service response interface
+ */
+interface ServiceResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
+
 // ==================== API FUNCTIONS ====================
 
 /**
  * Verify QR code and fetch purchase details
  * NO AUTH required - Public endpoint for merchants to scan
+ * @param {string} qrCode - The QR code to verify
+ * @returns {Promise<ServiceResponse<PurchaseData>>} Purchase data if valid
  */
 export const verifyQRCode = async (
   qrCode: string,
-): Promise<{
-  success: boolean;
-  data?: PurchaseData;
-  message?: string;
-}> => {
+): Promise<ServiceResponse<PurchaseData>> => {
   try {
-    const response = await fetch(`${API_URL}purchases/qr/${qrCode.trim()}`);
+    const response = await axios.get<ApiResponse<PurchaseData>>(
+      `${API_URL}purchases/qr/${qrCode.trim()}`,
+    );
 
-    if (!response.ok) {
-      throw new Error("QR code not found");
-    }
-
-    const result = await response.json();
     return {
       success: true,
-      data: result.data.purchase,
+      data: response.data.data.purchase,
     };
   } catch (error) {
     console.error("QR Verification Error:", error);
+
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError;
+      return {
+        success: false,
+        message:
+          axiosError.response?.status === 404
+            ? "QR code not found"
+            : "Invalid QR code or purchase not found",
+      };
+    }
+
     return {
       success: false,
       message: "Invalid QR code or purchase not found",
@@ -82,33 +112,42 @@ export const verifyQRCode = async (
 /**
  * Get purchase details by ID
  * AUTH required - Used for authenticated merchant access
+ * @param {string} purchaseId - The purchase ID to fetch
+ * @returns {Promise<ServiceResponse<PurchaseData>>} Purchase data if found
  */
 export const getPurchaseById = async (
   purchaseId: string,
-): Promise<{
-  success: boolean;
-  data?: PurchaseData;
-  message?: string;
-}> => {
+): Promise<ServiceResponse<PurchaseData>> => {
   try {
     const token = getToken();
-    const response = await fetch(`${API_URL}purchases/${purchaseId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
+
+    const response = await axios.get<ApiResponse<PurchaseData>>(
+      `${API_URL}purchases/${purchaseId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       },
-    });
+    );
 
-    if (!response.ok) {
-      throw new Error("Purchase not found");
-    }
-
-    const result = await response.json();
     return {
       success: true,
-      data: result.data.purchase,
+      data: response.data.data.purchase,
     };
   } catch (error) {
     console.error("Get Purchase Error:", error);
+
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError;
+      return {
+        success: false,
+        message:
+          axiosError.response?.status === 404
+            ? "Purchase not found"
+            : "Failed to fetch purchase details",
+      };
+    }
+
     return {
       success: false,
       message: "Failed to fetch purchase details",
@@ -117,7 +156,10 @@ export const getPurchaseById = async (
 };
 
 // ==================== DEFAULT EXPORT ====================
-// Export all functions as a single object for backward compatibility
+
+/**
+ * Export all functions as a single object for backward compatibility
+ */
 const VerifyService = {
   verifyQRCode,
   getPurchaseById,

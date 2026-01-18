@@ -12,7 +12,7 @@ import {
   Download,
   Search,
 } from "lucide-react";
-import { RedemptionHistoryItem } from "../services/QRRedemptionHistoryService";
+import { RedemptionHistoryItem } from "../Services/QRCodeRedemptionHistoryService";
 
 interface RedemptionHistoryModalProps {
   isOpen: boolean;

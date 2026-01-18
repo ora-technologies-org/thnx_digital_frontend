@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { Provider } from "react-redux";
+
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import { store } from "./app/store";
+
 import { AuthInitializer } from "./features/auth/components/AuthInitializer";
 import AppRoutes from "./routes/AppRoutes";
 import "./styles/globals.css";
@@ -27,19 +27,17 @@ function App() {
   }
 
   return (
-    <Provider store={store}>
-      <QueryClientProvider client={queryClient}>
-        <GoogleOAuthProvider clientId={googleClientId}>
-          <BrowserRouter>
-            <AuthInitializer>
-              <AppRoutes />
-              <Toaster position="top-right" />
-            </AuthInitializer>
-          </BrowserRouter>
-        </GoogleOAuthProvider>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
-    </Provider>
+    <QueryClientProvider client={queryClient}>
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <BrowserRouter>
+          <AuthInitializer>
+            <AppRoutes />
+            <Toaster position="top-right" />
+          </AuthInitializer>
+        </BrowserRouter>
+      </GoogleOAuthProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 

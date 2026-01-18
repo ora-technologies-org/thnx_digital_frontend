@@ -52,11 +52,21 @@ export const fetchRedemptionHistory = async (
   params: RedemptionHistoryParams,
 ): Promise<RedemptionHistoryResponse> => {
   try {
-    // Remove undefined/null values from query params
+    // Build URL path based on what parameters are provided
+    let endpoint = "/purchases/redemptions/history";
+
+    // If qrCode is provided, add it to the path
+    if (params.qrCode) {
+      endpoint = `/purchases/redemptions/history/qr/${params.qrCode}`;
+    }
+    // If purchaseId is provided (and no qrCode), add it to the path
+    else if (params.purchaseId) {
+      endpoint = `/purchases/redemptions/history/purchase/${params.purchaseId}`;
+    }
+
+    // Remaining parameters go as query params (pagination, filters, etc.)
     const queryParams = Object.fromEntries(
       Object.entries({
-        qrCode: params.qrCode,
-        purchaseId: params.purchaseId,
         page: params.page || 1,
         limit: params.limit || 10,
         startDate: params.startDate,
@@ -65,9 +75,10 @@ export const fetchRedemptionHistory = async (
       }).filter(([, value]) => value !== undefined && value !== null),
     );
 
+    console.log("Endpoint:", endpoint);
     console.log("Query params being sent:", queryParams);
 
-    const response = await api.get("/purchases/redemptions/history", {
+    const response = await api.get(endpoint, {
       params: queryParams,
     });
 

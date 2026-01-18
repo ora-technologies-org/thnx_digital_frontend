@@ -1,13 +1,18 @@
-// src/features/admin/hooks/useAdmin.ts - PROPERLY FIXED AUTO-REFRESH! 🔄
+// src/features/admin/hooks/useAdmin.ts - REFACTORED WITH CUSTOM HOOK! 🔄
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   adminApi,
   CreateMerchantRequest,
   MerchantUser,
 } from "../api/admin.api";
-import { ContactMessage, contactUsService } from "../services/contactusService";
+import { ContactMessage, contactUsService } from "../services/contactUsService";
 import api from "../../../shared/utils/api";
+import {
+  merchantService,
+  GetMerchantsParams,
+} from "../services/merchantService";
+import { useInvalidateQueries } from "@/shared/hooks/useInvalidateQueries";
 
 // ==================== QUERY KEYS - EXPORTED FOR USE IN OTHER FILES ====================
 export const adminQueryKeys = {
@@ -24,32 +29,32 @@ export const adminQueryKeys = {
 // - useMerchantMutations.ts
 // - Any other file that deals with merchant data
 
-// ==================== GET ALL MERCHANTS ====================
-export const useAllMerchants = (params: {
+// ==================== TYPE DEFINITIONS ====================
+
+/**
+ * Parameters for fetching pending merchants
+ */
+export interface GetPendingMerchantsParams {
   page: number;
   limit: number;
-  status?: string;
   search?: string;
-  sortBy?: string;
-  order?: string;
-}) => {
+  sortBy?: "createdAt" | "updatedAt";
+  order?: "asc" | "desc";
+}
+
+// ==================== GET ALL MERCHANTS ====================
+export const useAllMerchants = (params: GetMerchantsParams) => {
   return useQuery({
-    queryKey: ["merchants", params], // ✅ Include ALL params in query key
-    queryFn: () => adminApi.getAllMerchants(params),
+    queryKey: ["merchants", params],
+    queryFn: () => merchantService.getMerchants(params),
     staleTime: 30000,
   });
 };
 
 // ==================== GET PENDING MERCHANTS ====================
-export const usePendingMerchants = (params: {
-  page: number;
-  limit: number;
-  search?: string;
-  sortBy?: string;
-  order?: string;
-}) => {
+export const usePendingMerchants = (params: GetPendingMerchantsParams) => {
   return useQuery({
-    queryKey: ["pending-merchants", params], // ✅ Include params in key!
+    queryKey: ["pending-merchants", params],
     queryFn: () => adminApi.getPendingMerchants(params),
     staleTime: 1000 * 60 * 2,
     refetchOnWindowFocus: true,
@@ -59,16 +64,12 @@ export const usePendingMerchants = (params: {
 
 // ==================== CREATE MERCHANT ====================
 export const useCreateMerchant = () => {
-  const queryClient = useQueryClient();
+  const { invalidateMerchants } = useInvalidateQueries();
 
   return useMutation({
     mutationFn: (data: CreateMerchantRequest) => adminApi.createMerchant(data),
     onSuccess: () => {
-      // Invalidate and refetch immediately
-      queryClient.invalidateQueries({
-        queryKey: adminQueryKeys.merchants(),
-        refetchType: "active", // Force immediate refetch
-      });
+      invalidateMerchants();
     },
     onError: (error: Error) => {
       console.error("Create merchant error:", error.message);
@@ -76,9 +77,10 @@ export const useCreateMerchant = () => {
   });
 };
 
-// ==================== APPROVE MERCHANT - COMPLETE FIX! ====================
+// ==================== APPROVE MERCHANT - REFACTORED! ====================
 export const useApproveMerchant = () => {
-  const queryClient = useQueryClient();
+  const { updateMerchantInCache, refetchMerchantsAndPending } =
+    useInvalidateQueries();
 
   return useMutation({
     mutationFn: ({
@@ -92,14 +94,13 @@ export const useApproveMerchant = () => {
       console.log("✅ Approve Success - Response:", response);
       console.log("✅ Merchant ID:", variables.merchantId);
 
-      // CRITICAL FIX: Extract the updated profile from response
       const updatedProfile = response?.data?.profile;
 
       if (updatedProfile) {
         console.log("✅ Updated Profile:", updatedProfile);
 
-        //  Update all merchants cache immediately
-        queryClient.setQueryData<MerchantUser[]>(
+        // Update all merchants cache immediately
+        updateMerchantInCache<MerchantUser[]>(
           adminQueryKeys.merchants(),
           (oldData) => {
             if (!oldData) return oldData;
@@ -111,12 +112,11 @@ export const useApproveMerchant = () => {
         );
 
         // Update pending merchants cache
-        queryClient.setQueryData<MerchantUser[]>(
+        updateMerchantInCache<MerchantUser[]>(
           adminQueryKeys.pendingMerchants(),
           (oldData) => {
             if (!oldData) return oldData;
             console.log("🔄 Updating pending merchants cache...");
-            // Remove from pending if approved
             return oldData.filter(
               (merchant) => merchant.id !== updatedProfile.id,
             );
@@ -124,16 +124,9 @@ export const useApproveMerchant = () => {
         );
       }
 
-      //  Force immediate refetch to ensure consistency
+      // Force immediate refetch to ensure consistency
       console.log("🔄 Forcing refetch...");
-      queryClient.refetchQueries({
-        queryKey: adminQueryKeys.merchants(),
-        type: "active",
-      });
-      queryClient.refetchQueries({
-        queryKey: adminQueryKeys.pendingMerchants(),
-        type: "active",
-      });
+      refetchMerchantsAndPending();
     },
     onError: (error: Error) => {
       console.error("❌ Approve merchant error:", error.message);
@@ -141,9 +134,10 @@ export const useApproveMerchant = () => {
   });
 };
 
-// ==================== REJECT MERCHANT - COMPLETE FIX! ====================
+// ==================== REJECT MERCHANT - REFACTORED! ====================
 export const useRejectMerchant = () => {
-  const queryClient = useQueryClient();
+  const { updateMerchantInCache, refetchMerchantsAndPending } =
+    useInvalidateQueries();
 
   return useMutation({
     mutationFn: ({
@@ -164,7 +158,7 @@ export const useRejectMerchant = () => {
       if (updatedProfile) {
         console.log("✅ Updated Profile:", updatedProfile);
 
-        queryClient.setQueryData<MerchantUser[]>(
+        updateMerchantInCache<MerchantUser[]>(
           adminQueryKeys.merchants(),
           (oldData) => {
             if (!oldData) return oldData;
@@ -175,13 +169,11 @@ export const useRejectMerchant = () => {
           },
         );
 
-        // Method 2: Update pending merchants cache
-        queryClient.setQueryData<MerchantUser[]>(
+        updateMerchantInCache<MerchantUser[]>(
           adminQueryKeys.pendingMerchants(),
           (oldData) => {
             if (!oldData) return oldData;
             console.log("🔄 Updating pending merchants cache...");
-            // Remove from pending if rejected
             return oldData.filter(
               (merchant) => merchant.id !== updatedProfile.id,
             );
@@ -189,16 +181,8 @@ export const useRejectMerchant = () => {
         );
       }
 
-      // Method 3: Force immediate refetch to ensure consistency
       console.log("🔄 Forcing refetch...");
-      queryClient.refetchQueries({
-        queryKey: adminQueryKeys.merchants(),
-        type: "active",
-      });
-      queryClient.refetchQueries({
-        queryKey: adminQueryKeys.pendingMerchants(),
-        type: "active",
-      });
+      refetchMerchantsAndPending();
     },
     onError: (error: Error) => {
       console.error("❌ Reject merchant error:", error.message);
@@ -206,9 +190,10 @@ export const useRejectMerchant = () => {
   });
 };
 
-// ==================== DELETE MERCHANT (SOFT/HARD) ====================
+// ==================== DELETE MERCHANT (SOFT/HARD) - REFACTORED! ====================
 export const useDeleteMerchant = () => {
-  const queryClient = useQueryClient();
+  const { updateMerchantInCache, refetchMerchantsAndPending } =
+    useInvalidateQueries();
 
   return useMutation({
     mutationFn: ({
@@ -222,7 +207,7 @@ export const useDeleteMerchant = () => {
       console.log("✅ Delete Success - Response:", response);
 
       // Update cache - remove deleted merchant
-      queryClient.setQueryData<MerchantUser[]>(
+      updateMerchantInCache<MerchantUser[]>(
         adminQueryKeys.merchants(),
         (oldData) => {
           if (!oldData) return oldData;
@@ -232,7 +217,7 @@ export const useDeleteMerchant = () => {
         },
       );
 
-      queryClient.setQueryData<MerchantUser[]>(
+      updateMerchantInCache<MerchantUser[]>(
         adminQueryKeys.pendingMerchants(),
         (oldData) => {
           if (!oldData) return oldData;
@@ -243,14 +228,7 @@ export const useDeleteMerchant = () => {
       );
 
       // Force refetch
-      queryClient.refetchQueries({
-        queryKey: adminQueryKeys.merchants(),
-        type: "active",
-      });
-      queryClient.refetchQueries({
-        queryKey: adminQueryKeys.pendingMerchants(),
-        type: "active",
-      });
+      refetchMerchantsAndPending();
     },
     onError: (error: Error) => {
       console.error("❌ Delete merchant error:", error.message);
@@ -305,6 +283,7 @@ export interface RecentActivityItem {
   description?: string;
   timestamp: string;
 }
+
 export interface DashboardData {
   timeRange: string;
   dateRange: {
@@ -372,6 +351,7 @@ export const useDashboardData = (timeRange: string) => {
   return useQuery<DashboardResponse>({
     queryKey: adminQueryKeys.dashboard(timeRange),
     queryFn: async () => {
+      // <DashboardResponse> - Generic type parameter that specifies the structure of response.data
       const response = await api.get<DashboardResponse>(
         `/admin/dashboard?timeRange=${timeRange}`,
       );

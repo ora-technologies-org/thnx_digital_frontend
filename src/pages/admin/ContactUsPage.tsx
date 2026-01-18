@@ -1,7 +1,7 @@
 import { Mail, Phone, MessageSquare, Calendar, User, X } from "lucide-react";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { useContactMessages } from "@/features/admin/hooks/useAdmin";
-import { ContactMessage } from "@/features/admin/services/contactusService";
+import { ContactMessage } from "@/features/admin/services/contactUsService";
 import { useState } from "react";
 import { Spinner } from "@/shared/components/ui/Spinner";
 

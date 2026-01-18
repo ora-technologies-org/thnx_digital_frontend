@@ -1,14 +1,11 @@
 // src/features/merchant/hooks/useUpdateProfile.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/shared/utils/api";
 import { AxiosError } from "axios";
-
-// Define interface for the update profile request payload
-interface UpdateProfilePayload {
-  name: string;
-  phone: string;
-  bio: string;
-}
+import {
+  profileService,
+  type UpdateProfilePayload,
+  type UpdateProfileResponse,
+} from "../services/ProfileMerchantService";
 
 // Define interface for error response structure
 interface UpdateProfileError {
@@ -17,26 +14,44 @@ interface UpdateProfileError {
 
 /**
  * Custom hook for updating merchant profile information
- * Handles profile update mutation with proper cache invalidation
+ *
+ * This hook:
+ * - Handles profile update mutations
+ * - Invalidates relevant queries on success to refresh cached data
+ * - Provides error handling and logging
+ *
+ * @returns Mutation object with mutate function and status properties
  */
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
 
-  // Create and return the mutation hook
   return useMutation({
-    // Mutation function that makes the API call
-    mutationFn: async (data: UpdateProfilePayload) => {
-      const response = await api.put("/merchants/update/profile", data);
-      return response.data;
+    /**
+     * Mutation function that delegates to the profile service
+     *
+     * @param data - Profile update payload containing name, phone, and bio
+     * @returns Promise resolving to the update response
+     */
+    mutationFn: async (
+      data: UpdateProfilePayload,
+    ): Promise<UpdateProfileResponse> => {
+      return await profileService.updateProfile(data);
     },
-    // Success handler: invalidate related queries to refresh data
+
+    /**
+     * Success handler - invalidates related queries to refresh data
+     * This ensures the UI shows the latest profile information
+     */
     onSuccess: () => {
       // Invalidate auth-me query to update user context
       queryClient.invalidateQueries({ queryKey: ["auth-me"] });
       // Invalidate merchant-profile query to refresh profile data
       queryClient.invalidateQueries({ queryKey: ["merchant-profile"] });
     },
-    // Error handler: log errors for debugging
+
+    /**
+     * Error handler - logs errors for debugging
+     */
     onError: (error: AxiosError<UpdateProfileError>) => {
       console.error("Failed to update profile:", error);
     },
@@ -44,3 +59,9 @@ export const useUpdateProfile = () => {
 };
 
 export default useUpdateProfile;
+
+// Re-export types for consumers
+export type {
+  UpdateProfilePayload,
+  UpdateProfileResponse,
+} from "../services/ProfileMerchantService";

@@ -55,9 +55,10 @@ export async function changePassword(
 ): Promise<ChangePasswordResponse> {
   try {
     // Make API request to change password endpoint
+    // <ChangePasswordResponse> - Generic type parameter that specifies the structure of response.data
     const response = await api.post<ChangePasswordResponse>(
       `${AUTH_BASE_URL}/admin-password`,
-      data,
+      data, // TypeScript already knows this is ChangePasswordRequest
     );
     return response.data;
   } catch (error: unknown) {

@@ -1,5 +1,4 @@
 // services/contactUs.service.ts
-
 import api from "@/shared/utils/api";
 
 export interface ContactMessage {
@@ -34,12 +33,18 @@ export interface ContactMessagesResponse {
 
 export const contactUsService = {
   getContactMessages: async (): Promise<ContactMessage[]> => {
-    const response = await api.get<ContactMessagesResponse>(
-      "/users/contact-us?order=asc",
-    );
+    try {
+      const response = await api.get<ContactMessagesResponse>(
+        "/users/contact-us?order=asc",
+      );
 
-    // The response structure is: response.data.data.data
-    // Because api.get returns { data: ... }, and your API returns { data: { data: [...] } }
-    return response.data?.data?.data || [];
+      // The response structure is: response.data.data.data
+      // Because api.get returns { data: ... }, and your API returns { data: { data: [...] } }
+      return response.data?.data?.data || [];
+    } catch (error) {
+      console.error("Error fetching contact messages:", error);
+      // Re-throw the error so the calling component can handle it
+      throw error;
+    }
   },
 };
