@@ -12,10 +12,12 @@ interface Redemption {
   amount: string;
   status: "success" | "failed";
 }
+
 interface PurchaseData {
   balance: number;
   recentRedemptions: Redemption[];
 }
+
 interface UseOTPRedeemReturn {
   // OTP States
   isRequestingOTP: boolean;
@@ -56,6 +58,9 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
   // Error states
   const [otpError, setOtpError] = useState(""); // OTP request/verify errors
   const [redeemError, setRedeemError] = useState(""); // Redemption errors
+
+  // ✅ Store the verified OTP to use during redemption
+  const [verifiedOTP, setVerifiedOTP] = useState<string>("");
 
   // ==================== OTP REQUEST ====================
   /**
@@ -99,6 +104,7 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
 
         if (result.success) {
           setOtpVerified(true);
+          setVerifiedOTP(otp); // ✅ Store the verified OTP for redemption
           return true;
         } else {
           setOtpError(result.message || "Invalid OTP");
@@ -118,6 +124,7 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
   // ==================== REDEMPTION ====================
   /**
    * Complete redemption using the redeemGiftCard endpoint
+   * ✅ Now includes the verified OTP in the payload
    */
   const redeemGiftCard = useCallback(
     async (
@@ -131,8 +138,17 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
       setRedeemError("");
 
       try {
+        // ✅ Check if OTP has been verified
+        if (!verifiedOTP) {
+          const errorMsg = "Please verify OTP before redeeming";
+          setRedeemError(errorMsg);
+          return { success: false, message: errorMsg };
+        }
+
+        // ✅ Include OTP in the redemption payload
         const payload: RedeemData = {
           qrCode,
+          otp: verifiedOTP, // ✅ Include the verified OTP
           amount: parseFloat(amount),
           locationName,
           locationAddress,
@@ -169,7 +185,7 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
         setIsRedeeming(false);
       }
     },
-    [],
+    [verifiedOTP], // ✅ Add verifiedOTP as a dependency
   );
 
   // ==================== REFRESH PURCHASE DATA ====================
@@ -180,10 +196,10 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
    * @returns Updated purchase data or null on error
    */
   const refreshPurchaseData = useCallback(
-    async (qrCode: string): Promise<unknown> => {
+    async (qrCode: string): Promise<PurchaseData | null> => {
       try {
         const result = await VerifyService.verifyQRCode(qrCode);
-        return result.data;
+        return result.data as PurchaseData;
       } catch (error) {
         console.error("Refresh error:", error);
         return null;
@@ -203,6 +219,7 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
     setRedeemSuccess(false);
     setOtpError("");
     setRedeemError("");
+    setVerifiedOTP(""); // ✅ Clear the verified OTP
   }, []);
 
   // ==================== RETURN ====================

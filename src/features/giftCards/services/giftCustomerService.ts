@@ -1,40 +1,41 @@
-// giftCardService.js
+// giftCardService.ts
 // Service file for handling all Gift Card API calls
 
-const GiftCardService = {
-  // Base API URL - Update this to match your backend API
-  baseURL: "https://g820v4kp-5000.inc1.devtunnels.ms/api/users/myRedemptions",
+import axios from "axios";
+import api from "@/shared/utils/api";
 
+interface GiftCardData {
+  // Define your gift card data structure here
+  // Update based on your actual API response
+  qrCode: string;
+  // Add other fields as needed
+}
+
+const GiftCardService = {
   /**
    * Fetch gift card data by QR code
    * @param {string} qrCode - The QR code of the gift card
    * @returns {Promise} - Promise resolving to the gift card data
    */
-  async fetchByQRCode(qrCode) {
+  async fetchByQRCode(qrCode: string): Promise<GiftCardData> {
     try {
-      const url = `${this.baseURL}/${qrCode}`;
+      const url = `users/myRedemptions/${qrCode}`;
       console.log("Fetching gift card data from:", url);
 
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          // Add any authentication headers if needed
-          // 'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-      });
+      const response = await api.get<GiftCardData>(url);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`,
-        );
-      }
-
-      const data = await response.json();
-      return data;
+      return response.data;
     } catch (error) {
       console.error("Error fetching gift card data:", error);
+
+      // Handle axios errors with better error messages
+      if (axios.isAxiosError(error)) {
+        const errorMessage =
+          error.response?.data?.message ||
+          `HTTP error! status: ${error.response?.status}`;
+        throw new Error(errorMessage);
+      }
+
       throw error;
     }
   },
@@ -43,12 +44,16 @@ const GiftCardService = {
    * You can add more API methods here as needed
    * For example:
    *
-   * async redeemGiftCard(qrCode, amount) {
-   *   // Implementation
+   * async redeemGiftCard(qrCode: string, amount: number): Promise<void> {
+   *   const response = await api.post(`users/myRedemptions/${qrCode}/redeem`, {
+   *     amount
+   *   });
+   *   return response.data;
    * }
    *
-   * async cancelGiftCard(qrCode) {
-   *   // Implementation
+   * async cancelGiftCard(qrCode: string): Promise<void> {
+   *   const response = await api.post(`users/myRedemptions/${qrCode}/cancel`, {});
+   *   return response.data;
    * }
    */
 };

@@ -27,7 +27,6 @@ export interface PurchaseResponse {
   createdAt: string;
 }
 
-// ADD THIS NEW INTERFACE:
 export interface PurchasedGiftCard {
   id: string;
   qrCode: string;
@@ -50,4 +49,42 @@ export interface PurchasedGiftCard {
     id: string;
     businessName: string;
   };
+}
+
+// ✅ ADD THESE NEW INTERFACES BELOW:
+
+// Alias for PurchaseFormData (used in purchaseService)
+export type PurchaseData = PurchaseFormData;
+
+// Redeem gift card request - UPDATED to include all fields from your hook
+export interface RedeemData {
+  qrCode: string;
+  otp: string;
+  amount: number;
+  locationName: string;
+  locationAddress: string;
+  notes: string;
+}
+
+// Redemption response
+export interface RedemptionResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    redemption: {
+      id: string;
+      purchaseId: string;
+      merchantId: string;
+      redeemedAmount: number;
+      remainingBalance: number;
+      redeemedAt: string;
+      amount?: number; // Added based on your mutation
+    };
+    purchase?: PurchasedGiftCard;
+    remainingBalance?: number; // Added based on your mutation
+  };
+  errors?: Array<{
+    field: string;
+    message: string;
+  }>;
 }

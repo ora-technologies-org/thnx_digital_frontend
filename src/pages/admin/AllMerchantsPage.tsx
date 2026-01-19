@@ -1292,36 +1292,30 @@ export const AllMerchantsPage: React.FC = () => {
                     { length: pagination.totalPages },
                     (_, i) => i + 1,
                   )
-                    .filter((p) => {
-                      return (
+                    .filter(
+                      (p) =>
                         p === 1 ||
                         p === pagination.totalPages ||
-                        Math.abs(p - page) <= 1
-                      );
-                    })
-                    .map((p, index, array) => {
-                      const showEllipsisBefore =
-                        index > 0 && p - array[index - 1] > 1;
-
-                      return (
-                        <React.Fragment key={p}>
-                          {showEllipsisBefore && (
-                            <span className="px-3 py-2 text-gray-500">...</span>
-                          )}
-                          <button
-                            onClick={() => handlePageChange(p)}
-                            disabled={isRefetching}
-                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                              p === page
-                                ? "bg-blue-500 text-white shadow-md"
-                                : "bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </React.Fragment>
-                      );
-                    })}
+                        Math.abs(p - page) <= 1,
+                    )
+                    .map((p, i, arr) => (
+                      <React.Fragment key={p}>
+                        {i > 0 && p - arr[i - 1] > 1 && (
+                          <span className="px-3 py-2 text-gray-500">...</span>
+                        )}
+                        <button
+                          onClick={() => handlePageChange(p)}
+                          disabled={isRefetching}
+                          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                            p === page
+                              ? "bg-blue-500 text-white shadow-md"
+                              : "bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-500"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    ))}
                 </div>
 
                 <Button

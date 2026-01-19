@@ -1,8 +1,9 @@
 // src/features/merchant/hooks/useProfileComplete.ts
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import api from "@/shared/utils/api";
 import toast from "react-hot-toast";
 import { AxiosError, AxiosResponse } from "axios";
+import { useInvalidateQueries } from "@/shared/hooks/useInvalidateQueries";
 
 // Define types for the API response
 interface ApiSuccessResponse {
@@ -50,7 +51,7 @@ interface FormDataEntry {
  * @returns Mutation object with mutate function and status properties
  */
 export const useSubmitProfile = () => {
-  const queryClient = useQueryClient();
+  const queryClient = useInvalidateQueries();
 
   return useMutation({
     /**

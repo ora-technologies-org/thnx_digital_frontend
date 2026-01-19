@@ -1,5 +1,6 @@
-// src/features/orders/api/orders.api.ts - FIXED VERSION
+// src/features/orders/api/orders.api.ts - FIXED VERSION WITH AXIOS
 
+import axios from "axios";
 import type {
   OrdersResponse,
   Order,
@@ -91,23 +92,29 @@ export const ordersApi = {
   // Get all purchases/orders with pagination and filters
   getOrders: async (params?: OrdersQueryParams): Promise<OrdersResponse> => {
     try {
-      // Build query string
-      const queryParams = new URLSearchParams();
+      // Build query params object
+      const queryParams: Record<string, string> = {};
 
-      if (params?.page) queryParams.append("page", params.page.toString());
-      if (params?.limit) queryParams.append("limit", params.limit.toString());
-      if (params?.search) queryParams.append("search", params.search);
-      if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
-      if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+      if (params?.page) queryParams.page = params.page.toString();
+      if (params?.limit) queryParams.limit = params.limit.toString();
+      if (params?.search) queryParams.search = params.search;
+      if (params?.sortBy) queryParams.sortBy = params.sortBy;
+      if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
       if (params?.status && params.status !== "all") {
-        queryParams.append("status", params.status);
+        queryParams.status = params.status;
       }
 
-      const url = `${API_BASE_URL}merchants/orders${queryParams.toString() ? `?${queryParams.toString()}` : "?sortOrder=desc"}`;
+      // Set default sortOrder if no params
+      if (!params || Object.keys(queryParams).length === 0) {
+        queryParams.sortOrder = "desc";
+      }
+
+      const url = `${API_BASE_URL}merchants/orders`;
 
       console.log("Fetching orders from:", url);
 
-      const response = await fetch(url, {
+      const response = await axios.get<ApiResponse>(url, {
+        params: queryParams,
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,
           "Content-Type": "application/json",
@@ -117,15 +124,7 @@ export const ordersApi = {
       console.log("Response status:", response.status);
       console.log("Response headers:", response.headers);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error Response:", errorText);
-        throw new Error(
-          `Failed to fetch orders: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const apiResponse: ApiResponse = await response.json();
+      const apiResponse = response.data;
 
       console.log("API Response:", apiResponse);
       console.log("API Response.data type:", typeof apiResponse.data);
@@ -225,21 +224,17 @@ export const ordersApi = {
   // Verify purchase by QR code
   verifyPurchase: async (qrCode: string): Promise<PurchaseVerification> => {
     try {
-      const response = await fetch(`${API_BASE_URL}purchases/qr/${qrCode}`, {
-        headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-          "Content-Type": "application/json",
+      const response = await axios.get(
+        `${API_BASE_URL}purchases/qr/${qrCode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Purchase not found");
-        }
-        throw new Error("Failed to verify purchase");
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       return {
         isValid: true,
@@ -264,6 +259,15 @@ export const ordersApi = {
       };
     } catch (error) {
       console.error("Error verifying purchase:", error);
+
+      // Check if it's a 404 error
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return {
+          isValid: false,
+          error: "Purchase not found",
+        };
+      }
+
       return {
         isValid: false,
         error: error instanceof Error ? error.message : "Verification failed",
@@ -273,29 +277,24 @@ export const ordersApi = {
 
   createOrder: async (data: CreateOrderData): Promise<CreateOrderResponse> => {
     try {
-      const response = await fetch(
+      const response = await axios.post<CreateOrderResponse>(
         `${API_BASE_URL}purchases/gift-cards/${data.giftCardId}`,
         {
-          method: "POST",
+          customerName: data.customerName,
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone,
+          paymentMethod: data.paymentMethod,
+          transactionId: data.transactionId,
+        },
+        {
           headers: {
             Authorization: `Bearer ${getAuthToken()}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            customerName: data.customerName,
-            customerEmail: data.customerEmail,
-            customerPhone: data.customerPhone,
-            paymentMethod: data.paymentMethod,
-            transactionId: data.transactionId,
-          }),
         },
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to create order");
-      }
-
-      return response.json();
+      return response.data;
     } catch (error) {
       console.error("Error creating order:", error);
       throw error;
@@ -305,20 +304,16 @@ export const ordersApi = {
   // Mark purchase as redeemed
   redeemPurchase: async (purchaseId: string): Promise<void> => {
     try {
-      const response = await fetch(
+      await axios.post(
         `${API_BASE_URL}purchases/${purchaseId}/redeem`,
+        {},
         {
-          method: "POST",
           headers: {
             Authorization: `Bearer ${getAuthToken()}`,
             "Content-Type": "application/json",
           },
         },
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to redeem purchase");
-      }
     } catch (error) {
       console.error("Error redeeming purchase:", error);
       throw error;
