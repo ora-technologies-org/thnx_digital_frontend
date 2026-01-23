@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Activity, AlertTriangle, XCircle, CheckCircle } from "lucide-react";
+// import { CATEGORY_CONFIG, SEVERITY_CONFIG } from '../../types/activityLog.types';
 
 interface StatsData {
   today: number;

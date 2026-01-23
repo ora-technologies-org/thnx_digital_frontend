@@ -1,6 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
 import { forgotPasswordService } from "../services/forgotPasswordService";
-import { toast } from "react-hot-toast";
 
 // Define error response type
 interface ErrorResponse {
@@ -119,6 +118,32 @@ export const useForgotPassword = () => {
       return false;
     }
   };
+
+  /**
+   * Reset all mutation states
+   * Useful when navigating away or restarting the flow
+   */
+  // const resetState = () => {
+  //   requestOtpMutation.reset();
+  //   verifyOtpMutation.reset();
+  //   resetPasswordMutation.reset();
+  // };
+
+  /**
+   * Determine current step based on mutation states
+   */
+  // const getCurrentStep = (): ForgotPasswordStep => {
+  //   if (resetPasswordMutation.isSuccess) {
+  //     return ForgotPasswordStep.COMPLETED;
+  //   }
+  //   if (verifyOtpMutation.isSuccess) {
+  //     return ForgotPasswordStep.RESET_PASSWORD;
+  //   }
+  //   if (requestOtpMutation.isSuccess) {
+  //     return ForgotPasswordStep.VERIFY_OTP;
+  //   }
+  //   return ForgotPasswordStep.REQUEST_OTP;
+  // };
 
   return {
     // Async wrapper functions that return Promises

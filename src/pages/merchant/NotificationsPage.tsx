@@ -30,7 +30,7 @@ const NotificationsPage: React.FC = () => {
   const { isConnected } = useNotificationSocket({
     enabled: true,
   });
-
+  console.log("", connectionStatus);
   const hasNotifications = notifications.length > 0;
   const hasUnread = notifications.some((n) => !n.isRead);
 

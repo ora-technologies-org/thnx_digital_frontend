@@ -1,15 +1,15 @@
-// src/shared/utils/socket.ts
 import { io, Socket } from "socket.io-client";
 import { config } from "../../config/env";
-import { Socket } from "socket.io-client";
+
 let adminSocket: Socket | null = null;
 let merchantSocket: Socket | null = null;
 // let socket: Socket | null = null;
 
-/**
- * Get base URL from config
- */
-const getBaseUrl = (): string => config.apiUrl.replace("/api", "");
+// let socket: Socket | null = null;
+
+const getBaseUrl = (): string => {
+  return config.apiUrl.replace("/api", "");
+};
 
 /**
  * Socket connection options
@@ -28,32 +28,32 @@ const getSocketOptions = (token: string) => ({
  * Setup common socket event handlers
  */
 const setupSocketHandlers = (socket: Socket, namespace: string): void => {
-  socket.on("connect", () =>
-    console.log(`🔌 [${namespace}] Socket connected:`, socket.id),
-  );
+  socket.on("connect", () => {
+    console.log(`🔌 [${namespace}] Socket connected:`, socket.id);
+  });
 
-  socket.on("disconnect", (reason) =>
-    console.log(`🔌 [${namespace}] Socket disconnected:`, reason),
-  );
+  socket.on("disconnect", (reason) => {
+    console.log(`🔌 [${namespace}] Socket disconnected:`, reason);
+  });
 
-  socket.on("connect_error", (error: Error) =>
-    console.error(`🔌 [${namespace}] Socket connection error:`, error.message),
-  );
+  socket.on("connect_error", (error) => {
+    console.error(`🔌 [${namespace}] Socket connection error:`, error.message);
+  });
 
-  socket.on("reconnect", (attemptNumber) =>
+  socket.on("reconnect", (attemptNumber) => {
     console.log(
       `🔌 [${namespace}] Socket reconnected after`,
       attemptNumber,
       "attempts",
-    ),
-  );
+    );
+  });
 
-  socket.on("reconnect_error", (error: Error) =>
+  socket.on("reconnect_error", (error) => {
     console.error(
       `🔌 [${namespace}] Socket reconnection error:`,
       error.message,
-    ),
-  );
+    );
+  });
 };
 
 /**
@@ -87,8 +87,9 @@ export const disconnectAdminSocket = (): void => {
 /**
  * Check if admin socket is connected
  */
-export const isAdminSocketConnected = (): boolean =>
-  adminSocket?.connected ?? false;
+export const isAdminSocketConnected = (): boolean => {
+  return adminSocket?.connected ?? false;
+};
 
 /**
  * Connect to merchant namespace (for merchant users)
@@ -121,8 +122,9 @@ export const disconnectMerchantSocket = (): void => {
 /**
  * Check if merchant socket is connected
  */
-export const isMerchantSocketConnected = (): boolean =>
-  merchantSocket?.connected ?? false;
+export const isMerchantSocketConnected = (): boolean => {
+  return merchantSocket?.connected ?? false;
+};
 
 /**
  * Connect default socket (deprecated, connects admin namespace)
@@ -143,7 +145,9 @@ export const disconnectSocket = (): void => disconnectAdminSocket();
 /**
  * Check if default socket is connected (deprecated)
  */
-export const isSocketConnected = (): boolean => isAdminSocketConnected();
+export const isSocketConnected = (): boolean => {
+  return isAdminSocketConnected();
+};
 
 /**
  * Disconnect all sockets
@@ -160,16 +164,22 @@ export const connectSocketByRole = (
   token: string,
   role: "ADMIN" | "MERCHANT",
 ): Socket => {
-  return role === "ADMIN"
-    ? connectAdminSocket(token)
-    : connectMerchantSocket(token);
+  if (role === "ADMIN") {
+    return connectAdminSocket(token);
+  } else {
+    return connectMerchantSocket(token);
+  }
 };
 
 /**
  * Get socket by role
  */
 export const getSocketByRole = (role: "ADMIN" | "MERCHANT"): Socket | null => {
-  return role === "ADMIN" ? getAdminSocket() : getMerchantSocket();
+  if (role === "ADMIN") {
+    return getAdminSocket();
+  } else {
+    return getMerchantSocket();
+  }
 };
 
 /**

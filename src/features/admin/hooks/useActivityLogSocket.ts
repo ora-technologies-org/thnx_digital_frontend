@@ -163,8 +163,8 @@ export const useActivityLogSocket = (
   const reconnect = useCallback(() => {
     const token = localStorage.getItem("accessToken");
     if (token) {
-      setSocketStatus("connecting");
-      setSocketError(null);
+      setConnectionStatus("connecting");
+      setError(null);
       disconnectSocket();
       connectSocket(token);
     }
@@ -173,7 +173,13 @@ export const useActivityLogSocket = (
   useEffect(() => {
     if (!enabled) {
       disconnectSocket();
-      return;
+      // Defer state updates to avoid synchronous setState in effect
+      const timeoutId = setTimeout(() => {
+        setIsConnected(false);
+        setConnectionStatus("disconnected");
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }
 
     const token = localStorage.getItem("accessToken");
@@ -223,6 +229,7 @@ export const useActivityLogSocket = (
     }
 
     return () => {
+      clearTimeout(connectingTimeoutId);
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);

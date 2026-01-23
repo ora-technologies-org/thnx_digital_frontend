@@ -52,12 +52,13 @@ export const useActivityLogs = (initialFilters: ActivityLogFilters = {}) => {
   });
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
+    // Defer state updates to avoid synchronous setState in effect
+    const timeoutId = setTimeout(() => {
       setRealtimeLogs([]);
       setNewLogIds(new Set());
     }, 0);
 
-    return () => clearTimeout(timeout);
+    return () => clearTimeout(timeoutId);
   }, [filters, query.dataUpdatedAt]);
 
   const addRealtimeLog = useCallback(

@@ -18,7 +18,6 @@ import { AnalyticsPage } from "../pages/merchant/AnalyticsPage";
 import { PayoutsPage } from "../pages/merchant/PayoutsPage";
 import { SettingsPage } from "../pages/merchant/SettingsPage";
 import { CompleteProfilePage } from "../pages/auth/CompleteProfilePage";
-import { AdminDashboardPage } from "../features/admin/AdminDashboardPage";
 import { PendingMerchantsPage } from "@/pages/admin/PendngMerchantsPage";
 import { AllMerchantsPage } from "@/pages/admin/AllMerchantsPage";
 import { CreateMerchantPage } from "@/pages/admin/CreateMerchantPage";
@@ -171,7 +170,7 @@ const AppRoutes: React.FC = () => {
         path={ROUTES.ADMIN_DASHBOARD}
         element={
           <ProtectedRoute requiredRole="ADMIN">
-            <AdminDashboardPage />
+            <NotificationsPage />
           </ProtectedRoute>
         }
       />
@@ -238,7 +237,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-
       <Route
         path={ROUTES.ADMIN_ACTIVITY}
         element={
@@ -247,7 +245,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-
       <Route
         path={ROUTES.ADMIN_SETTINGS}
         element={
@@ -256,7 +253,6 @@ const AppRoutes: React.FC = () => {
           </ProtectedRoute>
         }
       />
-
       <Route
         path={ROUTES.ADMIN_SUPPORT_TICKETS}
         element={

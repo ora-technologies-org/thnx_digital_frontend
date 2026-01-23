@@ -4,7 +4,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { LogIn, Mail, Lock, ArrowRight, Gift, Eye, EyeOff } from "lucide-react";
+import {
+  LogIn,
+  Mail,
+  Lock,
+  ArrowRight,
+  Gift,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+} from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
@@ -16,8 +25,33 @@ import { loginSchema } from "@/shared/utils/register";
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+// ===== HOOKS =====
+const useCapsLockDetection = () => {
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.getModifierState) {
+        setIsCapsLockOn(e.getModifierState("CapsLock"));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    window.addEventListener("keyup", handleKeyPress);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+      window.removeEventListener("keyup", handleKeyPress);
+    };
+  }, []);
+
+  return isCapsLockOn;
+};
+
+// ===== MAIN COMPONENT =====
 export const LoginPage: React.FC = () => {
-  const { login, loginWithGoogle, isLoading } = useAuth();
+  const isCapsLockOn = useCapsLockDetection();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
@@ -29,6 +63,11 @@ export const LoginPage: React.FC = () => {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      rememberMe: false,
+    },
   });
 
   // ==================== AUTO REDIRECT AFTER LOGIN ====================
@@ -83,36 +122,46 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
-      <motion.div
-        className="absolute top-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
-        }}
-        transition={{ duration: 8, repeat: Infinity }}
-      />
-      <motion.div
-        className="absolute bottom-20 left-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
-        animate={{
-          scale: [1.2, 1, 1.2],
-          opacity: [0.5, 0.3, 0.5],
-        }}
-        transition={{ duration: 8, repeat: Infinity }}
-      />
+      {/* Animated background - respects reduced motion */}
+      {!shouldReduceMotion && (
+        <>
+          <motion.div
+            className="absolute top-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3],
+            }}
+            transition={{ duration: 8, repeat: Infinity }}
+            aria-hidden="true"
+          />
+          <motion.div
+            className="absolute bottom-20 left-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
+            animate={{
+              scale: [1.2, 1, 1.2],
+              opacity: [0.5, 0.3, 0.5],
+            }}
+            transition={{ duration: 8, repeat: Infinity }}
+            aria-hidden="true"
+          />
+        </>
+      )}
 
       <motion.div
         className="w-full max-w-md relative z-10"
         initial="hidden"
         animate="visible"
-        variants={staggerContainer}
+        variants={getAnimationVariants(staggerContainer)}
       >
         {/* Header */}
-        <motion.div variants={fadeInUp} className="text-center mb-8">
+        <motion.div
+          variants={getAnimationVariants(fadeInUp)}
+          className="text-center mb-8"
+        >
           <motion.div
             className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-xl"
-            whileHover={{ rotate: 360, scale: 1.1 }}
+            whileHover={shouldReduceMotion ? {} : { rotate: 360, scale: 1.1 }}
             transition={{ duration: 0.6 }}
+            aria-hidden="true"
           >
             <Gift className="h-8 w-8 text-white" />
           </motion.div>
@@ -128,12 +177,37 @@ export const LoginPage: React.FC = () => {
           </p>
         </motion.div>
 
+        {/* Global Error Message */}
+        {authError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            role="alert"
+            aria-live="assertive"
+            className="mb-4"
+          >
+            <Card className="bg-red-50 border-2 border-red-200">
+              <div className="p-4 flex items-start gap-3">
+                <AlertCircle
+                  className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                <p className="text-sm text-red-800">{authError}</p>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Form Card */}
-        <motion.div variants={fadeInUp}>
+        <motion.div variants={getAnimationVariants(fadeInUp)}>
           <Card className="backdrop-blur-sm bg-white/90 border-2 border-gray-200/50 shadow-2xl">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-8">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-6 p-8"
+              noValidate
+            >
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
+                initial={shouldReduceMotion ? {} : { opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
               >
@@ -142,14 +216,25 @@ export const LoginPage: React.FC = () => {
                   type="email"
                   placeholder="your@email.com"
                   error={errors.email?.message}
-                  {...register("email")}
-                  className="transition-all focus:scale-[1.02]"
-                  icon={<Mail className="w-5 h-5 text-gray-400" />}
+                  {...emailRegisterProps}
+                  ref={(e) => {
+                    emailRegisterRef(e); // Call register's ref
+                    emailInputRef.current = e; // Assign to your custom ref
+                  }}
+                  disabled={isFormLoading}
+                  autoComplete="email"
+                  className="transition-all"
+                  icon={
+                    <Mail
+                      className="w-5 h-5 text-gray-400"
+                      aria-hidden="true"
+                    />
+                  }
                 />
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
+                initial={shouldReduceMotion ? {} : { opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
                 className="relative"
@@ -175,32 +260,51 @@ export const LoginPage: React.FC = () => {
                     <Eye className="w-5 h-5" />
                   )}
                 </button>
+                {isCapsLockOn && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 mt-2 text-amber-600 text-sm"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Caps Lock is on</span>
+                  </motion.div>
+                )}
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
+                initial={shouldReduceMotion ? {} : { opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
                 className="flex items-center justify-between"
               >
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-600">Remember me</span>
-                </label>
+                {FEATURE_FLAGS.ENABLE_REMEMBER_ME && (
+                  <label
+                    htmlFor="rememberMe"
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <input
+                      id="rememberMe"
+                      type="checkbox"
+                      {...register("rememberMe")}
+                      disabled={isFormLoading}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50"
+                    />
+                    <span className="text-sm text-gray-600">Remember me</span>
+                  </label>
+                )}
 
                 <Link
-                  to="/forgot-password"
-                  className="text-sm text-blue-600 hover:underline"
+                  to={ROUTES.FORGOT_PASSWORD}
+                  className="text-sm text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
+                  tabIndex={isFormLoading ? -1 : 0}
                 >
                   Forgot password?
                 </Link>
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
@@ -208,81 +312,104 @@ export const LoginPage: React.FC = () => {
                   size="lg"
                   variant="primary"
                   className="w-full"
-                  onClick={handleSubmit(onSubmit)}
-                  type="button"
-                  disabled={isLoading}
+                  type="submit"
+                  disabled={isFormLoading}
+                  aria-label={
+                    loadingStates.isLoggingIn
+                      ? "Logging in, please wait"
+                      : "Login"
+                  }
                 >
-                  {isLoading ? (
+                  {loadingStates.isLoggingIn ? (
                     <>
                       <motion.div
-                        animate={{ rotate: 360 }}
+                        animate={shouldReduceMotion ? {} : { rotate: 360 }}
                         transition={{
                           duration: 1,
                           repeat: Infinity,
                           ease: "linear",
                         }}
                         className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        aria-hidden="true"
                       />
                       Logging in...
                     </>
                   ) : (
                     <>
-                      <LogIn className="mr-2 h-5 w-5" />
+                      <LogIn className="mr-2 h-5 w-5" aria-hidden="true" />
                       Login
                     </>
                   )}
                 </MagneticButton>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="relative"
-              >
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">or</span>
-                </div>
-              </motion.div>
+              {FEATURE_FLAGS.ENABLE_GOOGLE_LOGIN && (
+                <>
+                  <motion.div
+                    initial={shouldReduceMotion ? {} : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="relative"
+                    aria-hidden="true"
+                  >
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-gray-500">or</span>
+                    </div>
+                  </motion.div>
 
-              {/* Google Sign-In Button */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="flex justify-center"
-              >
-                <GoogleLogin
-                  onSuccess={(credentialResponse) => {
-                    console.log("🔐 Google credential received");
-                    if (credentialResponse.credential) {
-                      loginWithGoogle(credentialResponse.credential);
-                    }
-                  }}
-                  onError={() => {
-                    console.error("❌ Google login failed");
-                  }}
-                  useOneTap
-                  theme="outline"
-                  size="large"
-                  width="100%"
-                  text="continue_with"
-                />
-              </motion.div>
+                  <motion.div
+                    initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="flex justify-center"
+                  >
+                    <div className="w-full">
+                      {isGoogleLoading ? (
+                        <div className="flex items-center justify-center py-3">
+                          <motion.div
+                            animate={shouldReduceMotion ? {} : { rotate: 360 }}
+                            transition={{
+                              duration: 1,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
+                            className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full"
+                            aria-hidden="true"
+                          />
+                          <span className="ml-2 text-sm text-gray-600">
+                            Connecting to Google...
+                          </span>
+                        </div>
+                      ) : (
+                        <GoogleLogin
+                          onSuccess={handleGoogleSuccess}
+                          onError={handleGoogleError}
+                          useOneTap={FEATURE_FLAGS.ENABLE_ONE_TAP}
+                          theme="outline"
+                          size="large"
+                          width="100%"
+                          text="continue_with"
+                        />
+                      )}
+                    </div>
+                  </motion.div>
+                </>
+              )}
 
               <motion.p
-                initial={{ opacity: 0 }}
+                initial={shouldReduceMotion ? {} : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
                 className="text-center text-sm text-gray-600"
               >
                 Don't have an account?{" "}
                 <Link
-                  to="/register"
-                  className="text-blue-600 hover:underline font-medium"
+                  to={ROUTES.REGISTER}
+                  className="text-blue-600 hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-1"
+                  tabIndex={isFormLoading ? -1 : 0}
                 >
                   Register here
                 </Link>
@@ -292,25 +419,40 @@ export const LoginPage: React.FC = () => {
         </motion.div>
 
         {/* Customer Link */}
-        <motion.div variants={fadeInUp} className="mt-6 text-center">
+        <motion.div
+          variants={getAnimationVariants(fadeInUp)}
+          className="mt-6 text-center"
+        >
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
             <div className="p-4">
               <p className="text-sm text-gray-700 mb-2">
                 Looking to <strong>buy gift cards</strong>?
               </p>
-              <Link to="/browse">
+              <Link to={ROUTES.BROWSE} tabIndex={isFormLoading ? -1 : 0}>
                 <motion.button
-                  className="text-blue-600 hover:underline font-medium text-sm inline-flex items-center gap-1"
-                  whileHover={{ x: 5 }}
+                  className="text-blue-600 hover:underline font-medium text-sm inline-flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                  whileHover={shouldReduceMotion ? {} : { x: 5 }}
+                  type="button"
+                  disabled={isFormLoading}
                 >
                   Browse our marketplace
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </motion.button>
               </Link>
             </div>
           </Card>
         </motion.div>
       </motion.div>
+
+      {/* Screen reader announcement for loading state */}
+      <div
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {isFormLoading && "Processing login request"}
+      </div>
     </div>
   );
 };

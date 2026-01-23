@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
+
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import {
   setCredentials,
@@ -11,6 +12,57 @@ import { authService } from "../services/authService";
 import { LoginCredentials, RegisterData } from "../types/auth.types";
 import { AxiosError } from "axios";
 
+// ===== CONSTANTS =====
+const ROUTES = {
+  MERCHANT_DASHBOARD: "/merchant/dashboard",
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  HOME: "/",
+  LOGIN: "/login",
+} as const;
+
+// ===== HELPERS =====
+/**
+ * Get target route based on user role
+ * Note: This is for UI routing only. Authorization is enforced on backend.
+//  */
+// const getRouteByRole = (role: UserRole): string => {
+//   switch (role) {
+//     case "MERCHANT":
+//       return ROUTES.MERCHANT_DASHBOARD;
+//     case "ADMIN":
+//       return ROUTES.ADMIN_DASHBOARD;
+//     default:
+//       return ROUTES.HOME;
+//   }
+// };
+
+/**
+ * Extract error message from API error
+//  */
+// const getErrorMessage = (error: unknown, defaultMessage: string): string => {
+//   if (error instanceof AxiosError) {
+//     const data = error.response?.data as ApiErrorResponse | undefined;
+//     return data?.message || data?.error || defaultMessage;
+//   }
+//   return defaultMessage;
+// };
+
+/**
+ * Development-only logging
+ */
+const devLog = (message: string, data?: unknown) => {
+  if (import.meta.env.DEV) {
+    console.log(message, data || "");
+  }
+};
+
+// const devError = (message: string, data?: unknown) => {
+//   if (import.meta.env.DEV) {
+//     console.error(message, data || "");
+//   }
+// };
+
+// ===== HOOK =====
 export const useAuth = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -188,6 +240,8 @@ export const useAuth = () => {
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: () => {
+      // Note: Ideally, refresh token should be in HttpOnly cookie
+      // and backend should handle logout without client sending token
       const refreshToken = localStorage.getItem("refreshToken") || "";
       return authService.logout(refreshToken);
     },
@@ -195,22 +249,22 @@ export const useAuth = () => {
       dispatch(logoutAction());
       queryClient.clear();
       toast.success("Logged out successfully");
-      navigate("/login", { replace: true });
+      navigate(ROUTES.LOGIN, { replace: true });
     },
     onError: () => {
       dispatch(logoutAction());
       queryClient.clear();
-      navigate("/login", { replace: true });
+      navigate(ROUTES.LOGIN, { replace: true });
     },
   });
 
   const login = (credentials: LoginCredentials) => {
-    console.log("🔐 Login initiated for:", credentials.email);
+    devLog("Login initiated for:", credentials.email);
     loginMutation.mutate(credentials);
   };
 
   const loginWithGoogle = (credential: string) => {
-    console.log("🔐 Google login initiated");
+    devLog("Google login initiated");
     googleLoginMutation.mutate(credential);
   };
 
@@ -240,5 +294,12 @@ export const useAuth = () => {
     loginWithGoogle,
     register,
     logout,
+    // Expose granular loading states for flexible UI control
+    loadingStates: {
+      isLoggingIn: loginMutation.isPending,
+      isLoggingInWithGoogle: googleLoginMutation.isPending,
+      isRegistering: registerMutation.isPending,
+      isLoggingOut: logoutMutation.isPending,
+    },
   };
 };
