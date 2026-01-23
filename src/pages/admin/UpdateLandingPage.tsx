@@ -1,6 +1,6 @@
-// src/pages/LandingPageEditor.tsx - LANDING PAGE EDITOR! 📄
+// src/pages/LandingPageEditor.tsx - FIXED VERSION
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Edit2, Plus, Trash2, Save } from "lucide-react";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
@@ -8,6 +8,10 @@ import AdminLayout from "@/shared/components/layout/AdminLayout";
 import {
   useLandingPageRedux,
   useUpdateLandingPage,
+  useFAQOperations,
+  useTestimonialOperations,
+  useFAQsData,
+  useTestimonialsData,
 } from "@/features/merchant/hooks/useLanding";
 
 import {
@@ -26,15 +30,36 @@ import {
 } from "@/shared/utils/Landing";
 import { Spinner } from "@/shared/components/ui/Spinner";
 
+// Type definitions
+interface ItemWithId extends SectionItem {
+  id?: string;
+  is_active?: boolean;
+}
+
+interface SectionWithItems {
+  title?: string;
+  subtitle?: string;
+  items: ItemWithId[];
+}
+
 interface EditingState {
   section: string;
   index: number | null;
+  itemId?: string;
   isNew?: boolean;
 }
 
 const LandingPageEditor: React.FC = () => {
   const { data: landingData, loading, fetchData } = useLandingPageRedux();
+  const { data: faqsData, isLoading: faqsLoading } = useFAQsData();
+  const { data: testimonialsData, isLoading: testimonialsLoading } =
+    useTestimonialsData();
+
   const { updateSection } = useUpdateLandingPage();
+  const { addFAQ, updateFAQ, deleteFAQ } = useFAQOperations();
+  const { addTestimonial, updateTestimonial, deleteTestimonial } =
+    useTestimonialOperations();
+
   const [editingItem, setEditingItem] = useState<EditingState | null>(null);
   const [formData, setFormData] = useState<SectionItem>({});
 
@@ -42,21 +67,60 @@ const LandingPageEditor: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
+  // Merge FAQs and Testimonials into landing page data using useMemo
+  const mergedData = useMemo(() => {
+    if (!landingData) return null;
+
+    const merged = { ...landingData };
+
+    // Merge FAQs
+    if (faqsData && Array.isArray(faqsData)) {
+      merged.faqs = {
+        title: landingData.faqs?.title || "Frequently Asked Questions",
+        subtitle:
+          landingData.faqs?.subtitle || "Got questions? We've got answers",
+        items: faqsData,
+      };
+    }
+
+    // Merge Testimonials
+    if (testimonialsData && Array.isArray(testimonialsData)) {
+      merged.testimonials = {
+        title: landingData.testimonials?.title || "What Our Customers Say",
+        subtitle: landingData.testimonials?.subtitle || "Trusted by thousands",
+        items: testimonialsData,
+      };
+    }
+
+    return merged;
+  }, [landingData, faqsData, testimonialsData]);
+
   const handleEdit = (section: string, index: number | null = null): void => {
-    if (!landingData) return;
+    if (!mergedData) return;
 
-    const sectionData = landingData[section] as SectionData;
+    const sectionData = mergedData[section] as SectionData;
 
-    // Handle sections with 'items' property (faqs, testimonials)
-    if (hasItemsProperty(sectionData) && index !== null) {
-      setFormData({ ...sectionData.items[index] });
-      setEditingItem({ section, index });
+    if (hasItemsProperty(sectionData)) {
+      if (index !== null) {
+        const item = sectionData.items[index] as ItemWithId;
+        const { id, ...itemData } = item;
+        // Remove id and is_active from itemData
+        delete itemData.is_active;
+        setFormData(itemData);
+        setEditingItem({ section, index, itemId: id });
+      } else {
+        const sectionWithItems = sectionData as SectionWithItems;
+        const headerData: SectionItem = {};
+        if (sectionWithItems.title) headerData.title = sectionWithItems.title;
+        if (sectionWithItems.subtitle)
+          headerData.subtitle = sectionWithItems.subtitle;
+        setFormData(headerData);
+        setEditingItem({ section, index: null });
+      }
     } else if (isArraySection(sectionData) && index !== null) {
-      // Handle simple array sections (stats, steps, features)
       setFormData({ ...sectionData[index] });
       setEditingItem({ section, index });
     } else {
-      // Handle object sections (hero, contact, etc.) - exclude 'items' field
       const dataToEdit =
         typeof sectionData === "object" && sectionData !== null
           ? Object.fromEntries(
@@ -69,9 +133,9 @@ const LandingPageEditor: React.FC = () => {
   };
 
   const handleAdd = (section: string): void => {
-    if (!landingData) return;
+    if (!mergedData) return;
 
-    const sectionData = landingData[section] as SectionData;
+    const sectionData = mergedData[section] as SectionData;
     const currentLength = getItemsFromSection(sectionData).length;
     const template = getEmptyTemplate(section, currentLength);
 
@@ -80,18 +144,65 @@ const LandingPageEditor: React.FC = () => {
   };
 
   const handleSave = async (): Promise<void> => {
-    if (!editingItem || !landingData) return;
+    if (!editingItem || !mergedData) return;
 
-    const { section, index, isNew = false } = editingItem;
-    const sectionData = landingData[section] as SectionData;
+    const { section, index, itemId, isNew = false } = editingItem;
+    const sectionData = mergedData[section] as SectionData;
 
-    const updatedData = updateSectionData(sectionData, formData, index, isNew);
+    try {
+      if (section === "faqs") {
+        if (index === null && !isNew) {
+          const updatedSection = {
+            ...sectionData,
+            title: formData.title,
+            subtitle: formData.subtitle,
+          };
+          await updateSection({ section: "faqs", data: updatedSection });
+        } else if (isNew) {
+          await addFAQ(formData as ItemWithId);
+        } else if (itemId) {
+          await updateFAQ({ id: itemId, data: formData as ItemWithId });
+        }
+        setEditingItem(null);
+        setFormData({});
+        return;
+      }
 
-    const success = await updateSection({ section, data: updatedData });
+      if (section === "testimonials") {
+        if (index === null && !isNew) {
+          const updatedSection = {
+            ...sectionData,
+            title: formData.title,
+            subtitle: formData.subtitle,
+          };
+          await updateSection({
+            section: "testimonials",
+            data: updatedSection,
+          });
+        } else if (isNew) {
+          await addTestimonial(formData as ItemWithId);
+        } else if (itemId) {
+          await updateTestimonial({ id: itemId, data: formData as ItemWithId });
+        }
+        setEditingItem(null);
+        setFormData({});
+        return;
+      }
 
-    if (success) {
-      setEditingItem(null);
-      setFormData({});
+      const updatedData = updateSectionData(
+        sectionData,
+        formData,
+        index,
+        isNew,
+      );
+      const success = await updateSection({ section, data: updatedData });
+
+      if (success) {
+        setEditingItem(null);
+        setFormData({});
+      }
+    } catch (error) {
+      console.error("Error saving:", error);
     }
   };
 
@@ -100,12 +211,32 @@ const LandingPageEditor: React.FC = () => {
     index: number,
   ): Promise<void> => {
     if (!confirm("Are you sure you want to delete this item?")) return;
-    if (!landingData) return;
+    if (!mergedData) return;
 
-    const sectionData = landingData[section] as SectionData;
-    const updatedData = deleteItemFromSection(sectionData, index);
+    const sectionData = mergedData[section] as SectionData;
 
-    await updateSection({ section, data: updatedData });
+    try {
+      if (section === "faqs" && hasItemsProperty(sectionData)) {
+        const item = sectionData.items[index] as ItemWithId;
+        if (item?.id) {
+          await deleteFAQ(item.id);
+          return;
+        }
+      }
+
+      if (section === "testimonials" && hasItemsProperty(sectionData)) {
+        const item = sectionData.items[index] as ItemWithId;
+        if (item?.id) {
+          await deleteTestimonial(item.id);
+          return;
+        }
+      }
+
+      const updatedData = deleteItemFromSection(sectionData, index);
+      await updateSection({ section, data: updatedData });
+    } catch (error) {
+      console.error("Error deleting:", error);
+    }
   };
 
   const handleInputChange = (field: string, value: string): void => {
@@ -162,7 +293,13 @@ const LandingPageEditor: React.FC = () => {
     key: string,
     value: unknown,
   ): React.ReactNode | null => {
-    if (key === "step" || key === "items") return null;
+    if (
+      key === "step" ||
+      key === "items" ||
+      key === "id" ||
+      key === "is_active"
+    )
+      return null;
 
     if (Array.isArray(value)) {
       return (
@@ -264,7 +401,6 @@ const LandingPageEditor: React.FC = () => {
     );
   };
 
-  // Render sections with 'items' property (faqs, testimonials)
   const renderItemsSection = (
     sectionName: string,
     sectionData: SectionData,
@@ -315,16 +451,18 @@ const LandingPageEditor: React.FC = () => {
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1 space-y-1">
-                      {Object.entries(item).map(([key, value]) => (
-                        <div key={key} className="text-sm">
-                          <span className="font-medium text-gray-700 capitalize">
-                            {key}:{" "}
-                          </span>
-                          <span className="text-gray-600">
-                            {formatValueForDisplay(value)}
-                          </span>
-                        </div>
-                      ))}
+                      {Object.entries(item)
+                        .filter(([key]) => key !== "id" && key !== "is_active")
+                        .map(([key, value]) => (
+                          <div key={key} className="text-sm">
+                            <span className="font-medium text-gray-700 capitalize">
+                              {key}:{" "}
+                            </span>
+                            <span className="text-gray-600">
+                              {formatValueForDisplay(value)}
+                            </span>
+                          </div>
+                        ))}
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
@@ -521,19 +659,22 @@ const LandingPageEditor: React.FC = () => {
     );
   };
 
-  if (loading) {
+  const isLoading = loading || faqsLoading || testimonialsLoading;
+
+  if (isLoading) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-screen bg-gray-50">
           <div className="text-center">
             <Spinner size="lg" />
+            <p className="mt-4 text-gray-600">Loading landing page data...</p>
           </div>
         </div>
       </AdminLayout>
     );
   }
 
-  if (!landingData) {
+  if (!mergedData) {
     return (
       <AdminLayout>
         <div className="p-6 text-center text-gray-500">No data available</div>
@@ -587,24 +728,21 @@ const LandingPageEditor: React.FC = () => {
           </Modal>
 
           <div className="space-y-6">
-            {Object.entries(landingData)
+            {Object.entries(mergedData)
               .filter(([key]) => !shouldExcludeField(key))
               .map(([key, value]) => {
                 const sectionData = value as SectionData;
 
-                // Check if section has 'items' property (faqs, testimonials, etc.)
                 if (hasItemsProperty(sectionData)) {
                   return (
                     <div key={key}>{renderItemsSection(key, sectionData)}</div>
                   );
                 }
-                // Simple array sections (stats, steps, features)
                 if (isArraySection(sectionData)) {
                   return (
                     <div key={key}>{renderArraySection(key, sectionData)}</div>
                   );
                 }
-                // Object sections (hero, contact, footer, etc.)
                 return (
                   <div key={key}>{renderObjectSection(key, sectionData)}</div>
                 );

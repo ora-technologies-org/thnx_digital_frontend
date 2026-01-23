@@ -38,6 +38,7 @@ import UpdateLandingPage from "@/pages/admin/UpdateLandingPage";
 import GiftCardRedemption from "@/pages/customer/Myredemption";
 import { UserHomePage } from "@/pages/merchant/userHomePage";
 import { NotFoundPage } from "@/shared/components/common/NotFound";
+import { AdminDashboardPage } from "@/features/admin/AdminDashboardPage";
 
 const AppRoutes: React.FC = () => {
   return (
@@ -166,15 +167,22 @@ const AppRoutes: React.FC = () => {
       />
 
       {/* Admin Routes - ALL PROTECTED */}
-      <Route
+      {/* <Route
         path={ROUTES.ADMIN_DASHBOARD}
         element={
           <ProtectedRoute requiredRole="ADMIN">
             <NotificationsPage />
           </ProtectedRoute>
         }
+      /> */}
+      <Route
+        path={ROUTES.ADMIN_DASHBOARD}
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        }
       />
-
       <Route
         path={ROUTES.ADMIN_UPDATE}
         element={

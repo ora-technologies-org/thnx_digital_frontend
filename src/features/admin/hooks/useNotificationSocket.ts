@@ -31,9 +31,6 @@ export const useNotificationSocket = (
   const { enabled = true, onNewNotification, onUnreadCountUpdate } = options;
 
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connecting" | "connected" | "disconnected" | "error"
-  >("disconnected");
   const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
@@ -57,7 +54,6 @@ export const useNotificationSocket = (
   const reconnect = useCallback(() => {
     const token = localStorage.getItem("accessToken");
     if (token && userRole) {
-      setConnectionStatus("connecting");
       setError(null);
 
       if (userRole === "ADMIN") {
@@ -81,16 +77,10 @@ export const useNotificationSocket = (
       // Defer state updates to avoid synchronous setState in effect
       const timeoutId = setTimeout(() => {
         setError("No authentication token");
-        setConnectionStatus("error");
       }, 0);
 
       return () => clearTimeout(timeoutId);
     }
-
-    // Only set connecting status when we're actually going to connect
-    const connectTimeoutId = setTimeout(() => {
-      setConnectionStatus("connecting");
-    }, 0);
 
     // Connect to appropriate namespace based on role
     const socket =
@@ -100,19 +90,16 @@ export const useNotificationSocket = (
 
     const handleConnect = () => {
       setIsConnected(true);
-      setConnectionStatus("connected");
       setError(null);
     };
 
     const handleDisconnect = (reason: string) => {
       setIsConnected(false);
-      setConnectionStatus("disconnected");
       console.log("Socket disconnected:", reason);
     };
 
     const handleConnectError = (err: Error) => {
       setIsConnected(false);
-      setConnectionStatus("error");
       setError(err.message);
     };
 
@@ -164,7 +151,6 @@ export const useNotificationSocket = (
 
     // Cleanup
     return () => {
-      clearTimeout(connectTimeoutId);
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);

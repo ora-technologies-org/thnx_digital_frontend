@@ -18,9 +18,9 @@ import {
   Menu,
   X,
   UserPlus,
+  ChevronDown,
 } from "lucide-react";
 import { usePendingMerchants } from "../../../features/admin/hooks/useAdmin";
-
 import NotificationBell from "../notifications/NotificationBell";
 
 interface AdminLayoutProps {
@@ -36,13 +36,6 @@ const getNavigation = (pendingCount: number) => [
     gradient: "from-blue-500 to-blue-600",
   },
   {
-    name: "Pending Merchants",
-    href: "/admin/pending",
-    icon: Users,
-    gradient: "from-orange-500 to-orange-600",
-    badge: pendingCount > 0 ? pendingCount : undefined, // Dynamic badge
-  },
-  {
     name: "All Merchants",
     href: "/admin/merchants",
     icon: CheckCircle,
@@ -53,6 +46,13 @@ const getNavigation = (pendingCount: number) => [
     href: "/admin/create-merchant",
     icon: UserPlus,
     gradient: "from-indigo-500 to-purple-600",
+  },
+  {
+    name: "Pending Merchants",
+    href: "/admin/pending",
+    icon: Users,
+    gradient: "from-orange-500 to-orange-600",
+    badge: pendingCount > 0 ? pendingCount : undefined,
   },
   {
     name: "Gift Cards",
@@ -75,6 +75,24 @@ const getNavigation = (pendingCount: number) => [
   {
     name: "Activity Log",
     href: "/admin/activity",
+    icon: Activity,
+    gradient: "from-cyan-500 to-cyan-600",
+  },
+  {
+    name: "Contact us",
+    href: "/admin/contact-us",
+    icon: Activity,
+    gradient: "from-cyan-500 to-cyan-600",
+  },
+  {
+    name: "Support Tickets",
+    href: "/admin/support-tickets",
+    icon: Activity,
+    gradient: "from-cyan-500 to-cyan-600",
+  },
+  {
+    name: "Update Landing",
+    href: "/admin/update",
     icon: Activity,
     gradient: "from-cyan-500 to-cyan-600",
   },
@@ -374,24 +392,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
             <div className="flex items-center gap-4">
               {/* Notifications with dynamic badge */}
-              <NotificationBell />
 
-              {/* User Profile */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  A
-                </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-sm font-semibold text-gray-900">
-                    Admin User
-                  </p>
-                  <p className="text-xs text-gray-500">admin@thnxdigital.com</p>
-                </div>
-              </motion.button>
               <NotificationBell />
 
               {/* User Profile Dropdown */}

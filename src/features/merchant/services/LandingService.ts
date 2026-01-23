@@ -46,7 +46,6 @@ export const landingPageService = {
       }
 
       // Fallback to data field
-
       if (response.data?.data) {
         return response.data.data as unknown as LandingPageData;
       }
@@ -95,7 +94,7 @@ export const landingPageService = {
       );
 
       const response = await api.patch<UpdateLandingPageResponse>(
-        "users/landing-page",
+        "admin/landing-page",
         requestPayload,
       );
 
@@ -126,21 +125,38 @@ export const landingPageService = {
     }
   },
 
+  // ==================== FAQ FETCH METHOD ====================
+
   /**
-   * Adds a new FAQ item
+   * Fetches all FAQ items
    */
-  async addFAQItem(faqItem: FAQItem): Promise<LandingPageData> {
+  async getFAQs(): Promise<FAQItem[]> {
     try {
-      const currentData = await this.getLandingPageData();
-      const updatedFAQs: FAQSection = {
-        ...currentData.faqs,
-        items: [...currentData.faqs.items, faqItem],
+      const response = await api.get<{ data: FAQItem[] }>("users/faq");
+      console.log("📥 FAQs fetched:", response.data);
+      return response.data.data || [];
+    } catch (error) {
+      console.error("Error fetching FAQs:", error);
+      throw error;
+    }
+  },
+
+  // ==================== FAQ METHODS ====================
+
+  /**
+   * Adds a new FAQ item using dedicated endpoint
+   */
+  async addFAQItem(faqItem: Omit<FAQItem, "id">): Promise<ApiResponse> {
+    try {
+      const payload = {
+        question: faqItem.question,
+        answer: faqItem.answer,
+        is_active: true,
       };
 
-      return await this.updateLandingPageSection({
-        section: "faqs",
-        data: updatedFAQs,
-      });
+      const response = await api.post<ApiResponse>("admin/faq", payload);
+      console.log("✅ FAQ added successfully:", response.data);
+      return response.data;
     } catch (error) {
       console.error("Error adding FAQ item:", error);
       throw error;
@@ -148,26 +164,25 @@ export const landingPageService = {
   },
 
   /**
-   * Updates a specific FAQ item by index
+   * Updates a specific FAQ item by ID using dedicated endpoint
    */
   async updateFAQItem(
-    faqItem: FAQItem,
-    index: number,
-  ): Promise<LandingPageData> {
+    faqId: string,
+    faqItem: Partial<Omit<FAQItem, "id">>,
+  ): Promise<ApiResponse> {
     try {
-      const currentData = await this.getLandingPageData();
-      const updatedItems = [...currentData.faqs.items];
-      updatedItems[index] = faqItem;
-
-      const updatedFAQs: FAQSection = {
-        ...currentData.faqs,
-        items: updatedItems,
+      const payload = {
+        question: faqItem.question,
+        answer: faqItem.answer,
+        is_active: true,
       };
 
-      return await this.updateLandingPageSection({
-        section: "faqs",
-        data: updatedFAQs,
-      });
+      const response = await api.patch<ApiResponse>(
+        `admin/faq/${faqId}`,
+        payload,
+      );
+      console.log("✅ FAQ updated successfully:", response.data);
+      return response.data;
     } catch (error) {
       console.error("Error updating FAQ item:", error);
       throw error;
@@ -175,22 +190,13 @@ export const landingPageService = {
   },
 
   /**
-   * Deletes a FAQ item by index
+   * Deletes a FAQ item by ID
    */
-  async deleteFAQItem(index: number): Promise<LandingPageData> {
+  async deleteFAQItem(faqId: string): Promise<ApiResponse> {
     try {
-      const currentData = await this.getLandingPageData();
-      const updatedItems = currentData.faqs.items.filter((_, i) => i !== index);
-
-      const updatedFAQs: FAQSection = {
-        ...currentData.faqs,
-        items: updatedItems,
-      };
-
-      return await this.updateLandingPageSection({
-        section: "faqs",
-        data: updatedFAQs,
-      });
+      const response = await api.delete<ApiResponse>(`admin/faq/${faqId}`);
+      console.log("✅ FAQ deleted successfully:", response.data);
+      return response.data;
     } catch (error) {
       console.error("Error deleting FAQ item:", error);
       throw error;
@@ -198,22 +204,59 @@ export const landingPageService = {
   },
 
   /**
-   * Adds a new testimonial item
+   * Updates FAQ section metadata (title, subtitle)
+   */
+  async updateFAQSection(metadata: Partial<FAQSection>): Promise<ApiResponse> {
+    try {
+      const response = await api.patch<ApiResponse>("admin/faq", metadata);
+      console.log("✅ FAQ section updated successfully:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating FAQ section:", error);
+      throw error;
+    }
+  },
+
+  // ==================== TESTIMONIAL FETCH METHOD ====================
+
+  /**
+   * Fetches all testimonial items
+   */
+  async getTestimonials(): Promise<TestimonialItem[]> {
+    try {
+      const response = await api.get<{ data: TestimonialItem[] }>(
+        "admin/testimonials",
+      );
+      console.log("📥 Testimonials fetched:", response.data);
+      return response.data.data || [];
+    } catch (error) {
+      console.error("Error fetching testimonials:", error);
+      throw error;
+    }
+  },
+
+  // ==================== TESTIMONIAL METHODS ====================
+
+  /**
+   * Adds a new testimonial item using dedicated endpoint
    */
   async addTestimonialItem(
-    testimonialItem: TestimonialItem,
-  ): Promise<LandingPageData> {
+    testimonialItem: Omit<TestimonialItem, "id">,
+  ): Promise<ApiResponse> {
     try {
-      const currentData = await this.getLandingPageData();
-      const updatedTestimonials: TestimonialSection = {
-        ...currentData.testimonials,
-        items: [...currentData.testimonials.items, testimonialItem],
+      const payload = {
+        name: testimonialItem.name,
+        role: testimonialItem.role,
+        message: testimonialItem.message,
+        is_active: true,
       };
 
-      return await this.updateLandingPageSection({
-        section: "testimonials",
-        data: updatedTestimonials,
-      });
+      const response = await api.post<ApiResponse>(
+        "admin/testimonials",
+        payload,
+      );
+      console.log("✅ Testimonial added successfully:", response.data);
+      return response.data;
     } catch (error) {
       console.error("Error adding testimonial item:", error);
       throw error;
@@ -221,26 +264,26 @@ export const landingPageService = {
   },
 
   /**
-   * Updates a specific testimonial item by index
+   * Updates a specific testimonial item by ID using dedicated endpoint
    */
   async updateTestimonialItem(
-    testimonialItem: TestimonialItem,
-    index: number,
-  ): Promise<LandingPageData> {
+    testimonialId: string,
+    testimonialItem: Partial<Omit<TestimonialItem, "id">>,
+  ): Promise<ApiResponse> {
     try {
-      const currentData = await this.getLandingPageData();
-      const updatedItems = [...currentData.testimonials.items];
-      updatedItems[index] = testimonialItem;
-
-      const updatedTestimonials: TestimonialSection = {
-        ...currentData.testimonials,
-        items: updatedItems,
+      const payload = {
+        name: testimonialItem.name,
+        role: testimonialItem.role,
+        message: testimonialItem.message,
+        is_active: true,
       };
 
-      return await this.updateLandingPageSection({
-        section: "testimonials",
-        data: updatedTestimonials,
-      });
+      const response = await api.patch<ApiResponse>(
+        `admin/testimonials/${testimonialId}`,
+        payload,
+      );
+      console.log("✅ Testimonial updated successfully:", response.data);
+      return response.data;
     } catch (error) {
       console.error("Error updating testimonial item:", error);
       throw error;
@@ -248,29 +291,44 @@ export const landingPageService = {
   },
 
   /**
-   * Deletes a testimonial item by index
+   * Deletes a testimonial item by ID
    */
-  async deleteTestimonialItem(index: number): Promise<LandingPageData> {
+  async deleteTestimonialItem(testimonialId: string): Promise<ApiResponse> {
     try {
-      const currentData = await this.getLandingPageData();
-      const updatedItems = currentData.testimonials.items.filter(
-        (_, i) => i !== index,
+      const response = await api.delete<ApiResponse>(
+        `admin/testimonials/${testimonialId}`,
       );
-
-      const updatedTestimonials: TestimonialSection = {
-        ...currentData.testimonials,
-        items: updatedItems,
-      };
-
-      return await this.updateLandingPageSection({
-        section: "testimonials",
-        data: updatedTestimonials,
-      });
+      console.log("✅ Testimonial deleted successfully:", response.data);
+      return response.data;
     } catch (error) {
       console.error("Error deleting testimonial item:", error);
       throw error;
     }
   },
+
+  /**
+   * Updates testimonial section metadata (title, subtitle)
+   */
+  async updateTestimonialSection(
+    metadata: Partial<TestimonialSection>,
+  ): Promise<ApiResponse> {
+    try {
+      const response = await api.patch<ApiResponse>(
+        "admin/testimonials",
+        metadata,
+      );
+      console.log(
+        "✅ Testimonial section updated successfully:",
+        response.data,
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error updating testimonial section:", error);
+      throw error;
+    }
+  },
+
+  // ==================== STATS METHODS ====================
 
   /**
    * Adds a new stat item
@@ -330,6 +388,8 @@ export const landingPageService = {
     }
   },
 
+  // ==================== STEP METHODS ====================
+
   /**
    * Adds a new step item
    */
@@ -387,6 +447,8 @@ export const landingPageService = {
       throw error;
     }
   },
+
+  // ==================== FEATURE METHODS ====================
 
   /**
    * Adds a new feature item
@@ -447,6 +509,8 @@ export const landingPageService = {
       throw error;
     }
   },
+
+  // ==================== NEWSLETTER & CONTACT ====================
 
   /**
    * Subscribes an email address to the newsletter

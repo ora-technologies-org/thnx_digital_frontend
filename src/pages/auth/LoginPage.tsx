@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import {
   LogIn,
   Mail,
@@ -13,8 +13,9 @@ import {
   Eye,
   EyeOff,
   AlertTriangle,
+  AlertCircle,
 } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
@@ -24,6 +25,22 @@ import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { loginSchema } from "@/shared/utils/register";
 
 type LoginFormData = z.infer<typeof loginSchema>;
+
+// ===== CONSTANTS =====
+const FEATURE_FLAGS = {
+  ENABLE_REMEMBER_ME: true,
+  ENABLE_GOOGLE_LOGIN: true,
+  ENABLE_ONE_TAP: false,
+};
+
+const ROUTES = {
+  FORGOT_PASSWORD: "/forgot-password",
+  REGISTER: "/register",
+  BROWSE: "/browse",
+};
+
+// ===== HELPER FUNCTIONS =====
+const getAnimationVariants = (variant: Variants) => variant;
 
 // ===== HOOKS =====
 const useCapsLockDetection = () => {
@@ -48,14 +65,46 @@ const useCapsLockDetection = () => {
   return isCapsLockOn;
 };
 
+const useReducedMotion = () => {
+  // Use useMemo to calculate initial state only once
+  const initialMotionPreference = useMemo(() => {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  const [shouldReduceMotion, setShouldReduceMotion] = useState(
+    initialMotionPreference,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const handleChange = (event: MediaQueryListEvent) => {
+      setShouldReduceMotion(event.matches);
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  return shouldReduceMotion;
+};
+
 // ===== MAIN COMPONENT =====
 export const LoginPage: React.FC = () => {
   const isCapsLockOn = useCapsLockDetection();
-  const { login } = useAuth();
+  const shouldReduceMotion = useReducedMotion();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const {
+    isAuthenticated,
+    user,
+    error: authError,
+    loading,
+  } = useAppSelector((state) => state.auth);
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     register,
@@ -69,6 +118,15 @@ export const LoginPage: React.FC = () => {
       rememberMe: false,
     },
   });
+
+  // Get register props for email field
+  const { ref: emailRegisterRef, ...emailRegisterProps } = register("email");
+
+  // Derive loading states
+  const loadingStates = {
+    isLoggingIn: loading,
+  };
+  const isFormLoading = loading || isGoogleLoading;
 
   // ==================== AUTO REDIRECT AFTER LOGIN ====================
   useEffect(() => {
@@ -118,6 +176,27 @@ export const LoginPage: React.FC = () => {
 
   const onSubmit = (data: LoginFormData) => {
     login(data);
+  };
+
+  // Google Login Handlers
+  const handleGoogleSuccess = async (
+    credentialResponse: CredentialResponse,
+  ) => {
+    try {
+      setIsGoogleLoading(true);
+      if (loginWithGoogle && credentialResponse.credential) {
+        await loginWithGoogle(credentialResponse.credential);
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error("Google login failed");
+    setIsGoogleLoading(false);
   };
 
   return (
@@ -245,14 +324,22 @@ export const LoginPage: React.FC = () => {
                   placeholder="••••••••"
                   error={errors.password?.message}
                   {...register("password")}
+                  disabled={isFormLoading}
+                  autoComplete="current-password"
                   className="transition-all focus:scale-[1.02] pr-12"
-                  icon={<Lock className="w-5 h-5 text-gray-400" />}
+                  icon={
+                    <Lock
+                      className="w-5 h-5 text-gray-400"
+                      aria-hidden="true"
+                    />
+                  }
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-[38px] text-gray-400 hover:text-gray-600 transition-colors"
                   tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
