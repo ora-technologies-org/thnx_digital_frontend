@@ -47,6 +47,7 @@ import { updateFormData } from "@/features/admin/slices/MerchantCreateSlice";
 import { AppDispatch } from "@/app/store";
 import DocumentPreviewCard from "@/shared/components/modals/DocumentPreviewCard";
 import { Spinner } from "@/shared/components/ui/Spinner";
+import { getStatusColor } from "@/shared/utils/helpers";
 
 // Types for filters
 type FilterStatus =
@@ -76,21 +77,6 @@ const MerchantDetailsModal: React.FC<{
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "VERIFIED":
-        return "bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-800 border-emerald-200";
-      case "PENDING_VERIFICATION":
-        return "bg-gradient-to-r from-amber-100 to-amber-50 text-amber-800 border-amber-200";
-      case "REJECTED":
-        return "bg-gradient-to-r from-rose-100 to-rose-50 text-rose-800 border-rose-200";
-      case "INCOMPLETE":
-        return "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 border-gray-200";
-      default:
-        return "bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 border-gray-200";
-    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -838,7 +824,7 @@ export const AllMerchantsPage: React.FC = () => {
     const latestMerchants = merchantsRef.current;
     if (latestMerchants) {
       const latestMerchant = latestMerchants.find((m) => m.id === merchant.id);
-      setSelectedMerchant(latestMerchant || merchant);
+      setSelectedMerchant((latestMerchant || merchant) as MerchantUser);
     } else {
       setSelectedMerchant(merchant);
     }

@@ -107,8 +107,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch pending merchants count
-  const { data: pendingMerchants } = usePendingMerchants();
-  const pendingCount = pendingMerchants?.length || 0;
+  const { data: pendingMerchantsResponse } = usePendingMerchants({
+    page: 1,
+    limit: 100, // Get all pending to show accurate count
+  });
+  const pendingCount = pendingMerchantsResponse?.merchants?.length || 0;
 
   // Get navigation with dynamic badge
   const navigation = getNavigation(pendingCount);

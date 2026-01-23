@@ -1,51 +1,9 @@
 // src/features/purchase/services/QRRedemptionHistoryService.ts
 import api from "@/shared/utils/api";
-
-// Represents a single redemption transaction
-export interface RedemptionHistoryItem {
-  id: string;
-  purchaseId?: string;
-  qrCode?: string;
-  amount: number;
-  balanceBefore?: number;
-  balanceAfter?: number;
-  locationName?: string;
-  locationAddress?: string;
-  notes?: string;
-  redeemedAt: string;
-  redeemedBy?: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  status?: "completed" | "failed" | "pending";
-  transactionId?: string;
-  paymentMethod?: string;
-}
-
-// API response structure for redemption history
-export interface RedemptionHistoryResponse {
-  success: boolean;
-  message: string;
-  data: RedemptionHistoryItem[];
-  pagination?: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
-
-// Query parameters for filtering redemption history
-export interface RedemptionHistoryParams {
-  qrCode?: string;
-  purchaseId?: string;
-  page?: number;
-  limit?: number;
-  startDate?: string;
-  endDate?: string;
-  status?: string;
-}
+import {
+  RedemptionHistoryParams,
+  RedemptionHistoryResponse,
+} from "../types/redeem.types";
 
 // Fetch redemption history with flexible filtering options
 export const fetchRedemptionHistory = async (
@@ -57,7 +15,7 @@ export const fetchRedemptionHistory = async (
 
     // If qrCode is provided, add it to the path
     if (params.qrCode) {
-      endpoint = `/purchases/redemptions/history/qr/${params.qrCode}`;
+      endpoint = `/purchases/qr/${params.qrCode}`;
     }
     // If purchaseId is provided (and no qrCode), add it to the path
     else if (params.purchaseId) {

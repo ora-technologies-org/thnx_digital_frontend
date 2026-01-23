@@ -1,70 +1,10 @@
 // src/features/auth/slices/profileSlice.ts
+import { ProfileFormData } from "@/shared/types/Form.types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-export interface ProfileFormData {
-  // Business Details
-  businessName: string;
-  businessLogo: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  businessPhone: string;
-  businessEmail: string;
-  website: string;
-  profile: string | null;
-  loading: boolean;
-  error: string;
-  updateSuccess: boolean;
-
-  // Bank Information
-  bankName: string;
-  accountNumber: string;
-  accountHolderName: string;
-  ifscCode: string;
-  swiftCode: string;
-
-  // Additional Business Info
-  businessRegistrationNumber: string;
-  taxId: string;
-  businessType: string;
-  businessCategory: string;
-  description: string;
-
-  // Document status (not the actual files)
-  documents: {
-    identityDocument?: {
-      name: string;
-      url: string;
-      uploadedAt: string;
-    };
-    registrationDocument?: {
-      name: string;
-      url: string;
-      uploadedAt: string;
-    };
-    taxDocument?: {
-      name: string;
-      url: string;
-      uploadedAt: string;
-    };
-  };
-
-  // Profile Status
-  status: "incomplete" | "pending" | "approved" | "rejected";
-  lastUpdated?: string;
-  submittedAt?: string;
-  rejectionReason?: string;
-
-  // ID for edit mode
-  id?: string;
-  profileStatus?: "incomplete" | "pending" | "approved" | "rejected";
-}
 
 const initialState: ProfileFormData = {
   businessName: "",
-  businessLogo: "", // NEW: Initialize as empty string
+  businessLogo: "",
   address: "",
   city: "",
   state: "",
@@ -125,7 +65,7 @@ const profileSlice = createSlice({
       state.lastUpdated = new Date().toISOString();
     },
 
-    // NEW: Update business logo specifically
+    // Update business logo specifically
     updateBusinessLogo: (state, action: PayloadAction<string>) => {
       state.businessLogo = action.payload;
       state.lastUpdated = new Date().toISOString();

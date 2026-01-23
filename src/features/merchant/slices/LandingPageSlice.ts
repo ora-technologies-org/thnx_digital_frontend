@@ -1,10 +1,10 @@
 // src/store/slices/landingPageSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { landingPageService } from "../services/LandingService";
 import {
   LandingPageData,
-  landingPageService,
   UpdateLandingPageRequest,
-} from "../services/LandingService";
+} from "@/shared/types/landingPage.types";
 
 interface LandingPageState {
   data: LandingPageData | null;
@@ -107,26 +107,17 @@ const landingPageSlice = createSlice({
 
       const { section, data, index } = action.payload;
 
-      // Create a new data object to maintain immutability
-      const newData = { ...state.data };
-
-      // Type-safe access to section data
-      const sectionData = newData[section];
-
-      if (index !== undefined && Array.isArray(sectionData)) {
+      // Handle updates based on section structure
+      if (index !== undefined) {
         // Handle array sections with index: update specific item in array
-        const sectionArray = [...sectionData];
-        sectionArray[index] = data;
-        newData[section] = sectionArray as typeof sectionData;
-      } else if (Array.isArray(sectionData)) {
-        // Handle array sections without index: replace entire array
-        newData[section] = data as typeof sectionData;
+        const sectionData = state.data[section];
+        if (Array.isArray(sectionData)) {
+          (sectionData as unknown[])[index] = data;
+        }
       } else {
-        // Handle object sections: update the entire section
-        newData[section] = data as typeof sectionData;
+        // Handle both array and object sections: replace entire section
+        (state.data[section] as unknown) = data;
       }
-
-      state.data = newData;
     },
   },
   extraReducers: (builder) => {

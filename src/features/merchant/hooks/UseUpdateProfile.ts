@@ -1,11 +1,11 @@
 // src/features/merchant/hooks/useUpdateProfile.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { profileService } from "../services/ProfileMerchantService";
 import {
-  profileService,
-  type UpdateProfilePayload,
-  type UpdateProfileResponse,
-} from "../services/ProfileMerchantService";
+  UpdateProfilePayload,
+  UpdateProfileResponse,
+} from "../types/profileMerchant.types";
 
 // Define interface for error response structure
 interface UpdateProfileError {
@@ -59,9 +59,3 @@ export const useUpdateProfile = () => {
 };
 
 export default useUpdateProfile;
-
-// Re-export types for consumers
-export type {
-  UpdateProfilePayload,
-  UpdateProfileResponse,
-} from "../services/ProfileMerchantService";

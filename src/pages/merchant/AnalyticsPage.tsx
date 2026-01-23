@@ -12,7 +12,7 @@ import {
   Eye,
 } from "lucide-react";
 import { format } from "date-fns";
-import { RedemptionHistory } from "@/features/Redemption/Services/redemptionService";
+
 import { Button } from "@/shared/components/ui/Button";
 import { RedemptionDetailsModal } from "@/features/Redemption/Components/RedemptionDetails";
 import {
@@ -20,6 +20,7 @@ import {
   useExportRedemptions,
 } from "@/features/Redemption/Hooks/useRedemption";
 import { DashboardLayout } from "@/shared/components/layout/DashboardLayout";
+import { RedemptionHistory } from "@/features/Redemption/types/redeem.types";
 
 // Define the expected API response type structure
 interface RedemptionsResponse {

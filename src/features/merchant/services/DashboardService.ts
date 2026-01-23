@@ -1,7 +1,6 @@
 // src/services/DashboardService.ts
 import axios, { AxiosError } from "axios";
 import api from "@/shared/utils/api";
-
 // ==================== TYPE DEFINITIONS ====================
 
 /**
@@ -31,7 +30,66 @@ interface ServiceResponse<T> {
   message?: string;
 }
 
+export interface AuthMeResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    email: string;
+    name: string;
+    phone: string;
+    role: string;
+    avatar: string | null;
+    bio: string;
+    emailVerified: boolean;
+    isActive: boolean;
+    createdAt: string;
+    lastLogin: string;
+    merchantProfile?: {
+      id: string;
+      businessName: string;
+      profileStatus: string;
+      isVerified: boolean;
+      verifiedAt: string;
+      rejectionReason: string | null;
+      rejectedAt: string | null;
+      address: string;
+      city: string;
+      country: string;
+      businessPhone: string;
+      businessEmail: string;
+      website: string | null;
+      logo: string | null;
+      description: string | null;
+    };
+  };
+}
+
+export interface UserData {
+  name: string;
+  phone: string;
+  bio: string;
+}
+
 // ==================== API FUNCTIONS ====================
+/**
+ * Authentication related services
+ */
+export const authService = {
+  /**
+   * Fetches the authenticated user's data
+   */
+  getAuthMe: async (): Promise<UserData> => {
+    const response = await api.get<AuthMeResponse>("/auth/me");
+    const user = response.data.data;
+
+    return {
+      name: user.name || "",
+      phone: user.phone || "",
+      bio: user.bio || "",
+    };
+  },
+};
 
 /**
  * Fetch dashboard statistics for the authenticated merchant

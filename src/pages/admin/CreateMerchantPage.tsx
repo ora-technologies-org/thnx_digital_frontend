@@ -16,9 +16,9 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
+
 import { useNavigate, useParams } from "react-router-dom";
-import { RootState, AppDispatch } from "@/app/store";
+import { RootState } from "@/app/store";
 import {
   setField,
   clearErrors,
@@ -32,6 +32,8 @@ import {
 import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
+import { CreateMerchantForm } from "@/shared/types/Form.types";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 
 // Types
 interface ValidationErrorItem {
@@ -43,37 +45,16 @@ interface ValidationError {
   errors: Array<ValidationErrorItem | string>;
 }
 
-type FieldValue = string | number | boolean | File | null | undefined;
-
-interface CreateMerchantForm {
-  email: string;
-  password: string;
-  name: string;
-  phone: string;
-  businessName: string;
-  businessRegistrationNumber: string;
-  taxId: string;
-  businessType: string;
-  businessCategory: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  businessPhone: string;
-  businessEmail: string;
-  website: string;
-  description: string;
-  bankName: string;
-  accountNumber: string;
-  accountHolderName: string;
-  ifscCode: string;
-  swiftCode: string;
-  giftCardLimit?: number;
-  registrationDocument?: File | string;
-  taxDocument?: File | string;
-  identityDocument?: File | string;
-}
+// Update this type near the top of your file
+type FieldValue =
+  | string
+  | number
+  | boolean
+  | File
+  | string[]
+  | File[]
+  | null
+  | undefined;
 
 // Update ApiResponse interface to match CreateMerchantResponse
 interface ApiResponse {
@@ -117,29 +98,6 @@ interface ResponseModalData {
   confirmText?: string;
 }
 
-// Constants
-const businessTypes = [
-  "Sole Proprietorship",
-  "Partnership",
-  "Limited Liability Company (LLC)",
-  "Corporation",
-  "Cooperative",
-  "Non-Profit Organization",
-];
-
-const businessCategories = [
-  "Retail",
-  "Food & Dining",
-  "Entertainment",
-  "Health & Beauty",
-  "Services",
-  "Education",
-  "Technology",
-  "Sports & Fitness",
-  "Travel & Hospitality",
-  "Other",
-];
-
 const validationRules: Record<keyof CreateMerchantForm, ValidationRule> = {
   email: { required: true, type: "email" },
   password: { required: true, minLength: 6 },
@@ -172,6 +130,7 @@ const validationRules: Record<keyof CreateMerchantForm, ValidationRule> = {
   registrationDocument: { required: true },
   taxDocument: { required: true },
   identityDocument: { required: true },
+  additionalDocuments: { required: false },
 };
 
 // Minimal Components
@@ -254,76 +213,6 @@ const InputField: React.FC<{
         />
         {touched && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            {hasError ? (
-              <XCircle className="w-4 h-4 text-red-500" />
-            ) : isValid ? (
-              <CheckCircle className="w-4 h-4 text-green-500" />
-            ) : null}
-          </div>
-        )}
-      </div>
-      {hasError && (
-        <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3" />
-          {error}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const SelectField: React.FC<{
-  label: string;
-  name: keyof CreateMerchantForm;
-  options: string[];
-  error?: string;
-  required?: boolean;
-  value: string;
-  onChange: (value: string) => void;
-  onBlur?: () => void;
-  touched?: boolean;
-}> = ({
-  label,
-  name,
-  options,
-  error,
-  required = true,
-  value,
-  onChange,
-  onBlur,
-  touched,
-}) => {
-  const hasError = touched && error;
-  const isValid = touched && !error && value;
-
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        <select
-          name={name}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-          className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none bg-white ${
-            hasError
-              ? "border-red-500 bg-red-50"
-              : isValid
-                ? "border-green-500 bg-green-50"
-                : "border-gray-300"
-          }`}
-        >
-          <option value="">Select {label}</option>
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        {touched && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
             {hasError ? (
               <XCircle className="w-4 h-4 text-red-500" />
             ) : isValid ? (
@@ -636,14 +525,16 @@ const extractErrorMessage = (
 
 // Main Component
 export const CreateMerchantPage: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id; // Determine if we're in edit mode
 
   // Get form data and errors from Redux store
-  const formData = useSelector((state: RootState) => state.merchant.formData);
-  const errors = useSelector((state: RootState) => state.merchant.errors);
+  const formData = useAppSelector(
+    (state: RootState) => state.merchant.formData,
+  );
+  const errors = useAppSelector((state: RootState) => state.merchant.errors);
 
   // API mutation hooks
   const { mutate: createMerchant, isPending: isCreating } = useCreateMerchant();
@@ -1220,6 +1111,28 @@ export const CreateMerchantPage: React.FC = () => {
                         : undefined
                     }
                   />
+                  <FileField
+                    label="Additional Documents"
+                    name="additionalDocuments"
+                    onChange={(file) =>
+                      handleFileChange("additionalDocuments", file)
+                    }
+                    onBlur={() => handleFieldBlur("additionalDocuments")}
+                    required={!isEditMode}
+                    error={errors.additionalDocuments}
+                    touched={touchedFields.has("additionalDocuments")}
+                    hasFile={
+                      !!(
+                        formData.identityDocument instanceof File ||
+                        formData.identityDocument
+                      )
+                    }
+                    existingFileUrl={
+                      isEditMode
+                        ? (formData.identityDocument as string)
+                        : undefined
+                    }
+                  />
                 </div>
               </FormSection>
 
@@ -1263,7 +1176,7 @@ export const CreateMerchantPage: React.FC = () => {
                     touched={touchedFields.has("taxId")}
                   />
 
-                  <SelectField
+                  <InputField
                     label="Business Type"
                     name="businessType"
                     value={formData.businessType}
@@ -1271,12 +1184,12 @@ export const CreateMerchantPage: React.FC = () => {
                       handleInputChange("businessType", value)
                     }
                     onBlur={() => handleFieldBlur("businessType")}
-                    options={businessTypes}
+                    placeholder="E-commerce"
                     error={errors.businessType}
                     touched={touchedFields.has("businessType")}
                   />
 
-                  <SelectField
+                  <InputField
                     label="Business Category"
                     name="businessCategory"
                     value={formData.businessCategory}
@@ -1284,7 +1197,7 @@ export const CreateMerchantPage: React.FC = () => {
                       handleInputChange("businessCategory", value)
                     }
                     onBlur={() => handleFieldBlur("businessCategory")}
-                    options={businessCategories}
+                    placeholder="Retail"
                     error={errors.businessCategory}
                     touched={touchedFields.has("businessCategory")}
                   />

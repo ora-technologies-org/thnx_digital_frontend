@@ -1,6 +1,6 @@
 import React from "react";
-import { GiftCard } from "../types";
 import "./Modal.css";
+import { GiftCard } from "../types/giftCard.types";
 
 interface GiftCardModalProps {
   isOpen: boolean;

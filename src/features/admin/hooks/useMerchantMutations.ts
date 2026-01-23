@@ -1,15 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CreateMerchantForm } from "../slices/MerchantCreateSlice";
-import {
-  CreateMerchantResponse,
-  UpdateMerchantResponse,
-  merchantService,
-  ApiError,
-} from "../services/merchantService";
+
+import { merchantService } from "../services/merchantService";
 import type { MerchantUser } from "@/features/admin/api/admin.api";
 
 // CRITICAL FIX: Import the same query keys used in useAdmin
 import { adminQueryKeys } from "./useAdmin";
+import { CreateMerchantForm } from "@/shared/types/Form.types";
+import {
+  CreateMerchantResponse,
+  UpdateMerchantResponse,
+  ApiError,
+} from "../types/merchant.types";
 
 export const useCreateMerchant = () => {
   const queryClient = useQueryClient();
@@ -42,7 +43,7 @@ export const useMerchants = () => {
   // CRITICAL FIX: Use the same query keys as useAdmin
   return useQuery({
     queryKey: adminQueryKeys.merchants(),
-    queryFn: merchantService.getMerchants,
+    queryFn: () => merchantService.getMerchants(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
     refetchOnMount: true,

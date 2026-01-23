@@ -5,17 +5,7 @@ import { CheckCircle, Download, Printer, QrCode } from "lucide-react";
 import { Modal } from "../../../shared/components/ui/Modal";
 import { Button } from "../../../shared/components/ui/Button";
 import type { GiftCard } from "../../giftCards/types/giftCard.types";
-
-// Define a proper interface for the purchase object
-interface Purchase {
-  id: string;
-  transactionId: string;
-  amount: number;
-  status: "completed" | "pending" | "failed";
-  code?: string;
-  qrCode?: string;
-  createdAt: string | Date;
-}
+import { Purchase } from "../types/purchase.types";
 
 interface PurchaseSuccessModalProps {
   isOpen: boolean;

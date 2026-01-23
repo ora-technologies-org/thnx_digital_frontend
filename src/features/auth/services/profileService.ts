@@ -12,6 +12,7 @@ export interface AdminProfile {
   role: string;
   phone?: string;
   avatar?: string;
+  bio?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +25,7 @@ export interface UpdateProfileRequest {
   name?: string;
   phone?: string;
   avatar?: string;
+  bio?: string;
 }
 
 /**
@@ -71,7 +73,6 @@ export async function getProfile(): Promise<AdminProfile> {
     // Fetch profile data from the backend
     const response = await api.get<ProfileResponse>(`${ADMIN_BASE_URL}/me`);
 
-    // Extract and return the profile data from the response
     return response.data.data;
   } catch (error: unknown) {
     // Type-safe error handling for Axios errors

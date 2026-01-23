@@ -3,31 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Shield, CheckCircle, Clock, AlertCircle, Receipt } from "lucide-react";
 import { Modal } from "@/shared/components/ui/Modal";
 import { Button } from "@/shared/components/ui/Button";
-
-interface OTPModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  purchaseId: string;
-  qrCode: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  currentBalance: string;
-  merchantAddress?: string; // NEW: merchant address
-  merchantCity?: string; // NEW: merchant city
-  onOTPVerified: (
-    amount: string,
-    locationName: string,
-    locationAddress: string,
-    notes: string,
-  ) => void;
-  onRequestOTP: (purchaseId: string) => Promise<void>;
-  onVerifyOTP: (otp: string, purchaseId: string) => Promise<boolean>;
-  isRequestingOTP: boolean;
-  isVerifyingOTP: boolean;
-  otpSent: boolean;
-  otpVerified: boolean;
-  otpError: string;
-}
+import { OTPModalProps } from "../types/purchase.types";
 
 export const OTPModal: React.FC<OTPModalProps> = ({
   isOpen,

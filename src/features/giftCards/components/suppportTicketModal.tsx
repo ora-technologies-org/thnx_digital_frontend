@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Loader2, CheckCircle } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { supportTicketService } from "../services/SuportTicketService";
+import { createSupportTicket } from "../services/SuportTicketService";
 
 interface SupportTicketModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export const SupportTicketModal: React.FC<SupportTicketModalProps> = ({
   const [showSuccess, setShowSuccess] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: supportTicketService.createTicket,
+    mutationFn: createSupportTicket,
     onSuccess: () => {
       setShowSuccess(true);
       setTimeout(() => {

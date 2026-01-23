@@ -37,39 +37,30 @@ export type OrderStatus =
   | "failed"
   | "refunded";
 
-// Complete order structure
 export interface Order {
   id: string;
-  orderId: string; // QR code or purchase ID
-
-  // Customer info (can be nested or flat)
-  customer?: Customer;
+  orderId?: string;
+  orderNumber?: string;
+  qrCode?: string;
+  status: OrderStatus;
+  paymentStatus?: PaymentStatus;
+  purchaseAmount?: number | string;
+  currentBalance?: number | string;
+  bonusAmount?: number | string;
+  amount?: number | string;
+  totalAmount?: number;
   customerName?: string;
-  customerEmail?: string;
   customerPhone?: string;
-
-  // Gift card info
-  giftCard?: GiftCardInfo;
-
-  // Amounts (supporting both naming conventions)
-  quantity?: number;
-  amount?: string;
-  purchaseAmount?: string;
-  currentBalance?: string;
-  discount?: string;
-  tax?: string;
-
-  // Status and payment
-  status?: OrderStatus;
-  paymentMethod?: string; // e.g., "ESEWA", "KHALTI", "CREDIT_CARD"
+  customerEmail?: string;
+  customer?: Customer;
+  paymentMethod?: string;
   transactionId?: string;
-
-  // Additional fields
-  notes?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  completedAt?: string; // redeemedAt
+  createdAt: string;
   purchasedAt?: string;
+  expiresAt?: string;
+  usedAt?: string;
+  notes?: string;
+  items?: OrderItem[];
 }
 
 // Response structure for fetching orders list
@@ -128,4 +119,15 @@ export interface PurchaseVerification {
   isValid: boolean;
   purchase?: PurchaseData;
   error?: string;
+}
+
+/** Payment status types */
+export type PaymentStatus = "COMPLETED" | "PENDING" | "FAILED";
+
+/** Order item interface for detailed line items */
+export interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
 }

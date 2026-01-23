@@ -1,63 +1,7 @@
 // src/features/admin/slices/MerchantCreateSlice.ts
 
+import { CreateMerchantForm, MerchantState } from "@/shared/types/Form.types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-/**
- * Form data structure for creating a new merchant
- * Contains personal info, business details, banking info, and document uploads
- */
-export interface CreateMerchantForm {
-  // Personal Information
-  email: string;
-  password: string;
-  name: string;
-  phone: string;
-
-  // Business Information
-  businessName: string;
-  businessRegistrationNumber: string;
-  taxId: string;
-  businessType: string;
-  merchant: string;
-  businessCategory: string;
-
-  // Business Address
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-
-  // Business Contact
-  businessPhone: string;
-  businessEmail: string;
-  website: string;
-  description: string;
-
-  // Banking Information
-  bankName: string;
-  accountNumber: string;
-  accountHolderName: string;
-  ifscCode: string;
-  swiftCode: string;
-
-  // Optional Fields
-  giftCardLimit?: number;
-
-  // Document Uploads (can be File objects or URLs)
-  registrationDocument?: File | string;
-  taxDocument?: File | string;
-  identityDocument?: File | string;
-  additionalDocuments?: File[] | string[];
-}
-
-/**
- * Redux state structure for merchant creation form
- */
-interface MerchantState {
-  formData: CreateMerchantForm;
-  errors: Partial<Record<keyof CreateMerchantForm, string>>;
-}
 
 /**
  * Initial form data with all fields set to empty values

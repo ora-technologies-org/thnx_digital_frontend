@@ -27,7 +27,7 @@ export interface RegisterData {
   password: string;
   name: string;
   phone?: string;
-  businessName: string;
+  businessName?: string;
   businessType?: string;
   businessCategory?: string;
   city?: string;

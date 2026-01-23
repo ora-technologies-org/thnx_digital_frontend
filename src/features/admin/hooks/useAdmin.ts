@@ -6,14 +6,84 @@ import {
   CreateMerchantRequest,
   MerchantUser,
 } from "../api/admin.api";
-import { ContactMessage, contactUsService } from "../services/contactUsService";
-import api from "../../../shared/utils/api";
 import {
-  merchantService,
-  GetMerchantsParams,
-} from "../services/merchantService";
+  ContactMessage,
+  contactUsService,
+} from "../services/contactusServices";
+import api from "../../../shared/utils/api";
+import { merchantService } from "../services/merchantService";
 import { useInvalidateQueries } from "@/shared/hooks/useInvalidateQueries";
+import { GetMerchantsParams } from "../types/merchant.types";
+export interface RecentActivityItem {
+  id: string;
+  type: "new" | "purchase" | "update" | string;
+  merchantName?: string;
+  title?: string;
+  description?: string;
+  timestamp: string;
+}
 
+export interface DashboardData {
+  timeRange: string;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  overview: {
+    totalMerchants: number;
+    totalRevenue: {
+      value: number;
+      percentageChange: number;
+    };
+    giftCardsSold: {
+      value: number;
+      percentageChange: number;
+    };
+    totalOrders: {
+      value: number;
+      percentageChange: number;
+    };
+  };
+  verificationStatus: {
+    pending: number;
+    verified: number;
+    rejected: number;
+    activeCustomers: {
+      value: number;
+      percentageChange: number;
+    };
+  };
+  salesAnalytics: {
+    monthlyRevenueTrends: Array<{
+      month: string;
+      revenue: number;
+    }>;
+    currentMonthRevenue: number;
+    previousMonthRevenue: number;
+    percentageChange: number;
+  };
+  merchantGrowth: {
+    trends: Array<{
+      month: string;
+      count: number;
+    }>;
+    currentMonthMerchants: number;
+    previousMonthMerchants: number;
+    percentageChange: number;
+  };
+  giftCardStatus: Array<{
+    status: string;
+    count: number;
+    percentage: number;
+  }>;
+  recentActivity?: RecentActivityItem[];
+}
+
+export interface DashboardResponse {
+  success: boolean;
+  message: string;
+  data: DashboardData;
+}
 // ==================== QUERY KEYS - EXPORTED FOR USE IN OTHER FILES ====================
 export const adminQueryKeys = {
   all: ["admin"] as const,
@@ -271,79 +341,6 @@ export function useContactMessages() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
   });
-}
-
-// ==================== DASHBOARD DATA TYPES ====================
-
-export interface RecentActivityItem {
-  id: string;
-  type: "new" | "purchase" | "update" | string;
-  merchantName?: string;
-  title?: string;
-  description?: string;
-  timestamp: string;
-}
-
-export interface DashboardData {
-  timeRange: string;
-  dateRange: {
-    start: string;
-    end: string;
-  };
-  overview: {
-    totalMerchants: number;
-    totalRevenue: {
-      value: number;
-      percentageChange: number;
-    };
-    giftCardsSold: {
-      value: number;
-      percentageChange: number;
-    };
-    totalOrders: {
-      value: number;
-      percentageChange: number;
-    };
-  };
-  verificationStatus: {
-    pending: number;
-    verified: number;
-    rejected: number;
-    activeCustomers: {
-      value: number;
-      percentageChange: number;
-    };
-  };
-  salesAnalytics: {
-    monthlyRevenueTrends: Array<{
-      month: string;
-      revenue: number;
-    }>;
-    currentMonthRevenue: number;
-    previousMonthRevenue: number;
-    percentageChange: number;
-  };
-  merchantGrowth: {
-    trends: Array<{
-      month: string;
-      count: number;
-    }>;
-    currentMonthMerchants: number;
-    previousMonthMerchants: number;
-    percentageChange: number;
-  };
-  giftCardStatus: Array<{
-    status: string;
-    count: number;
-    percentage: number;
-  }>;
-  recentActivity?: RecentActivityItem[];
-}
-
-export interface DashboardResponse {
-  success: boolean;
-  message: string;
-  data: DashboardData;
 }
 
 // ==================== DASHBOARD DATA HOOK ====================

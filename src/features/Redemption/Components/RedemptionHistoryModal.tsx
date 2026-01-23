@@ -12,7 +12,7 @@ import {
   Download,
   Search,
 } from "lucide-react";
-import { RedemptionHistoryItem } from "../Services/QRCodeRedemptionHistoryService";
+import { RedemptionHistoryItem } from "../types/redeem.types";
 
 interface RedemptionHistoryModalProps {
   isOpen: boolean;
@@ -38,16 +38,16 @@ export const RedemptionHistoryModal: React.FC<RedemptionHistoryModalProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const filteredHistory = history.filter((item) => {
+  // Safety check: ensure history is always an array
+  const safeHistory = Array.isArray(history) ? history : [];
+
+  const filteredHistory = safeHistory.filter((item) => {
     const matchesSearch =
       item.locationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.redeemedBy?.name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" || item.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   const formatCurrency = (amount: string | number | undefined) => {
@@ -58,19 +58,6 @@ export const RedemptionHistoryModal: React.FC<RedemptionHistoryModalProps> = ({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(typeof amount === "string" ? parseFloat(amount) : amount);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -101,7 +88,6 @@ export const RedemptionHistoryModal: React.FC<RedemptionHistoryModalProps> = ({
         "Address",
         "Notes",
         "Redeemed By",
-        "Status",
       ],
       ...filteredHistory.map((item) => {
         const { date, time } = formatDate(item.redeemedAt);
@@ -115,7 +101,6 @@ export const RedemptionHistoryModal: React.FC<RedemptionHistoryModalProps> = ({
           item.locationAddress || "N/A",
           item.notes || "",
           item.redeemedBy?.name || "Unknown",
-          item.status,
         ];
       }),
     ]
@@ -307,12 +292,6 @@ export const RedemptionHistoryModal: React.FC<RedemptionHistoryModalProps> = ({
                       >
                         Redeemed By
                       </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Status
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -373,16 +352,6 @@ export const RedemptionHistoryModal: React.FC<RedemptionHistoryModalProps> = ({
                                 </div>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(item.status || "pending")}`}
-                            >
-                              {item.status
-                                ? item.status.charAt(0).toUpperCase() +
-                                  item.status.slice(1)
-                                : "Unknown"}
-                            </span>
                           </td>
                         </tr>
                       );

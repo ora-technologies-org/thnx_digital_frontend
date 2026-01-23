@@ -31,6 +31,15 @@ export const giftCardService = {
     return response.data.data.giftCard;
   },
 
+  // Get gift cards by merchant/user ID
+  getGiftCards: async (userId: string): Promise<GiftCard[]> => {
+    const response = await api.get<{
+      success: boolean;
+      data: { giftCards: GiftCard[] };
+    }>(`/gift-cards/merchant/${userId}`);
+    return response.data.data.giftCards;
+  },
+
   // Get active gift cards (public)
   getActiveGiftCards: async (): Promise<GiftCard[]> => {
     const response = await api.get<{

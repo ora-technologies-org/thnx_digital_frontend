@@ -1,3 +1,5 @@
+// services/SupportTicketService.ts
+
 import api from "@/shared/utils/api";
 import { AxiosError } from "axios";
 
@@ -5,10 +7,12 @@ interface ApiErrorResponse {
   message?: string;
 }
 
-export const createSupportTicket = async (data: {
+interface CreateTicketData {
   title: string;
   query: string;
-}) => {
+}
+
+export const createSupportTicket = async (data: CreateTicketData) => {
   try {
     const response = await api.post("/merchants/support-ticket", data);
     return response.data;

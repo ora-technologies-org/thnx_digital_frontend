@@ -30,9 +30,10 @@ import {
   formatLocation,
   canEditMerchant,
 } from "@/shared/utils/merchant";
+import { Merchant } from "@/features/admin/types/merchant.types";
 
 interface MerchantCardProps {
-  merchant: MerchantUser;
+  merchant: MerchantUser | Merchant;
   index: number;
   onViewDetails?: (merchant: MerchantUser) => void;
   onEdit?: (merchant: MerchantUser) => void;
@@ -112,7 +113,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                       )}
                     </div>
                     {/* Active Indicator */}
-                    {merchant.user.isActive && merchant.isVerified && (
+                    {merchant.user?.isActive && merchant.isVerified && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -129,7 +130,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                       {merchant.businessName}
                     </h3>
                     <p className="text-sm text-gray-500 truncate mt-0.5">
-                      {merchant.user.name}
+                      {merchant.user?.name}
                     </p>
                   </div>
                 </div>
@@ -164,7 +165,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                         >
                           <button
                             onClick={() => {
-                              onViewDetails?.(merchant);
+                              onViewDetails?.(merchant as MerchantUser);
                               setShowActions(false);
                             }}
                             className="w-full px-4 py-2.5 text-left hover:bg-blue-50 flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors"
@@ -182,7 +183,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
                             <button
                               onClick={() => {
                                 if (onEdit) {
-                                  onEdit(merchant);
+                                  onEdit(merchant as MerchantUser);
                                 }
                                 setShowActions(false);
                               }}
@@ -309,7 +310,7 @@ export const MerchantCard: React.FC<MerchantCardProps> = ({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => onViewDetails?.(merchant)}
+                onClick={() => onViewDetails?.(merchant as MerchantUser)}
                 className={`flex-1 px-4 py-2.5 bg-gradient-to-r ${statusConfig.avatarBg} hover:opacity-90 text-white text-sm font-semibold rounded-xl transition-all shadow-lg ${statusConfig.glow}`}
               >
                 View Profile

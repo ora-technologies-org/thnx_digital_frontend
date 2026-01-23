@@ -1,25 +1,9 @@
 // src/services/giftCardSettingsService.ts
+import {
+  GiftCardSettings,
+  GiftCardSettingsResponse,
+} from "@/shared/types/giftCard.types";
 import api from "@/shared/utils/api";
-import { GradientDirection } from "../slices/giftCardSlice";
-
-export interface GiftCardSettingsPayload {
-  primaryColor: string;
-  secondaryColor: string;
-  gradientDirection: GradientDirection;
-  fontFamily: string;
-}
-
-export interface GiftCardSettingsResponse {
-  success: boolean;
-  data: {
-    id: string;
-    primaryColor: string;
-    secondaryColor: string;
-    gradientDirection: GradientDirection;
-    fontFamily: string;
-  } | null;
-  message?: string;
-}
 
 interface ApiError {
   response?: {
@@ -28,11 +12,11 @@ interface ApiError {
   };
   message?: string;
 }
-
+export type GiftCardSettingsPayload = Omit<GiftCardSettings, "id" | "amount">;
 export const giftCardSettingsService = {
   // Create new settings
   createSettings: async (
-    settings: GiftCardSettingsPayload,
+    settings: GiftCardSettings,
   ): Promise<GiftCardSettingsResponse> => {
     const response = await api.post<GiftCardSettingsResponse>(
       "/gift-cards/settings",
@@ -43,7 +27,7 @@ export const giftCardSettingsService = {
 
   // Update existing settings
   updateSettings: async (
-    settings: GiftCardSettingsPayload,
+    settings: GiftCardSettings,
   ): Promise<GiftCardSettingsResponse> => {
     const response = await api.put<GiftCardSettingsResponse>(
       `/gift-cards/card/settings`,

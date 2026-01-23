@@ -26,7 +26,7 @@ const convertToFullUrl = (url: string): string => {
 
 const DocumentPreviewCard: React.FC<{
   label: string;
-  url?: string;
+  url?: string | null;
 }> = ({ label, url }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);

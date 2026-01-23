@@ -1,3 +1,5 @@
+// types.ts or types/index.ts
+
 export interface GiftCard {
   id: string;
   merchantId: string;
@@ -78,4 +80,54 @@ export interface GiftCardsResponse {
     limitAllowed: number;
     remaining: number;
   };
+}
+export interface GiftCardState {
+  giftCards: GiftCard[];
+  selectedGiftCard: GiftCard | null;
+  isLoading: boolean;
+  error: string | null;
+  filters: {
+    search: string;
+    status: "all" | "active" | "inactive" | "expired";
+  };
+}
+export interface MerchantProfile {
+  businessName: string;
+  businessLogo?: string;
+}
+
+export interface Merchant {
+  id: string;
+  name: string;
+  merchantProfile: MerchantProfile;
+}
+
+export interface GiftCardType {
+  id: string;
+  title: string;
+  price: string;
+  expiryDate: string;
+  isActive: boolean;
+  merchant?: Merchant;
+  _count?: {
+    purchases: number;
+  };
+}
+
+export interface GiftCardDisplaySettings {
+  primaryColor: string;
+  secondaryColor: string;
+  gradientDirection: string;
+  fontFamily: string;
+}
+
+export interface GiftCardDisplayProps {
+  giftCard: GiftCardType;
+  settings?: GiftCardSettings;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onDuplicate?: () => void;
+  showActions?: boolean;
+  clickable?: boolean;
+  className?: string;
 }

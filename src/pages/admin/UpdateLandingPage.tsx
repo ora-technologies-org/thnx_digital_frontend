@@ -24,6 +24,7 @@ import {
   updateSectionData,
   deleteItemFromSection,
 } from "@/shared/utils/Landing";
+import { Spinner } from "@/shared/components/ui/Spinner";
 
 interface EditingState {
   section: string;
@@ -55,12 +56,14 @@ const LandingPageEditor: React.FC = () => {
       setFormData({ ...sectionData[index] });
       setEditingItem({ section, index });
     } else {
-      // Handle object sections (hero, contact, etc.)
-      setFormData(
+      // Handle object sections (hero, contact, etc.) - exclude 'items' field
+      const dataToEdit =
         typeof sectionData === "object" && sectionData !== null
-          ? { ...(sectionData as SectionItem) }
-          : {},
-      );
+          ? Object.fromEntries(
+              Object.entries(sectionData).filter(([key]) => key !== "items"),
+            )
+          : {};
+      setFormData(dataToEdit as SectionItem);
       setEditingItem({ section, index: null });
     }
   };
@@ -437,7 +440,7 @@ const LandingPageEditor: React.FC = () => {
         <div className="p-6">
           <div className="space-y-3">
             {Object.entries(sectionData)
-              .filter(([key]) => !shouldExcludeField(key))
+              .filter(([key]) => !shouldExcludeField(key) && key !== "items")
               .map(([key, value]) => {
                 if (
                   typeof value === "object" &&
@@ -523,8 +526,7 @@ const LandingPageEditor: React.FC = () => {
       <AdminLayout>
         <div className="flex items-center justify-center h-screen bg-gray-50">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-900 border-t-transparent mx-auto mb-3"></div>
-            <p className="text-gray-600 font-medium">Loading...</p>
+            <Spinner size="lg" />
           </div>
         </div>
       </AdminLayout>
@@ -590,22 +592,19 @@ const LandingPageEditor: React.FC = () => {
               .map(([key, value]) => {
                 const sectionData = value as SectionData;
 
-                // Sections with 'items' property
-                if (
-                  hasItemsProperty(sectionData) &&
-                  ["faqs", "testimonials"].includes(key)
-                ) {
+                // Check if section has 'items' property (faqs, testimonials, etc.)
+                if (hasItemsProperty(sectionData)) {
                   return (
                     <div key={key}>{renderItemsSection(key, sectionData)}</div>
                   );
                 }
-                // Simple array sections
+                // Simple array sections (stats, steps, features)
                 if (isArraySection(sectionData)) {
                   return (
                     <div key={key}>{renderArraySection(key, sectionData)}</div>
                   );
                 }
-                // Object sections
+                // Object sections (hero, contact, footer, etc.)
                 return (
                   <div key={key}>{renderObjectSection(key, sectionData)}</div>
                 );

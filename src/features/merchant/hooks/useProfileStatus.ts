@@ -1,11 +1,11 @@
 // src/features/merchant/hooks/useProfileStatus.ts
 import { useState, useEffect } from "react";
 
+import { profileService } from "../services/ProfileMerchantService";
 import {
-  profileService,
+  ProfileStatusData,
   type ProfileStatus,
-  type ProfileStatusData,
-} from "../services/ProfileMerchantService";
+} from "../types/profileMerchant.types";
 
 /**
  * Custom hook to fetch and manage merchant profile status

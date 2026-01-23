@@ -1,28 +1,26 @@
 // src/hooks/useGiftCardSettings.ts
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useDispatch, useSelector } from "react-redux";
+
 import { toast } from "react-hot-toast";
 import type { RootState } from "@/app/store";
 import { AxiosError } from "axios";
-import {
-  GradientDirection,
-  setAllSettings,
-  setIsExistingSettings,
-} from "../slices/giftCardSlice";
+import { setAllSettings, setIsExistingSettings } from "../slices/giftCardSlice";
 import { giftCardService } from "@/features/giftCards/services/giftCardService";
 import {
   giftCardSettingsService,
   GiftCardSettingsPayload,
 } from "../services/gitCardService";
+import { GradientDirection } from "@/shared/types/giftCard.types";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 
 export const GIFT_CARD_SETTINGS_QUERY_KEY = ["giftCardSettings"];
 
 export const useGiftCardSettings = () => {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
 
-  const { settings, isExistingSettings } = useSelector(
+  const { settings, isExistingSettings } = useAppSelector(
     (state: RootState) => state.giftCardSettings,
   );
 
@@ -127,7 +125,10 @@ export const useGiftCardSettings = () => {
         throw new Error("Cannot update: No settings ID found");
       }
       console.log("🔄 Updating settings with ID:", settings.id);
-      return giftCardSettingsService.updateSettings(settings.id, settingsData);
+      return giftCardSettingsService.updateSettings({
+        ...settingsData,
+        id: settings.id,
+      });
     },
     onSuccess: (response) => {
       console.log("✅ Update successful:", response);

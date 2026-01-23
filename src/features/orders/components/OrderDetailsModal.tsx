@@ -13,58 +13,12 @@ import {
   Receipt,
   FileText,
 } from "lucide-react";
+import { Order } from "../types/order.types";
+import { getOrderStatusColor } from "@/shared/utils/helpers";
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
-
-/** Order status types */
-export type OrderStatus = "ACTIVE" | "USED" | "EXPIRED";
-
-/** Payment status types */
-export type PaymentStatus = "COMPLETED" | "PENDING" | "FAILED";
-
-/** Customer information interface */
-export interface Customer {
-  name?: string;
-  phone?: string;
-  email?: string;
-}
-
-/** Order item interface for detailed line items */
-export interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-}
-
-/** Main order interface containing all order details */
-export interface Order {
-  id: string;
-  orderId?: string;
-  orderNumber?: string;
-  qrCode?: string;
-  status: OrderStatus;
-  paymentStatus?: PaymentStatus;
-  purchaseAmount?: number | string;
-  currentBalance?: number | string;
-  bonusAmount?: number | string;
-  amount?: number | string;
-  totalAmount?: number;
-  customerName?: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  customer?: Customer;
-  paymentMethod?: string;
-  transactionId?: string;
-  createdAt: string;
-  purchasedAt?: string;
-  expiresAt?: string;
-  usedAt?: string;
-  notes?: string;
-  items?: OrderItem[];
-}
 
 /** Props interface for the OrderDetailModal component */
 interface OrderDetailModalProps {
@@ -119,24 +73,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         return <XCircle className="w-5 h-5 text-rose-500" />;
       default:
         return <Clock className="w-5 h-5 text-gray-400" />;
-    }
-  };
-
-  /**
-   * Returns Tailwind CSS classes for order status badge styling
-   * @param status - The order status string
-   * @returns String of Tailwind CSS classes
-   */
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "bg-green-50 text-green-700 border border-green-200";
-      case "USED":
-        return "bg-blue-50 text-blue-700 border border-blue-200";
-      case "EXPIRED":
-        return "bg-rose-50 text-rose-700 border border-rose-200";
-      default:
-        return "bg-gray-50 text-gray-700 border border-gray-200";
     }
   };
 
@@ -261,7 +197,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           Order Status
                         </div>
                         <span
-                          className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}
+                          className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getOrderStatusColor(order.status)}`}
                         >
                           {order.status}
                         </span>

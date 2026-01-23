@@ -1,208 +1,20 @@
 import api from "@/shared/utils/api";
-
-// Types
-export interface FAQItem {
-  question: string;
-  answer: string;
-}
-
-export interface FAQSection {
-  title: string;
-  subtitle: string;
-  items: FAQItem[];
-}
-
-export interface HeroSection {
-  badge: string;
-  title: string;
-  subtitle: string;
-  primaryCTA: {
-    link: string;
-    label: string;
-  };
-  secondaryCTA: {
-    link: string;
-    label: string;
-  };
-}
-
-export interface StatItem {
-  label: string;
-  value: string;
-}
-
-export interface StepItem {
-  step: number;
-  title: string;
-  description: string;
-}
-
-export interface FeaturePoint {
-  title: string;
-  description: string;
-  points: string[];
-}
-
-export interface TestimonialItem {
-  name: string;
-  role: string;
-  message: string;
-}
-
-export interface TestimonialSection {
-  title: string;
-  subtitle: string;
-  items: TestimonialItem[];
-}
-
-export interface FooterLinks {
-  legal: string[];
-  company: string[];
-  product: string[];
-}
-
-export interface Footer {
-  links: FooterLinks;
-  copyright: string;
-}
-
-export interface Contact {
-  title: string;
-  heading: string;
-  subtitle: string;
-  responseTime: string;
-}
-
-export interface RawStats {
-  activeUsers: number;
-  merchants: number;
-  giftCardsSold: number;
-  revenue: number;
-  satisfactionRate: number;
-}
-
-export interface Newsletter {
-  title: string;
-  subtitle: string;
-  privacyNote: string;
-}
-
-export interface FinalCTA {
-  title: string;
-  subtitle: string;
-  primaryCTA: {
-    link: string;
-    label: string;
-  };
-  secondaryCTA: {
-    link: string;
-    label: string;
-  };
-}
-
-export interface LandingPageData {
-  faqs: FAQSection;
-  hero: HeroSection;
-  stats: StatItem[];
-  steps: StepItem[];
-  footer: Footer;
-  contact: Contact;
-  features: FeaturePoint[];
-  testimonials: TestimonialSection;
-  rawStats: RawStats;
-  finalCTA: FinalCTA;
-  newsletter: Newsletter;
-}
-
-/**
- * API response structure for landing page data fetch
- */
-export interface LandingPageResponse {
-  success: boolean;
-  message: string;
-  data: {
-    data: LandingPageData;
-  };
-}
-
-/**
- * Valid section names that can be updated on the landing page
- */
-export type LandingPageSection =
-  | "faqs"
-  | "hero"
-  | "stats"
-  | "steps"
-  | "footer"
-  | "contact"
-  | "features"
-  | "testimonials"
-  | "rawStats"
-  | "finalCTA"
-  | "newsletter";
-
-/**
- * Type mapping for section data
- */
-type SectionDataMap = {
-  faqs: FAQSection;
-  hero: HeroSection;
-  stats: StatItem[];
-  steps: StepItem[];
-  footer: Footer;
-  contact: Contact;
-  features: FeaturePoint[];
-  testimonials: TestimonialSection;
-  rawStats: RawStats;
-  finalCTA: FinalCTA;
-  newsletter: Newsletter;
-};
-
-/**
- * Request payload for updating a landing page section
- */
-export interface UpdateLandingPageRequest<
-  T extends LandingPageSection = LandingPageSection,
-> {
-  slug?: string;
-  section: T;
-  data: SectionDataMap[T];
-  index?: number;
-}
-
-/**
- * API response structure for landing page updates
- */
-interface UpdateLandingPageResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    data?: {
-      content?: LandingPageData;
-      data?: LandingPageData;
-    };
-    content?: LandingPageData;
-  };
-  content?: LandingPageData;
-}
-
-/**
- * Generic API response structure
- */
-interface ApiResponse {
-  success: boolean;
-  message: string;
-}
-
-/**
- * Request payload interface for internal use
- */
-interface RequestPayload {
-  slug: string;
-  section: LandingPageSection;
-  data: SectionDataMap[LandingPageSection];
-  index?: number;
-}
+import {
+  ApiResponse,
+  ErrorResponse,
+  FAQItem,
+  FAQSection,
+  FeaturePoint,
+  LandingPageData,
+  LandingPageResponse,
+  RequestPayload,
+  StatItem,
+  StepItem,
+  TestimonialItem,
+  TestimonialSection,
+  UpdateLandingPageRequest,
+  UpdateLandingPageResponse,
+} from "@/shared/types/landingPage.types";
 
 /**
  * Landing Page Service
@@ -217,16 +29,29 @@ export const landingPageService = {
       const response = await api.get<LandingPageResponse>("users/landing-page");
       console.log("📥 Fetch response:", response.data);
 
-      if (response.data?.data?.data?.content) {
-        return response.data.data.data.content;
-      } else if (response.data?.data?.data) {
-        return response.data.data.data;
-      } else if (response.data?.data) {
-        return response.data.data;
-      } else {
-        console.error("Unexpected response structure:", response.data);
-        throw new Error("Invalid response structure");
+      const responseData = response.data?.data?.data;
+
+      // Handle nested content structure
+      if (
+        responseData &&
+        typeof responseData === "object" &&
+        "content" in responseData
+      ) {
+        return responseData.content as LandingPageData;
       }
+
+      // Handle direct data structure
+      if (responseData) {
+        return responseData as LandingPageData;
+      }
+
+      // Fallback to data field
+
+      if (response.data?.data) {
+        return response.data.data as unknown as LandingPageData;
+      }
+      console.error("Unexpected response structure:", response.data);
+      throw new Error("Invalid response structure");
     } catch (error) {
       console.error("Error fetching landing page data:", error);
       throw error;
@@ -284,17 +109,18 @@ export const landingPageService = {
       } else if (response.data?.content) {
         return response.data.content;
       } else if (response.data?.data?.data) {
-        return response.data.data.data;
+        return response.data.data.data as LandingPageData;
       } else if (response.data?.data) {
-        return response.data.data;
+        return response.data.data as LandingPageData;
       } else {
         console.error("Unexpected response structure:", response.data);
         throw new Error("Invalid response structure");
       }
     } catch (error) {
-      console.error("Error updating landing page data:", error);
-      if (error.response) {
-        console.error("Error response:", error.response.data);
+      const err = error as ErrorResponse;
+      console.error("Error updating landing page data:", err);
+      if (err.response) {
+        console.error("Error response:", err.response.data);
       }
       throw error;
     }
@@ -306,7 +132,7 @@ export const landingPageService = {
   async addFAQItem(faqItem: FAQItem): Promise<LandingPageData> {
     try {
       const currentData = await this.getLandingPageData();
-      const updatedFAQs = {
+      const updatedFAQs: FAQSection = {
         ...currentData.faqs,
         items: [...currentData.faqs.items, faqItem],
       };
@@ -333,7 +159,7 @@ export const landingPageService = {
       const updatedItems = [...currentData.faqs.items];
       updatedItems[index] = faqItem;
 
-      const updatedFAQs = {
+      const updatedFAQs: FAQSection = {
         ...currentData.faqs,
         items: updatedItems,
       };
@@ -356,7 +182,7 @@ export const landingPageService = {
       const currentData = await this.getLandingPageData();
       const updatedItems = currentData.faqs.items.filter((_, i) => i !== index);
 
-      const updatedFAQs = {
+      const updatedFAQs: FAQSection = {
         ...currentData.faqs,
         items: updatedItems,
       };
@@ -379,7 +205,7 @@ export const landingPageService = {
   ): Promise<LandingPageData> {
     try {
       const currentData = await this.getLandingPageData();
-      const updatedTestimonials = {
+      const updatedTestimonials: TestimonialSection = {
         ...currentData.testimonials,
         items: [...currentData.testimonials.items, testimonialItem],
       };
@@ -406,7 +232,7 @@ export const landingPageService = {
       const updatedItems = [...currentData.testimonials.items];
       updatedItems[index] = testimonialItem;
 
-      const updatedTestimonials = {
+      const updatedTestimonials: TestimonialSection = {
         ...currentData.testimonials,
         items: updatedItems,
       };
@@ -431,7 +257,7 @@ export const landingPageService = {
         (_, i) => i !== index,
       );
 
-      const updatedTestimonials = {
+      const updatedTestimonials: TestimonialSection = {
         ...currentData.testimonials,
         items: updatedItems,
       };
@@ -447,69 +273,177 @@ export const landingPageService = {
   },
 
   /**
-   * Adds a new item to simple array sections (stats, steps, features)
+   * Adds a new stat item
    */
-  async addItemToSection(
-    section: "stats" | "steps" | "features",
-    item: StatItem | StepItem | FeaturePoint,
-  ): Promise<LandingPageData> {
+  async addStatItem(item: StatItem): Promise<LandingPageData> {
     try {
       const currentData = await this.getLandingPageData();
-      const currentArray = currentData[section];
-      const updatedArray = [...currentArray, item];
+      const updatedStats = [...currentData.stats, item];
 
       return await this.updateLandingPageSection({
-        section,
-        data: updatedArray,
+        section: "stats",
+        data: updatedStats,
       });
     } catch (error) {
-      console.error(`Error adding item to ${section}:`, error);
+      console.error("Error adding stat item:", error);
       throw error;
     }
   },
 
   /**
-   * Updates a specific item in simple array sections
+   * Updates a specific stat item by index
    */
-  async updateItemInSection(
-    section: "stats" | "steps" | "features",
-    item: StatItem | StepItem | FeaturePoint,
+  async updateStatItem(
+    item: StatItem,
     index: number,
   ): Promise<LandingPageData> {
     try {
       const currentData = await this.getLandingPageData();
-      const currentArray = currentData[section];
-      const updatedArray = [...currentArray];
-      updatedArray[index] = item;
+      const updatedStats = [...currentData.stats];
+      updatedStats[index] = item;
 
       return await this.updateLandingPageSection({
-        section,
-        data: updatedArray,
+        section: "stats",
+        data: updatedStats,
       });
     } catch (error) {
-      console.error(`Error updating item in ${section}:`, error);
+      console.error("Error updating stat item:", error);
       throw error;
     }
   },
 
   /**
-   * Deletes an item from simple array sections
+   * Deletes a stat item by index
    */
-  async deleteItemFromSection(
-    section: "stats" | "steps" | "features",
+  async deleteStatItem(index: number): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedStats = currentData.stats.filter((_, i) => i !== index);
+
+      return await this.updateLandingPageSection({
+        section: "stats",
+        data: updatedStats,
+      });
+    } catch (error) {
+      console.error("Error deleting stat item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Adds a new step item
+   */
+  async addStepItem(item: StepItem): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedSteps = [...currentData.steps, item];
+
+      return await this.updateLandingPageSection({
+        section: "steps",
+        data: updatedSteps,
+      });
+    } catch (error) {
+      console.error("Error adding step item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates a specific step item by index
+   */
+  async updateStepItem(
+    item: StepItem,
     index: number,
   ): Promise<LandingPageData> {
     try {
       const currentData = await this.getLandingPageData();
-      const currentArray = currentData[section];
-      const updatedArray = currentArray.filter((_, i) => i !== index);
+      const updatedSteps = [...currentData.steps];
+      updatedSteps[index] = item;
 
       return await this.updateLandingPageSection({
-        section,
-        data: updatedArray,
+        section: "steps",
+        data: updatedSteps,
       });
     } catch (error) {
-      console.error(`Error deleting item from ${section}:`, error);
+      console.error("Error updating step item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a step item by index
+   */
+  async deleteStepItem(index: number): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedSteps = currentData.steps.filter((_, i) => i !== index);
+
+      return await this.updateLandingPageSection({
+        section: "steps",
+        data: updatedSteps,
+      });
+    } catch (error) {
+      console.error("Error deleting step item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Adds a new feature item
+   */
+  async addFeatureItem(item: FeaturePoint): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedFeatures = [...currentData.features, item];
+
+      return await this.updateLandingPageSection({
+        section: "features",
+        data: updatedFeatures,
+      });
+    } catch (error) {
+      console.error("Error adding feature item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Updates a specific feature item by index
+   */
+  async updateFeatureItem(
+    item: FeaturePoint,
+    index: number,
+  ): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedFeatures = [...currentData.features];
+      updatedFeatures[index] = item;
+
+      return await this.updateLandingPageSection({
+        section: "features",
+        data: updatedFeatures,
+      });
+    } catch (error) {
+      console.error("Error updating feature item:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deletes a feature item by index
+   */
+  async deleteFeatureItem(index: number): Promise<LandingPageData> {
+    try {
+      const currentData = await this.getLandingPageData();
+      const updatedFeatures = currentData.features.filter(
+        (_, i) => i !== index,
+      );
+
+      return await this.updateLandingPageSection({
+        section: "features",
+        data: updatedFeatures,
+      });
+    } catch (error) {
+      console.error("Error deleting feature item:", error);
       throw error;
     }
   },

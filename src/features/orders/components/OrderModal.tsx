@@ -13,32 +13,8 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
-
-interface Order {
-  orderId?: string;
-  qrCode?: string;
-  status?: string;
-  paymentStatus?: string;
-  customerName?: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  customer?: {
-    name?: string;
-    phone?: string;
-    email?: string;
-  };
-  purchaseAmount?: string | number;
-  amount?: string | number;
-  currentBalance?: string | number;
-  bonusAmount?: string | number;
-  paymentMethod?: string;
-  transactionId?: string;
-  purchasedAt?: string;
-  createdAt?: string;
-  expiresAt?: string;
-  usedAt?: string;
-  notes?: string;
-}
+import { Order } from "../types/order.types";
+import { getOrderStatusColor } from "@/shared/utils/helpers";
 
 interface OrderDetailModalProps {
   order: Order | null;
@@ -63,19 +39,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         return <XCircle className="w-5 h-5 text-red-600" />;
       default:
         return <Clock className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "bg-green-100 text-green-800";
-      case "USED":
-        return "bg-gray-100 text-gray-800";
-      case "EXPIRED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -148,7 +111,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <div>
                       <div className="text-sm text-gray-600">Order Status</div>
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getStatusColor(order.status || "ACTIVE")}`}
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getOrderStatusColor(order.status || "ACTIVE")}`}
                       >
                         {order.status || "N/A"}
                       </span>

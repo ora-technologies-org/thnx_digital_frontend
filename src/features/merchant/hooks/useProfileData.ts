@@ -1,9 +1,7 @@
 // src/features/merchant/hooks/useProfileData.ts
-import {
-  profileService,
-  type ProfileData,
-} from "@/features/merchant/services/ProfileMerchantService";
+import { profileService } from "@/features/merchant/services/ProfileMerchantService";
 import { useQuery } from "@tanstack/react-query";
+import { ProfileData } from "../types/profileMerchant.types";
 
 /**
  * Custom hook to fetch merchant profile data
@@ -29,6 +27,3 @@ export const useProfileData = () => {
 
 // Default export for convenience
 export default useProfileData;
-
-// Re-export ProfileData type for consumers
-export type { ProfileData } from "@/features/merchant/services/ProfileMerchantService";

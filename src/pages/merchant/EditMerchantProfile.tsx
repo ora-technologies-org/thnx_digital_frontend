@@ -1,10 +1,11 @@
 // src/features/merchant/components/EditMerchantProfile.tsx
-import useAuthMe, { UserData } from "@/features/merchant/hooks/useAuthMe";
+import useAuthMe from "@/features/merchant/hooks/useAuthMe";
 import useUpdateProfile from "@/features/merchant/hooks/UseUpdateProfile";
 import { Spinner } from "@/shared/components/ui/Spinner";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
 import { useState, useMemo } from "react";
+import { UserData } from "@/features/merchant/services/DashboardService";
 
 export const EditMerchantProfile = () => {
   const { data: userData, isLoading, error, refetch } = useAuthMe();
@@ -113,11 +114,17 @@ export const EditMerchantProfile = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
-    setFormEdits((prev) => ({ ...prev, [name]: value }));
+    setFormEdits((prev: Partial<UserData>) => ({
+      ...prev,
+      [name]: value,
+    }));
 
     // Clear error for this field
     if (errors[name as keyof UserData]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
+      setErrors((prev: Partial<UserData>) => ({
+        ...prev,
+        [name]: undefined,
+      }));
     }
   };
 

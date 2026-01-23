@@ -3,47 +3,11 @@ import { useState, useCallback } from "react";
 import OTPService from "../services/otpService";
 import VerifyService from "../services/VerifyService";
 import { purchaseService } from "../services/purchaseService";
-import type { RedeemData } from "../types/purchase.types";
-
-interface Redemption {
-  id: string;
-  itemName: string;
-  date: string;
-  amount: string;
-  status: "success" | "failed";
-}
-
-interface PurchaseData {
-  balance: number;
-  recentRedemptions: Redemption[];
-}
-
-interface UseOTPRedeemReturn {
-  // OTP States
-  isRequestingOTP: boolean;
-  isVerifyingOTP: boolean;
-  isRedeeming: boolean;
-  otpSent: boolean;
-  otpVerified: boolean;
-  redeemSuccess: boolean;
-  otpError: string;
-  redeemError: string;
-
-  // Methods
-  requestOTP: (purchaseId: string) => Promise<void>;
-  verifyOTP: (otp: string, purchaseId: string) => Promise<boolean>;
-  redeemGiftCard: (
-    qrCode: string,
-    amount: string,
-    locationName: string,
-    locationAddress: string,
-    notes: string,
-  ) => Promise<{ success: boolean; message?: string }>;
-  resetOTPFlow: () => void;
-
-  // Refresh purchase data
-  refreshPurchaseData: (qrCode: string) => Promise<PurchaseData | null>;
-}
+import type {
+  PurchasesData,
+  RedeemData,
+  UseOTPRedeemReturn,
+} from "../types/purchase.types";
 
 export const useOTPRedeem = (): UseOTPRedeemReturn => {
   const [isRequestingOTP, setIsRequestingOTP] = useState(false);
@@ -196,10 +160,10 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
    * @returns Updated purchase data or null on error
    */
   const refreshPurchaseData = useCallback(
-    async (qrCode: string): Promise<PurchaseData | null> => {
+    async (qrCode: string): Promise<PurchasesData | null> => {
       try {
         const result = await VerifyService.verifyQRCode(qrCode);
-        return result.data as PurchaseData;
+        return result.data as PurchasesData;
       } catch (error) {
         console.error("Refresh error:", error);
         return null;

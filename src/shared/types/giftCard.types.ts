@@ -1,21 +1,30 @@
 // src/types/giftCard.types.ts
 
 export type GradientDirection =
+  | "LEFT_RIGHT"
+  | "TOP_BOTTOM"
   | "TOP_RIGHT"
-  | "TOP_LEFT"
-  | "BOTTOM_RIGHT"
-  | "BOTTOM_LEFT"
-  | "TOP"
-  | "BOTTOM"
-  | "LEFT"
-  | "RIGHT";
+  | "BOTTOM_LEFT";
 
 export interface GiftCardSettings {
+  id?: string;
   primaryColor: string;
   secondaryColor: string;
   gradientDirection: GradientDirection;
   fontFamily: string;
   amount?: number; // Optional, not sent to API
+}
+
+export interface GiftCardSettingsResponse {
+  success: boolean;
+  data: {
+    id: string;
+    primaryColor: string;
+    secondaryColor: string;
+    gradientDirection: GradientDirection;
+    fontFamily: string;
+  } | null;
+  message?: string;
 }
 
 export interface ColorPalette {

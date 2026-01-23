@@ -16,10 +16,10 @@ export const useGiftCard = (id: string) => {
   });
 };
 
-export const MerchantGiftCard = (userId) => {
+export const useMerchantGiftCards = (userId: string) => {
   return useQuery({
     queryKey: ["giftCards", userId],
-    queryFn: () => merchantService.getGiftCards(userId),
+    queryFn: () => giftCardService.getGiftCards(userId),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });

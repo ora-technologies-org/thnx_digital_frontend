@@ -234,7 +234,7 @@ const Pagination: React.FC<PaginationProps> = ({
               return (
                 <Button
                   key={page}
-                  variant={currentPage === page ? "default" : "outline"}
+                  variant={currentPage === page ? "primary" : "outline"}
                   onClick={() => onPageChange(page as number)}
                   className={`min-w-[40px] h-10 ${
                     currentPage === page

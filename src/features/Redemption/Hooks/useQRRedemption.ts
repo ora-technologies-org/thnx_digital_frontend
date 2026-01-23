@@ -1,11 +1,12 @@
 // src/features/purchase/hooks/useRedemptionHistory.ts
 import { useState, useCallback } from "react";
+import { fetchRedemptionHistory } from "../Services/QRCodeRedemptionHistoryService";
 import {
   RedemptionHistoryItem,
-  RedemptionHistoryResponse,
   RedemptionHistoryParams,
-  fetchRedemptionHistory,
-} from "../Services/QRCodeRedemptionHistoryService";
+  RedemptionHistoryResponse,
+  PurchaseWithRedemptions,
+} from "../types/redeem.types";
 
 export const useRedemptionHistory = () => {
   const [history, setHistory] = useState<RedemptionHistoryItem[]>([]);
@@ -28,22 +29,57 @@ export const useRedemptionHistory = () => {
       try {
         const result = await fetchRedemptionHistory(params);
 
+        console.log("🔍 Hook received result:", result);
+
         if (result.success) {
-          setHistory(result.data);
-          if (result.pagination) {
-            setPagination(result.pagination);
+          let redemptions: RedemptionHistoryItem[] = [];
+
+          // ✅ Check if data has the nested purchase structure
+          if (
+            result.data &&
+            typeof result.data === "object" &&
+            "purchase" in result.data
+          ) {
+            const purchaseData = result.data as PurchaseWithRedemptions;
+            redemptions = purchaseData.purchase.recentRedemptions || [];
+
+            // Create pagination info from purchase data
+            setPagination({
+              total:
+                purchaseData.purchase.redemptionCount || redemptions.length,
+              page: params.page || 1,
+              limit: params.limit || 10,
+              totalPages: Math.ceil(
+                (purchaseData.purchase.redemptionCount || redemptions.length) /
+                  (params.limit || 10),
+              ),
+            });
           }
+          // ✅ Handle direct array response
+          else if (Array.isArray(result.data)) {
+            redemptions = result.data as RedemptionHistoryItem[];
+
+            if (result.pagination) {
+              setPagination(result.pagination);
+            }
+          }
+
+          console.log("✅ Extracted redemptions:", redemptions);
+          setHistory(redemptions);
         } else {
           setError(result.message);
+          setHistory([]);
         }
 
         return result;
       } catch (err) {
+        console.error("❌ Hook error:", err);
         const message =
           err instanceof Error
             ? err.message
             : "Failed to fetch redemption history";
         setError(message);
+        setHistory([]);
         return { success: false, message, data: [] };
       } finally {
         setIsLoading(false);

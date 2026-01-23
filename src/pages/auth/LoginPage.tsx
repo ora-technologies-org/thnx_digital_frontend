@@ -12,11 +12,7 @@ import { MagneticButton } from "../../shared/components/animated/MagneticButton"
 import { useAuth } from "../../features/auth/hooks/useAuth";
 import { useAppSelector } from "../../app/hooks";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+import { loginSchema } from "@/shared/utils/register";
 
 type LoginFormData = z.infer<typeof loginSchema>;
 

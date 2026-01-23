@@ -1,10 +1,10 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
+import { redemptionService } from "../Services/redemptionService";
 import {
-  redemptionService,
   FetchRedemptionsParams,
   RedemptionsResponse,
-} from "../Services/redemptionService";
+} from "../types/redeem.types";
 
 export const useRedemptions = (initialParams: FetchRedemptionsParams = {}) => {
   const [params, setParams] = useState<FetchRedemptionsParams>({
@@ -26,7 +26,7 @@ export const useRedemptions = (initialParams: FetchRedemptionsParams = {}) => {
   } = useQuery<RedemptionsResponse, Error>({
     queryKey,
     queryFn: () => redemptionService.fetchRedemptions(params),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData, // Updated from keepPreviousData: true
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 

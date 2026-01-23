@@ -5,41 +5,12 @@ import toast from "react-hot-toast";
 import { AxiosError, AxiosResponse } from "axios";
 import { useInvalidateQueries } from "@/shared/hooks/useInvalidateQueries";
 
-// Define types for the API response
-interface ApiSuccessResponse {
-  data?: Record<string, unknown>;
-  message?: string;
-  success?: boolean;
-}
-
-interface ApiErrorResponse {
-  response?: {
-    status?: number;
-    data?: {
-      message?: string;
-      error?: string;
-      errors?: Record<string, string | string[]>;
-    };
-  };
-  message?: string;
-}
-
-interface ErrorMessage {
-  response?: {
-    data?: {
-      message?: string;
-      error?: string;
-      errors?: Record<string, string | string[]>;
-    };
-  };
-  message?: string;
-}
-
-interface FormDataEntry {
-  formData: FormData;
-  isEdit: boolean;
-  profileId?: string | number;
-}
+import type {
+  ApiSuccessResponse,
+  ApiErrorResponse,
+  FormDataEntry,
+  ErrorMessage,
+} from "../types/profileMerchant.types";
 
 /**
  * Custom hook for submitting or updating merchant profile
@@ -51,7 +22,8 @@ interface FormDataEntry {
  * @returns Mutation object with mutate function and status properties
  */
 export const useSubmitProfile = () => {
-  const queryClient = useInvalidateQueries();
+  // Get the queryClient from the hook
+  const { queryClient } = useInvalidateQueries();
 
   return useMutation({
     /**
@@ -88,8 +60,6 @@ export const useSubmitProfile = () => {
       }
 
       // Determine endpoint based on operation type
-      // POST: Create new profile - /auth/merchant/complete-profile
-      // PUT: Update existing profile - /merchants/
       const endpoint = isEdit
         ? `/merchants/`
         : "/auth/merchant/complete-profile";
@@ -100,7 +70,7 @@ export const useSubmitProfile = () => {
       try {
         console.log("🚀 Sending API request...");
 
-        // Configure headers for multipart/form-data (file upload support)
+        // Configure headers for multipart/form-data
         const config = {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -111,11 +81,9 @@ export const useSubmitProfile = () => {
 
         // Use appropriate HTTP method based on edit mode
         if (isEdit) {
-          // PUT request for updating existing profile
           response = await api.put(endpoint, formData, config);
           console.log("✏️ Using PUT method for profile update");
         } else {
-          // POST request for creating new profile
           response = await api.post(endpoint, formData, config);
           console.log("📝 Using POST method for new profile creation");
         }
@@ -127,7 +95,7 @@ export const useSubmitProfile = () => {
       } catch (error: unknown) {
         console.error("❌ API Error:", error);
 
-        // Type guard to check if it's an AxiosError for better error logging
+        // Type guard for AxiosError
         if (error && typeof error === "object" && "isAxiosError" in error) {
           const axiosError = error as AxiosError<ApiErrorResponse>;
           console.error("📋 Axios Error Details:", {
@@ -146,19 +114,16 @@ export const useSubmitProfile = () => {
 
     /**
      * Success callback - executed when the mutation succeeds
-     *
-     * - Invalidates relevant queries to trigger data refetch
-     * - Shows success toast notification
      */
     onSuccess: (data: ApiSuccessResponse, variables: FormDataEntry) => {
       console.log("✅ Success data:", data);
       console.log("✅ Variables:", variables);
 
-      // Invalidate queries to refresh data across the application
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["merchant-profile"] });
       queryClient.invalidateQueries({ queryKey: ["profile-status"] });
 
-      // Show appropriate success message based on operation type
+      // Show appropriate success message
       const message = variables.isEdit
         ? "Profile updated successfully!"
         : "Profile submitted for verification!";
@@ -168,10 +133,6 @@ export const useSubmitProfile = () => {
 
     /**
      * Error callback - executed when the mutation fails
-     *
-     * - Extracts user-friendly error messages from API response
-     * - Handles various error formats (message, error, errors object)
-     * - Shows error toast notification
      */
     onError: (error: ErrorMessage, variables: FormDataEntry) => {
       console.error("❌ Error Response:", error.response);
@@ -180,21 +141,18 @@ export const useSubmitProfile = () => {
       let errorMessage = "Failed to submit profile. Please try again.";
 
       // Extract error message from response
-      if (error.response) {
-        console.error("📋 Response Status:", error.response.data);
+      if (error.response?.data) {
+        const errorData = error.response.data;
 
-        // Check for various error message formats
-        if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response.data?.error) {
-          errorMessage = error.response.data.error;
-        } else if (error.response.data?.errors) {
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.errors) {
           // Handle field-specific validation errors
-          const fieldErrors = error.response.data.errors;
-          console.error("📋 Field Errors:", fieldErrors);
+          console.error("📋 Field Errors:", errorData.errors);
 
-          // Get the first field error
-          const firstError = Object.values(fieldErrors)[0];
+          const firstError = Object.values(errorData.errors)[0];
           if (firstError) {
             if (Array.isArray(firstError)) {
               errorMessage = firstError[0] || errorMessage;
@@ -204,7 +162,6 @@ export const useSubmitProfile = () => {
           }
         }
       } else if (error.message) {
-        // Fallback to generic error message
         errorMessage = error.message;
       }
 
@@ -213,8 +170,6 @@ export const useSubmitProfile = () => {
 
     /**
      * Mutate callback - executed before the mutation starts
-     *
-     * Useful for logging and optimistic updates
      */
     onMutate: (variables: FormDataEntry) => {
       console.log("🔄 Mutation starting with variables:", {
@@ -225,9 +180,7 @@ export const useSubmitProfile = () => {
     },
 
     /**
-     * Settled callback - executed after mutation completes (success or error)
-     *
-     * Useful for cleanup operations and final logging
+     * Settled callback - executed after mutation completes
      */
     onSettled: (
       data: ApiSuccessResponse | undefined,

@@ -1,26 +1,9 @@
 // src/features/merchant/slices/giftCardSettingsSlice.ts
+import {
+  GiftCardSettings,
+  GradientDirection,
+} from "@/shared/types/giftCard.types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-/**
- * Represents the direction of the gradient effect on gift cards
- */
-export type GradientDirection =
-  | "LEFT_RIGHT"
-  | "TOP_BOTTOM"
-  | "TOP_RIGHT"
-  | "BOTTOM_LEFT";
-
-/**
- * Interface defining the visual and functional settings for a gift card
- */
-export interface GiftCardSettings {
-  id?: string;
-  primaryColor: string;
-  secondaryColor: string;
-  gradientDirection: GradientDirection;
-  fontFamily: string;
-  amount: number;
-}
 
 /**
  * Interface defining the state structure for gift card settings
@@ -158,15 +141,18 @@ const giftCardSettingsSlice = createSlice({
         ...action.payload,
       };
 
-      // Preserve ID if provided in payload
-      if (action.payload.id !== undefined) {
-        newSettings.id = action.payload.id;
+      // Preserve ID if provided in payload (with type safety)
+      if ("id" in action.payload && action.payload.id !== undefined) {
+        (newSettings as GiftCardSettings & { id?: string }).id =
+          action.payload.id;
       }
 
       state.settings = newSettings;
 
       // Auto-update isExistingSettings based on presence of ID
-      const hasId = !!newSettings.id;
+      const hasId =
+        "id" in newSettings &&
+        !!(newSettings as GiftCardSettings & { id?: string }).id;
       if (hasId !== state.isExistingSettings) {
         state.isExistingSettings = hasId;
         console.log("🔄 Redux: isExistingSettings auto-updated to", hasId);

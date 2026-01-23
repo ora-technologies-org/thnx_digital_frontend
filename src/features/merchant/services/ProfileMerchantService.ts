@@ -1,106 +1,15 @@
 // src/features/merchant/services/profileService.ts
 import api from "@/shared/utils/api";
 import { AxiosError } from "axios";
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-/**
- * Main profile data structure for merchant profiles
- */
-export interface ProfileData {
-  id?: string;
-  businessName: string;
-  businessLogo?: string;
-  address: string;
-  city: string;
-  state?: string;
-  zipCode?: string;
-  country: string;
-  businessPhone: string;
-  businessEmail: string;
-  website?: string;
-  bankName: string;
-  accountNumber: string;
-  accountHolderName: string;
-  ifscCode?: string;
-  swiftCode?: string;
-  businessRegistrationNumber?: string;
-  taxId?: string;
-  businessType?: string;
-  businessCategory?: string;
-  description?: string;
-  profileStatus?:
-    | "incomplete"
-    | "pending"
-    | "approved"
-    | "rejected"
-    | "PENDING_VERIFICATION";
-  rejectionReason?: string;
-  submittedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  isVerified?: boolean;
-}
-
-/**
- * Profile status enumeration
- */
-export type ProfileStatus = "incomplete" | "pending" | "approved" | "rejected";
-
-/**
- * Profile status data with permissions and verification flags
- */
-export interface ProfileStatusData {
-  status: ProfileStatus;
-  isProfileComplete: boolean;
-  isVerified: boolean;
-  canCreateGiftCards: boolean;
-  canEdit: boolean;
-  rejectionReason?: string;
-}
-
-/**
- * Payload for updating profile information
- */
-export interface UpdateProfilePayload {
-  name: string;
-  phone: string;
-  bio: string;
-}
-
-/**
- * Response structure for profile update
- */
-export interface UpdateProfileResponse {
-  success?: boolean;
-  message?: string;
-  data?: unknown;
-}
-
-/**
- * Generic API response structure
- */
-interface ApiResponse {
-  success?: boolean;
-  data?: {
-    profile?: ProfileData;
-    stats?: Record<string, unknown>;
-    merchantProfile?: ProfileData;
-  };
-  profile?: ProfileData;
-}
-
-/**
- * Error structure for endpoint failures
- */
-interface EndpointError {
-  message: string;
-  response?: {
-    status?: number;
-  };
-}
+import type {
+  ProfileData,
+  ProfileStatus,
+  ProfileStatusData,
+  UpdateProfilePayload,
+  UpdateProfileResponse,
+  ApiResponse,
+  EndpointError,
+} from "../types/profileMerchant.types";
 
 // ============================================================================
 // HELPER FUNCTIONS

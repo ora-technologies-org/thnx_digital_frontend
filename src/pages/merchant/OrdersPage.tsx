@@ -19,6 +19,7 @@ import type {
   Order,
 } from "../../features/orders/types/order.types";
 import { OrderDetailModal } from "@/features/orders/components/OrderModal";
+import { getOrderStatusColor } from "@/shared/utils/helpers";
 
 // Decode JWT token to extract user verification status
 const decodeToken = (token: string) => {
@@ -114,20 +115,6 @@ export const OrdersPage: React.FC = () => {
   const handleCreateOrderClick = () => {
     if (isVerified) {
       setShowCreateModal(true);
-    }
-  };
-
-  // Get status badge color based on order status
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "bg-green-100 text-green-800";
-      case "USED":
-        return "bg-gray-100 text-gray-800";
-      case "EXPIRED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -533,7 +520,7 @@ export const OrdersPage: React.FC = () => {
 
                         <td className="px-6 py-4">
                           <span
-                            className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status || "ACTIVE")}`}
+                            className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getOrderStatusColor(order.status || "ACTIVE")}`}
                           >
                             {order.status || "N/A"}
                           </span>

@@ -1,5 +1,4 @@
 // src/components/GiftCardBuilder.tsx - GIFT CARD BUILDER! 🎁
-
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "../../shared/components/ui/Button";
-import type { GradientDirection } from "@/features/merchant/slices/giftCardSlice";
+
 import { useGiftCardSettings } from "@/features/merchant/hooks/useGiftCardSetting";
 import type { RootState } from "@/app/store";
 import { useAppSelector } from "@/app/hooks";
@@ -29,6 +28,7 @@ import {
   generateGradient,
   formatCurrency,
 } from "@/shared/utils/giftcard";
+import { GradientDirection } from "@/shared/types/giftCard.types";
 
 interface ColorPickerModalProps {
   isOpen: boolean;

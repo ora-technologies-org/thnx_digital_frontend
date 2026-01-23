@@ -1,6 +1,6 @@
 // src/hooks/useLandingPage.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useCallback } from "react";
 import { toast } from "react-hot-toast";
 import {
@@ -8,11 +8,10 @@ import {
   updateLandingPageSection,
   clearError,
 } from "../slices/LandingPageSlice";
-import {
-  landingPageService,
-  UpdateLandingPageRequest,
-} from "../services/LandingService";
+import { landingPageService } from "../services/LandingService";
 import { RootState, AppDispatch } from "@/app/store";
+import { UpdateLandingPageRequest } from "@/shared/types/landingPage.types";
+import { useAppSelector } from "@/app/hooks";
 
 /**
  * Hook to fetch landing page data using React Query
@@ -31,7 +30,7 @@ export const useLandingPageData = () => {
  */
 export const useLandingPageRedux = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { data, loading, error, updateLoading, updateError } = useSelector(
+  const { data, loading, error, updateLoading, updateError } = useAppSelector(
     (state: RootState) => state.landingPage,
   );
 

@@ -13,6 +13,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { RedemptionHistory } from "@/features/Redemption/Services/redemptionService";
+import { getOrderStatusColor } from "@/shared/utils/helpers";
 
 interface RedemptionDetailsModalProps {
   isOpen: boolean;
@@ -39,19 +40,6 @@ export const RedemptionDetailsModal: React.FC<RedemptionDetailsModalProps> = ({
 
   const formatCurrency = (amount: string) => {
     return `Rs. ${parseFloat(amount).toFixed(2)}`;
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "ACTIVE":
-        return "bg-green-100 text-green-800";
-      case "FULLY_REDEEMED":
-        return "bg-blue-100 text-blue-800";
-      case "EXPIRED":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
   };
 
   const getStatusIcon = () => {
@@ -117,7 +105,7 @@ export const RedemptionDetailsModal: React.FC<RedemptionDetailsModalProps> = ({
                         Gift Card Status
                       </div>
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getStatusColor(redemption.purchasedGiftCard.status)}`}
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getOrderStatusColor(redemption.purchasedGiftCard.status)}`}
                       >
                         {redemption.purchasedGiftCard.status.replace("_", " ")}
                       </span>

@@ -12,7 +12,7 @@ interface ApiErrorResponse {
   errors?: Record<string, string[]>;
 }
 
-// Interface for password form data
+// // Interface for password form data
 interface PasswordData {
   password: string;
   newPassword: string;
