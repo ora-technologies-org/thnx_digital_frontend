@@ -3,9 +3,9 @@ import authReducer from "../features/auth/slices/authSlice";
 import giftCardReducer from "../features/giftCards/slices/giftCardSlice";
 import merchantReducer from "../features/admin/slices/MerchantCreateSlice";
 import profileReducer from "../features/auth/slices/profileSlice";
-import adminprofileReducer from "../features/auth/slices/adminprofileSlice";
 import landingPageReducer from "../features/merchant/slices/LandingPageSlice";
 import giftCardSettingsReducer from "../features/merchant/slices/giftCardSlice";
+import AdminProfileReducer from "../features/auth/slices/adminProfileSlice";
 
 export const store = configureStore({
   reducer: {
@@ -13,7 +13,7 @@ export const store = configureStore({
     giftCards: giftCardReducer,
     merchant: merchantReducer,
     profile: profileReducer,
-    Adminprofile: adminprofileReducer,
+    Adminprofile: AdminProfileReducer,
     giftCardSettings: giftCardSettingsReducer,
     landingPage: landingPageReducer,
   },
