@@ -1,6 +1,6 @@
 // src/features/admin/api/createMerchant.ts - CREATE MERCHANT API! 🚀
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import api from "@/shared/utils/api";
 
 export interface CreateMerchantRequest {
   email: string;
@@ -34,23 +34,12 @@ export interface CreateMerchantResponse {
  * POST /api/auth/admin/create-merchant
  */
 export const createMerchant = async (
-  merchantData: CreateMerchantRequest
+  merchantData: CreateMerchantRequest,
 ): Promise<CreateMerchantResponse> => {
-  const token = localStorage.getItem('accessToken');
-  
-  const response = await fetch(`${API_URL}/auth/admin/create-merchant`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(merchantData)
-  });
+  const response = await api.post<CreateMerchantResponse>(
+    "/auth/admin/create-merchant",
+    merchantData,
+  );
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create merchant');
-  }
-
-  return response.json();
+  return response.data;
 };

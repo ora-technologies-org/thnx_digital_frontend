@@ -1,6 +1,6 @@
-// src/shared/components/layout/AdminLayout.tsx - STUNNING ADMIN SIDEBAR WITH DYNAMIC BADGE! 🎯✨
+// src/shared/components/layout/AdminLayout.tsx - WITH PROFILE DROPDOWN
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -18,29 +18,22 @@ import {
   Menu,
   X,
   UserPlus,
+  ChevronDown,
 } from "lucide-react";
 import { usePendingMerchants } from "../../../features/admin/hooks/useAdmin";
-
 import NotificationBell from "../notifications/NotificationBell";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-// Navigation items - badge will be added dynamically
+// Navigation items - Settings and Logout REMOVED from sidebar
 const getNavigation = (pendingCount: number) => [
   {
     name: "Dashboard",
     href: "/admin/dashboard",
     icon: LayoutDashboard,
     gradient: "from-blue-500 to-blue-600",
-  },
-  {
-    name: "Pending Merchants",
-    href: "/admin/pending",
-    icon: Users,
-    gradient: "from-orange-500 to-orange-600",
-    badge: pendingCount > 0 ? pendingCount : undefined, // Dynamic badge
   },
   {
     name: "All Merchants",
@@ -53,6 +46,13 @@ const getNavigation = (pendingCount: number) => [
     href: "/admin/create-merchant",
     icon: UserPlus,
     gradient: "from-indigo-500 to-purple-600",
+  },
+  {
+    name: "Pending Merchants",
+    href: "/admin/pending",
+    icon: Users,
+    gradient: "from-orange-500 to-orange-600",
+    badge: pendingCount > 0 ? pendingCount : undefined,
   },
   {
     name: "Gift Cards",
@@ -78,6 +78,24 @@ const getNavigation = (pendingCount: number) => [
     icon: Activity,
     gradient: "from-cyan-500 to-cyan-600",
   },
+  {
+    name: "Contact us",
+    href: "/admin/contact-us",
+    icon: Activity,
+    gradient: "from-cyan-500 to-cyan-600",
+  },
+  {
+    name: "Support Tickets",
+    href: "/admin/support-tickets",
+    icon: Activity,
+    gradient: "from-cyan-500 to-cyan-600",
+  },
+  {
+    name: "Update Landing",
+    href: "/admin/update",
+    icon: Activity,
+    gradient: "from-cyan-500 to-cyan-600",
+  },
 ];
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
@@ -85,20 +103,66 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch pending merchants count
-  const { data: pendingMerchants } = usePendingMerchants();
-  const pendingCount = pendingMerchants?.length || 0;
+  const { data: pendingMerchantsResponse } = usePendingMerchants({
+    page: 1,
+    limit: 100, // Get all pending to show accurate count
+  });
+  const pendingCount = pendingMerchantsResponse?.merchants?.length || 0;
 
   // Get navigation with dynamic badge
   const navigation = getNavigation(pendingCount);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // FIXED LOGOUT FUNCTION
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    navigate("/login");
+    try {
+      console.log("Initiating logout...");
+
+      // Clear all localStorage items
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+
+      console.log("localStorage cleared successfully");
+
+      // Close dropdowns
+      setIsProfileDropdownOpen(false);
+      setIsMobileMenuOpen(false);
+
+      // Navigate to login with replace to prevent back button issues
+      navigate("/login", { replace: true });
+
+      // Fallback: Force redirect if navigate doesn't work
+      setTimeout(() => {
+        if (window.location.pathname !== "/login") {
+          console.log("Fallback redirect triggered");
+          window.location.href = "/login";
+        }
+      }, 100);
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Force redirect on error
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -215,53 +279,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           })}
         </nav>
 
-        {/* Settings & Profile */}
-        <div className="p-4 border-t border-gray-800 space-y-2">
-          <Link
-            to="/admin/settings"
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-              location.pathname === "/admin/settings"
-                ? "bg-gray-800 text-white"
-                : "text-gray-300 hover:bg-gray-800 hover:text-white"
-            }`}
-          >
-            <Settings className="w-5 h-5 flex-shrink-0" />
-            <AnimatePresence>
-              {!isCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="font-medium whitespace-nowrap overflow-hidden"
-                >
-                  Settings
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </Link>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-red-600 hover:text-white transition-all w-full"
-          >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
-            <AnimatePresence>
-              {!isCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="font-medium whitespace-nowrap overflow-hidden"
-                >
-                  Logout
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </button>
-        </div>
-
         {/* Collapse Toggle */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -352,25 +369,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   );
                 })}
               </nav>
-
-              {/* Settings & Logout */}
-              <div className="p-4 border-t border-gray-800 space-y-2">
-                <Link
-                  to="/admin/settings"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="font-medium">Settings</span>
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-300 hover:bg-red-600 hover:text-white transition-all w-full"
-                >
-                  <LogOut className="w-5 h-5" />
-                  <span className="font-medium">Logout</span>
-                </button>
-              </div>
             </motion.div>
           </>
         )}
@@ -394,24 +392,80 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
             <div className="flex items-center gap-4">
               {/* Notifications with dynamic badge */}
+
               <NotificationBell />
 
-              {/* User Profile */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  A
-                </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-sm font-semibold text-gray-900">
-                    Admin User
-                  </p>
-                  <p className="text-xs text-gray-500">admin@thnxdigital.com</p>
-                </div>
-              </motion.button>
+              {/* User Profile Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() =>
+                    setIsProfileDropdownOpen(!isProfileDropdownOpen)
+                  }
+                  className="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    A
+                  </div>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-semibold text-gray-900">
+                      Admin User
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      admin@thnxdigital.com
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-gray-600 transition-transform ${
+                      isProfileDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </motion.button>
+
+                {/* Dropdown Menu */}
+                <AnimatePresence>
+                  {isProfileDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50"
+                    >
+                      <div className="p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+                        <p className="text-sm font-semibold text-gray-900">
+                          Admin User
+                        </p>
+                        <p className="text-xs text-gray-600 truncate">
+                          admin@thnxdigital.com
+                        </p>
+                      </div>
+
+                      <div className="py-2">
+                        <Link
+                          to="/admin/settings"
+                          onClick={() => setIsProfileDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <Settings className="w-4 h-4" />
+                          <span className="text-sm font-medium">Settings</span>
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-gray-100">
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors w-full"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span className="text-sm font-medium">Logout</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>

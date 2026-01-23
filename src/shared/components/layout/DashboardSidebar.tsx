@@ -1,12 +1,20 @@
 // src/shared/components/layout/DashboardSidebar.tsx
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, Gift, ShoppingBag, BarChart3, 
-  DollarSign, Settings, LogOut, Menu, X,
-  ChevronRight,  Bell, QrCode
-} from 'lucide-react';
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LayoutDashboard,
+  Gift,
+  ShoppingBag,
+  BarChart3,
+  DollarSign,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  ChevronRight,
+  QrCode,
+} from "lucide-react";
 
 interface MenuItem {
   id: string;
@@ -27,75 +35,27 @@ interface DashboardSidebarProps {
   onLogout?: () => void;
 }
 
-export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({ 
+// Separate SidebarContent component - defined OUTSIDE to prevent recreation during render
+interface SidebarContentProps {
+  isCollapsed: boolean;
+  user?: DashboardSidebarProps["user"];
+  menuItems: MenuItem[];
+  currentPath: string;
+  onLogout: () => void;
+  onMobileMenuClose: () => void;
+}
+
+const SidebarContent: React.FC<SidebarContentProps> = ({
+  isCollapsed,
   user,
-  onLogout 
+  menuItems,
+  currentPath,
+  onLogout,
+  onMobileMenuClose,
 }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const isActive = (path: string) => currentPath === path;
 
-  const menuItems: MenuItem[] = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard className="w-5 h-5" />,
-      path: '/merchant/dashboard',
-    },
-    {
-      id: 'gift-cards',
-      label: 'Gift Cards',
-      icon: <Gift className="w-5 h-5" />,
-      path: '/merchant/gift-cards',
-      badge: 3,
-    },
-    {
-      id: 'orders',
-      label: 'Orders',
-      icon: <ShoppingBag className="w-5 h-5" />,
-      path: '/merchant/orders',
-    },
-    {
-      id: 'scan',
-      label: 'Scan QR',
-      icon: <QrCode className="w-5 h-5" />,
-      path: '/merchant/scan',
-    },
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: <BarChart3 className="w-5 h-5" />,
-      path: '/merchant/analytics',
-    },
-    {
-      id: 'payouts',
-      label: 'Payouts',
-      icon: <DollarSign className="w-5 h-5" />,
-      path: '/merchant/payouts',
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: <Settings className="w-5 h-5" />,
-      path: '/merchant/settings',
-    },
-  ];
-
-  const isActive = (path: string) => location.pathname === path;
-
-  const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    } else {
-      // Default logout behavior
-      localStorage.removeItem('token');
-      navigate('/login');
-    }
-  };
-
-  // Sidebar content component (reused for desktop and mobile)
-  const SidebarContent = () => (
+  return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
@@ -126,22 +86,19 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {menuItems.map((item) => {
           const active = isActive(item.path);
-          
+
           return (
-            <Link
-              key={item.id}
-              to={item.path}
-              onClick={() => setIsMobileOpen(false)}
-            >
+            <Link key={item.id} to={item.path} onClick={onMobileMenuClose}>
               <motion.div
                 className={`
                   relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer
                   transition-all duration-200
-                  ${active 
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
-                    : 'text-gray-700 hover:bg-gray-100'
+                  ${
+                    active
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                      : "text-gray-700 hover:bg-gray-100"
                   }
-                  ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}
                 `}
                 whileHover={!item.disabled ? { scale: 1.02, x: 5 } : {}}
                 whileTap={!item.disabled ? { scale: 0.98 } : {}}
@@ -152,12 +109,14 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     layoutId="activeIndicator"
                     className="absolute left-0 w-1 h-8 bg-white rounded-r-full"
                     initial={false}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
 
                 {/* Icon */}
-                <div className={`flex-shrink-0 ${active ? 'text-white' : 'text-gray-600'}`}>
+                <div
+                  className={`flex-shrink-0 ${active ? "text-white" : "text-gray-600"}`}
+                >
                   {item.icon}
                 </div>
 
@@ -179,9 +138,10 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     animate={{ scale: 1 }}
                     className={`
                       px-2 py-0.5 text-xs font-bold rounded-full
-                      ${active 
-                        ? 'bg-white text-blue-600' 
-                        : 'bg-blue-100 text-blue-600'
+                      ${
+                        active
+                          ? "bg-white text-blue-600"
+                          : "bg-blue-100 text-blue-600"
                       }
                     `}
                   >
@@ -216,7 +176,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               {/* Avatar */}
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                 {user.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-full h-full rounded-full object-cover"
+                  />
                 ) : (
                   user.name?.charAt(0).toUpperCase()
                 )}
@@ -233,21 +197,17 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               </div>
 
               {/* Notification Bell */}
-              <button className="relative p-2 hover:bg-gray-200 rounded-lg transition-colors">
-                <Bell className="w-4 h-4 text-gray-600" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
             </div>
           </motion.div>
         )}
 
         {/* Logout Button */}
         <motion.button
-          onClick={handleLogout}
+          onClick={onLogout}
           className={`
             w-full flex items-center gap-3 px-4 py-3 rounded-xl
             text-red-600 hover:bg-red-50 transition-all
-            ${isCollapsed ? 'justify-center' : ''}
+            ${isCollapsed ? "justify-center" : ""}
           `}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -258,6 +218,81 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       </div>
     </div>
   );
+};
+
+export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
+  user,
+  onLogout,
+}) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const menuItems: MenuItem[] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: <LayoutDashboard className="w-5 h-5" />,
+      path: "/merchant/dashboard",
+    },
+    {
+      id: "gift-cards",
+      label: "Gift Cards",
+      icon: <Gift className="w-5 h-5" />,
+      path: "/merchant/gift-cards",
+    },
+    {
+      id: "orders",
+      label: "Orders",
+      icon: <ShoppingBag className="w-5 h-5" />,
+      path: "/merchant/orders",
+    },
+    {
+      id: "scan",
+      label: "Scan QR",
+      icon: <QrCode className="w-5 h-5" />,
+      path: "/merchant/scan",
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
+      icon: <BarChart3 className="w-5 h-5" />,
+      path: "/merchant/analytics",
+    },
+    {
+      id: "payouts",
+      label: "Payouts",
+      icon: <DollarSign className="w-5 h-5" />,
+      path: "/merchant/payouts",
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings className="w-5 h-5" />,
+      path: "/merchant/settings",
+    },
+    {
+      id: "support",
+      label: "Support",
+      icon: <Settings className="w-5 h-5" />,
+      path: "/merchant/support",
+    },
+  ];
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    } else {
+      // Default logout behavior
+      localStorage.removeItem("token");
+      navigate("/login");
+    }
+  };
+
+  const handleMobileMenuClose = () => {
+    setIsMobileOpen(false);
+  };
 
   return (
     <>
@@ -268,7 +303,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
-        {isMobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        {isMobileOpen ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <Menu className="w-6 h-6" />
+        )}
       </motion.button>
 
       {/* Desktop Sidebar */}
@@ -276,12 +315,19 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         className={`
           hidden lg:block fixed left-0 top-0 h-screen bg-white z-40
           transition-all duration-300 border-r border-gray-200
-          ${isCollapsed ? 'w-20' : 'w-64'}
+          ${isCollapsed ? "w-20" : "w-64"}
         `}
         initial={false}
         animate={{ width: isCollapsed ? 80 : 256 }}
       >
-        <SidebarContent />
+        <SidebarContent
+          isCollapsed={isCollapsed}
+          user={user}
+          menuItems={menuItems}
+          currentPath={location.pathname}
+          onLogout={handleLogout}
+          onMobileMenuClose={handleMobileMenuClose}
+        />
 
         {/* Collapse Toggle */}
         <motion.button
@@ -290,8 +336,8 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          <ChevronRight 
-            className={`w-4 h-4 text-gray-600 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} 
+          <ChevronRight
+            className={`w-4 h-4 text-gray-600 transition-transform ${isCollapsed ? "" : "rotate-180"}`}
           />
         </motion.button>
       </motion.aside>
@@ -314,10 +360,17 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
               initial={{ x: -300 }}
               animate={{ x: 0 }}
               exit={{ x: -300 }}
-              transition={{ type: 'spring', damping: 25 }}
+              transition={{ type: "spring", damping: 25 }}
               className="lg:hidden fixed left-0 top-0 h-screen w-64 z-50"
             >
-              <SidebarContent />
+              <SidebarContent
+                isCollapsed={false}
+                user={user}
+                menuItems={menuItems}
+                currentPath={location.pathname}
+                onLogout={handleLogout}
+                onMobileMenuClose={handleMobileMenuClose}
+              />
             </motion.aside>
           </>
         )}

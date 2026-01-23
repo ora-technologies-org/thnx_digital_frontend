@@ -1,325 +1,443 @@
-// src/features/orders/components/OrderDetailsModal.tsx - DETAILED ORDER VIEW! 📋
-import React from 'react';
-import { motion } from 'framer-motion';
-import { 
-  X, User, Mail, Phone, MapPin, Calendar, CreditCard,
-  Package, Gift, DollarSign, CheckCircle, Clock, XCircle,
-  Download, Printer
-} from 'lucide-react';
-import { Modal } from '../../../shared/components/ui/Modal';
-import { Badge } from '../../../shared/components/ui/Badge';
-import { Button } from '../../../shared/components/ui/Button';
-import type { Order } from '../types/order.types';
+import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X,
+  User,
+  CreditCard,
+  Calendar,
+  DollarSign,
+  QrCode,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Receipt,
+  FileText,
+} from "lucide-react";
+import { Order } from "../types/order.types";
+import { getOrderStatusColor } from "@/shared/utils/helpers";
 
-interface OrderDetailsModalProps {
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/** Props interface for the OrderDetailModal component */
+interface OrderDetailModalProps {
   order: Order;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
+// ============================================================================
+// Component: OrderDetailModal
+// ============================================================================
+
+/**
+ * OrderDetailModal Component
+ *
+ * A comprehensive modal dialog that displays detailed information about an order.
+ * Features:
+ * - Clean, modern design with subtle animations
+ * - Organized sections for different types of information
+ * - Responsive layout that works on all screen sizes
+ * - Visual status indicators with icons
+ * - Proper formatting for dates and currency
+ *
+ * @param order - The order object containing all details
+ * @param isOpen - Boolean controlling modal visibility
+ * @param onClose - Function to close the modal
+ */
+export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   order,
   isOpen,
   onClose,
 }) => {
+  // Guard clause: return null if no order is provided
+  if (!order) return null;
+
+  // ============================================================================
+  // Helper Functions
+  // ============================================================================
+
+  /**
+   * Returns the appropriate icon for a given order status
+   * @param status - The order status string
+   * @returns React element with status icon
+   */
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-6 h-6 text-green-600" />;
-      case 'pending':
-        return <Clock className="w-6 h-6 text-orange-600" />;
-      case 'failed':
-        return <XCircle className="w-6 h-6 text-red-600" />;
+      case "ACTIVE":
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case "USED":
+        return <CheckCircle className="w-5 h-5 text-blue-500" />;
+      case "EXPIRED":
+        return <XCircle className="w-5 h-5 text-rose-500" />;
       default:
-        return null;
+        return <Clock className="w-5 h-5 text-gray-400" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="success" className="text-base">Completed</Badge>;
-      case 'pending':
-        return <Badge variant="warning" className="text-base">Pending</Badge>;
-      case 'failed':
-        return <Badge variant="danger" className="text-base">Failed</Badge>;
-      default:
-        return <Badge variant="default" className="text-base">{status}</Badge>;
-    }
+  /**
+   * Returns Tailwind CSS classes for payment status badge styling
+   * @param status - The payment status string
+   * @returns String of Tailwind CSS classes
+   */
+  // const getPaymentStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case "COMPLETED":
+  //       return "bg-green-50 text-green-700 border border-green-200";
+  //     case "PENDING":
+  //       return "bg-amber-50 text-amber-700 border border-amber-200";
+  //     case "FAILED":
+  //       return "bg-rose-50 text-rose-700 border border-rose-200";
+  //     default:
+  //       return "bg-gray-50 text-gray-700 border border-gray-200";
+  //   }
+  // };
+
+  /**
+   * Formats currency values with INR symbol and proper formatting
+   * @param value - The amount to format (string or number)
+   * @returns Formatted currency string
+   */
+  const formatCurrency = (value: number | string | undefined) => {
+    const num = parseFloat(value as string) || 0;
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(num);
   };
 
-  const handlePrint = () => {
-    window.print();
+  /**
+   * Formats date strings into a readable format with time
+   * @param dateString - ISO date string
+   * @returns Formatted date string
+   */
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  const handleDownloadReceipt = () => {
-    // Implementation for downloading receipt
-    console.log('Downloading receipt for order:', order.orderId);
-  };
+  // ============================================================================
+  // Render
+  // ============================================================================
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="" size="xl">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between pb-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Order Details
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">Order ID:</span>
-              <code className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">
-                {order.orderId}
-              </code>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {getStatusIcon(order.status)}
-            {getStatusBadge(order.status)}
-          </div>
-        </div>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop with subtle blur effect */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+          />
 
-        {/* Order Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Customer Information */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Customer Information
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Name
-                </label>
-                <p className="text-sm font-medium text-gray-900 mt-1">
-                  {order.customer.name}
-                </p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Email
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <a
-                    href={`mailto:${order.customer.email}`}
-                    className="text-sm text-blue-600 hover:underline"
+          {/* Modal Container */}
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            {/* Modal Card with spring animation */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-100"
+            >
+              {/* Header Section */}
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Order Icon */}
+                    <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                      <Receipt className="w-6 h-6 text-white" />
+                    </div>
+
+                    {/* Order Title and ID */}
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">
+                        Order Details
+                      </h2>
+                      <p className="text-gray-300 text-sm font-medium mt-1">
+                        ID: {order.orderId || order.id}
+                        {order.orderNumber && ` • ${order.orderNumber}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Close Button */}
+                  <button
+                    onClick={onClose}
+                    className="text-gray-300 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
+                    aria-label="Close modal"
                   >
-                    {order.customer.email}
-                  </a>
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              {order.customer.phone && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Phone
-                  </label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <a
-                      href={`tel:${order.customer.phone}`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {order.customer.phone}
-                    </a>
-                  </div>
-                </div>
-              )}
-              {order.customer.address && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Address
-                  </label>
-                  <div className="flex items-start gap-2 mt-1">
-                    <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                    <p className="text-sm text-gray-900">{order.customer.address}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Order Information */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-purple-600" />
-              Order Information
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Order Date
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Calendar className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-gray-900">
-                    {new Date(order.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </p>
-                </div>
-                <p className="text-xs text-gray-500 ml-6">
-                  {new Date(order.createdAt).toLocaleTimeString()}
-                </p>
-              </div>
-              {order.completedAt && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Completed Date
-                  </label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <CheckCircle className="w-4 h-4 text-green-400" />
-                    <p className="text-sm text-gray-900">
-                      {new Date(order.completedAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </p>
+              {/* Content Area with scrolling */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {/* Status Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  {/* Order Status Card */}
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-3">
+                      {getStatusIcon(order.status)}
+                      <div>
+                        <div className="text-xs text-gray-600 font-medium mb-1">
+                          Order Status
+                        </div>
+                        <span
+                          className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getOrderStatusColor(order.status)}`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Payment Method
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <CreditCard className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-gray-900 capitalize">
-                    {order.paymentMethod || 'Card Payment'}
-                  </p>
-                </div>
-              </div>
-              {order.transactionId && (
-                <div>
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">
-                    Transaction ID
-                  </label>
-                  <code className="block px-2 py-1 bg-white rounded text-xs font-mono mt-1">
-                    {order.transactionId}
-                  </code>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Gift Card Details */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Gift className="w-5 h-5 text-blue-600" />
-            Gift Card Details
-          </h3>
-          <div className="bg-white rounded-lg p-4 shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                  {order.giftCard.title}
-                </h4>
-                {order.giftCard.description && (
-                  <p className="text-sm text-gray-600">{order.giftCard.description}</p>
+                {/* Customer Information Section */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-600" />
+                    Customer Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Name Field */}
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-xs text-gray-600 mb-1">
+                        Full Name
+                      </div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.customerName ||
+                          order.customer?.name ||
+                          "Not provided"}
+                      </div>
+                    </div>
+
+                    {/* Phone Field */}
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-xs text-gray-600 mb-1">
+                        Phone Number
+                      </div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {order.customerPhone ||
+                          order.customer?.phone ||
+                          "Not provided"}
+                      </div>
+                    </div>
+
+                    {/* Email Field */}
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-xs text-gray-600 mb-1">
+                        Email Address
+                      </div>
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {order.customerEmail ||
+                          order.customer?.email ||
+                          "Not provided"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financial Information Section */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-gray-600" />
+                    Financial Information
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Purchase Amount */}
+                    <div className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                      <div className="text-xs text-gray-600 mb-2">
+                        Purchase Amount
+                      </div>
+                      <div className="text-xl font-semibold text-gray-900">
+                        {formatCurrency(order.purchaseAmount || order.amount)}
+                      </div>
+                    </div>
+
+                    {/* Current Balance */}
+                    <div className="p-4 bg-white rounded-lg border border-green-200 shadow-sm">
+                      <div className="text-xs text-green-600 mb-2">
+                        Current Balance
+                      </div>
+                      <div className="text-xl font-semibold text-green-700">
+                        {formatCurrency(order.currentBalance || order.amount)}
+                      </div>
+                    </div>
+
+                    {/* Bonus Amount (conditional) */}
+                    {order.bonusAmount &&
+                      parseFloat(order.bonusAmount as string) > 0 && (
+                        <div className="p-4 bg-white rounded-lg border border-amber-200 shadow-sm">
+                          <div className="text-xs text-amber-600 mb-2">
+                            Bonus Amount
+                          </div>
+                          <div className="text-xl font-semibold text-amber-700">
+                            {formatCurrency(order.bonusAmount)}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                </div>
+
+                {/* Payment and Timeline Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Payment Information */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-gray-600" />
+                      Payment Information
+                    </h3>
+
+                    <div className="space-y-3">
+                      {/* Payment Method */}
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="text-xs text-gray-600 mb-1">
+                          Payment Method
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {order.paymentMethod || "Not specified"}
+                        </div>
+                      </div>
+
+                      {/* Transaction ID (conditional) */}
+                      {order.transactionId && (
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="text-xs text-blue-600 mb-1">
+                            Transaction ID
+                          </div>
+                          <div className="font-mono text-xs text-gray-800 break-all">
+                            {order.transactionId}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Timeline Information */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-600" />
+                      Order Timeline
+                    </h3>
+
+                    <div className="space-y-3">
+                      {/* Created Date */}
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                          <div className="text-xs text-gray-600">Created</div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatDate(order.createdAt)}
+                          </div>
+                        </div>
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                      </div>
+
+                      {/* Purchased Date (conditional) */}
+                      {order.purchasedAt && (
+                        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div>
+                            <div className="text-xs text-blue-600">
+                              Purchased
+                            </div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatDate(order.purchasedAt)}
+                            </div>
+                          </div>
+                          <Receipt className="w-4 h-4 text-blue-400" />
+                        </div>
+                      )}
+
+                      {/* Expiry Date (conditional) */}
+                      {order.expiresAt && (
+                        <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <div>
+                            <div className="text-xs text-amber-600">
+                              Expires
+                            </div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatDate(order.expiresAt)}
+                            </div>
+                          </div>
+                          <Clock className="w-4 h-4 text-amber-400" />
+                        </div>
+                      )}
+
+                      {/* Used Date (conditional) */}
+                      {order.usedAt && (
+                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div>
+                            <div className="text-xs text-green-600">Used</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatDate(order.usedAt)}
+                            </div>
+                          </div>
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* QR Code Section (conditional) */}
+                {order.qrCode && (
+                  <div className="mt-8">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <QrCode className="w-4 h-4 text-gray-600" />
+                      QR Code
+                    </h3>
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="font-mono text-xs text-gray-700 break-all bg-white p-3 rounded border">
+                        {order.qrCode}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes Section (conditional) */}
+                {order.notes && (
+                  <div className="mt-8">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-600" />
+                      Additional Notes
+                    </h3>
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                        {order.notes}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-gray-900">
-                  ₹{parseFloat(order.giftCard.price).toFixed(2)}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Qty: {order.quantity}
-                </div>
-              </div>
-            </div>
-            {order.giftCard.code && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <label className="text-xs text-gray-500 uppercase tracking-wide">
-                  Gift Card Code
-                </label>
-                <code className="block text-lg font-mono font-bold text-gray-900 mt-1 tracking-wider">
-                  {order.giftCard.code}
-                </code>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Payment Summary */}
-        <div className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            Payment Summary
-          </h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="text-gray-900">
-                ₹{(parseFloat(order.giftCard.price) * order.quantity).toFixed(2)}
-              </span>
-            </div>
-            {order.discount && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Discount</span>
-                <span className="text-green-600">
-                  -₹{parseFloat(order.discount).toFixed(2)}
-                </span>
+              {/* Footer with Close Button */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                <button
+                  onClick={onClose}
+                  className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Close
+                </button>
               </div>
-            )}
-            {order.tax && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tax</span>
-                <span className="text-gray-900">
-                  ₹{parseFloat(order.tax).toFixed(2)}
-                </span>
-              </div>
-            )}
-            <div className="border-t border-gray-300 pt-2 mt-2">
-              <div className="flex justify-between">
-                <span className="text-base font-semibold text-gray-900">Total</span>
-                <span className="text-2xl font-bold text-gray-900">
-                  ₹{parseFloat(order.amount).toFixed(2)}
-                </span>
-              </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-
-        {/* Notes */}
-        {order.notes && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-2">Notes</h4>
-            <p className="text-sm text-gray-700">{order.notes}</p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
-          <Button
-            variant="outline"
-            onClick={handlePrint}
-            className="flex-1"
-          >
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleDownloadReceipt}
-            className="flex-1"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Download Receipt
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onClose}
-            className="flex-1"
-          >
-            Close
-          </Button>
-        </div>
-      </div>
-    </Modal>
+        </>
+      )}
+    </AnimatePresence>
   );
 };

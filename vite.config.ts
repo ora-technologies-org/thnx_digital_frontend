@@ -13,4 +13,14 @@ export default defineConfig({
     port: 8081,
     open: true,
   },
+  build: {
+    // Remove console.log and debugger statements in production
+    minify: "esbuild",
+    terserOptions: {
+      compress: {
+        drop_console: true, // remove console.* calls
+        drop_debugger: true, // remove debugger statements
+      },
+    },
+  },
 });

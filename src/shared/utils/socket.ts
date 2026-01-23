@@ -3,6 +3,7 @@ import { config } from "../../config/env";
 
 let adminSocket: Socket | null = null;
 let merchantSocket: Socket | null = null;
+// let socket: Socket | null = null;
 
 // let socket: Socket | null = null;
 
@@ -59,23 +60,18 @@ const setupSocketHandlers = (socket: Socket, namespace: string): void => {
  * Connect to admin namespace (for admin users)
  */
 export const connectAdminSocket = (token: string): Socket => {
-  if (adminSocket?.connected) {
-    return adminSocket;
-  }
+  if (adminSocket?.connected) return adminSocket;
 
   const baseUrl = getBaseUrl();
   adminSocket = io(`${baseUrl}/admin`, getSocketOptions(token));
   setupSocketHandlers(adminSocket, "admin");
-
   return adminSocket;
 };
 
 /**
  * Get admin socket instance
  */
-export const getAdminSocket = (): Socket | null => {
-  return adminSocket;
-};
+export const getAdminSocket = (): Socket | null => adminSocket;
 
 /**
  * Disconnect admin socket
@@ -99,23 +95,18 @@ export const isAdminSocketConnected = (): boolean => {
  * Connect to merchant namespace (for merchant users)
  */
 export const connectMerchantSocket = (token: string): Socket => {
-  if (merchantSocket?.connected) {
-    return merchantSocket;
-  }
+  if (merchantSocket?.connected) return merchantSocket;
 
   const baseUrl = getBaseUrl();
   merchantSocket = io(`${baseUrl}/merchant`, getSocketOptions(token));
   setupSocketHandlers(merchantSocket, "merchant");
-
   return merchantSocket;
 };
 
 /**
  * Get merchant socket instance
  */
-export const getMerchantSocket = (): Socket | null => {
-  return merchantSocket;
-};
+export const getMerchantSocket = (): Socket | null => merchantSocket;
 
 /**
  * Disconnect merchant socket
@@ -136,30 +127,23 @@ export const isMerchantSocketConnected = (): boolean => {
 };
 
 /**
- * @deprecated Use connectAdminSocket or connectMerchantSocket instead
- * Connect to default namespace (backward compatibility)
+ * Connect default socket (deprecated, connects admin namespace)
  */
-export const connectSocket = (token: string): Socket => {
-  // For backward compatibility, connect to admin namespace
-  return connectAdminSocket(token);
-};
+export const connectSocket = (token: string): Socket =>
+  connectAdminSocket(token);
 
 /**
- * @deprecated Use getAdminSocket or getMerchantSocket instead
+ * Get default socket (deprecated)
  */
-export const getSocket = (): Socket | null => {
-  return adminSocket;
-};
+export const getSocket = (): Socket | null => adminSocket;
 
 /**
- * @deprecated Use disconnectAdminSocket or disconnectMerchantSocket instead
+ * Disconnect default socket (deprecated)
  */
-export const disconnectSocket = (): void => {
-  disconnectAdminSocket();
-};
+export const disconnectSocket = (): void => disconnectAdminSocket();
 
 /**
- * @deprecated Use isAdminSocketConnected or isMerchantSocketConnected instead
+ * Check if default socket is connected (deprecated)
  */
 export const isSocketConnected = (): boolean => {
   return isAdminSocketConnected();
@@ -174,7 +158,7 @@ export const disconnectAllSockets = (): void => {
 };
 
 /**
- * Connect appropriate socket based on user role
+ * Connect socket by role
  */
 export const connectSocketByRole = (
   token: string,
@@ -198,6 +182,9 @@ export const getSocketByRole = (role: "ADMIN" | "MERCHANT"): Socket | null => {
   }
 };
 
+/**
+ * Default export (optional)
+ */
 export default {
   connectAdminSocket,
   getAdminSocket,

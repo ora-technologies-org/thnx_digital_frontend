@@ -1,5 +1,6 @@
 // src/features/orders/types/order.types.ts - UPDATED FOR REAL API! 📦
 
+// Customer information structure
 export interface Customer {
   id: string;
   name: string;
@@ -8,6 +9,7 @@ export interface Customer {
   address?: string;
 }
 
+// Gift card details
 export interface GiftCardInfo {
   id: string;
   title: string;
@@ -16,7 +18,7 @@ export interface GiftCardInfo {
   code?: string; // QR code for the purchased gift card
 }
 
-
+// Data required to create a new order
 export interface CreateOrderData {
   customerName: string;
   customerEmail: string;
@@ -26,31 +28,70 @@ export interface CreateOrderData {
   transactionId: string;
 }
 
-export type OrderStatus = 'pending' | 'completed' | 'failed' | 'refunded';
+export type OrderStatus =
+  | "ACTIVE"
+  | "USED"
+  | "EXPIRED"
+  | "pending"
+  | "completed"
+  | "failed"
+  | "refunded";
 
 export interface Order {
   id: string;
-  orderId: string; // QR code or purchase ID
-  customer: Customer;
-  giftCard: GiftCardInfo;
-  quantity: number;
-  amount: string;
-  discount?: string;
-  tax?: string;
+  orderId?: string;
+  orderNumber?: string;
+  qrCode?: string;
   status: OrderStatus;
-  paymentMethod?: string; // e.g., "ESEWA", "KHALTI", "CREDIT_CARD"
+  paymentStatus?: PaymentStatus;
+  purchaseAmount?: number | string;
+  currentBalance?: number | string;
+  bonusAmount?: number | string;
+  amount?: number | string;
+  totalAmount?: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customer?: Customer;
+  paymentMethod?: string;
   transactionId?: string;
-  notes?: string;
   createdAt: string;
-  updatedAt: string;
-  completedAt?: string; // redeemedAt
+  purchasedAt?: string;
+  expiresAt?: string;
+  usedAt?: string;
+  notes?: string;
+  items?: OrderItem[];
 }
 
+// Response structure for fetching orders list
 export interface OrdersResponse {
   orders: Order[];
-  total: number;
-  page: number;
-  limit: number;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+// Response structure for creating an order
+export interface CreateOrderResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    code: string;
+    amount: number;
+    isRedeemed: boolean;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    paymentMethod: string;
+    transactionId: string;
+    giftCardId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
 }
 
 // For QR verification
@@ -73,8 +114,20 @@ export interface PurchaseData {
   createdAt: string;
 }
 
+// QR verification response
 export interface PurchaseVerification {
   isValid: boolean;
   purchase?: PurchaseData;
   error?: string;
+}
+
+/** Payment status types */
+export type PaymentStatus = "COMPLETED" | "PENDING" | "FAILED";
+
+/** Order item interface for detailed line items */
+export interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
 }

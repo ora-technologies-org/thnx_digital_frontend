@@ -1,251 +1,121 @@
 import { useMutation } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import { forgotPasswordService } from "../services/forgotPasswordService";
 
-// ===== TYPES =====
-/**
- * Password recovery flow steps
- */
-export enum ForgotPasswordStep {
-  REQUEST_OTP = "REQUEST_OTP",
-  VERIFY_OTP = "VERIFY_OTP",
-  RESET_PASSWORD = "RESET_PASSWORD",
-  COMPLETED = "COMPLETED",
+// Define error response type
+interface ErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
 }
 
-/**
- * API error response structure
- */
-interface ApiErrorResponse {
-  message?: string;
-  error?: string;
-}
-
-/**
- * API success response structure
- */
-interface ApiSuccessResponse {
-  message?: string;
-  data?: unknown;
-}
-
-/**
- * Request parameters for OTP verification
- */
-interface VerifyOtpParams {
-  email: string;
-  otp: string;
-}
-
-/**
- * Request parameters for password reset
- */
-interface ResetPasswordParams {
-  email: string;
-  otp: string;
-  password: string;
-  confirmPassword: string;
-}
-
-/**
- * Operation result with status and optional message
- */
-interface OperationResult {
-  success: boolean;
+// Define success response type
+interface SuccessResponse {
   message?: string;
 }
 
-// ===== HELPERS =====
-/**
- * Extract error message from API error
- * Uses generic messages to prevent information leakage
- */
-const getErrorMessage = (error: unknown, fallback: string): string => {
-  if (error instanceof AxiosError) {
-    const data = error.response?.data as ApiErrorResponse | undefined;
-    // Return generic messages for security (prevents email enumeration)
-    return data?.message || fallback;
-  }
-  return fallback;
-};
-
-/**
- * Development-only logging
- */
-const devLog = (message: string, data?: unknown) => {
-  if (import.meta.env.DEV) {
-    console.log(message, data || "");
-  }
-};
-
-const devError = (message: string, error?: unknown) => {
-  if (import.meta.env.DEV) {
-    console.error(message, error || "");
-  }
-};
-
-// ===== CONSTANTS =====
-/**
- * Generic error messages to prevent information leakage
- */
-const ERROR_MESSAGES = {
-  REQUEST_OTP: "Unable to process request. Please try again later.",
-  VERIFY_OTP: "Verification failed. Please check your code and try again.",
-  RESET_PASSWORD: "Unable to reset password. Please try again.",
-} as const;
-
-const SUCCESS_MESSAGES = {
-  REQUEST_OTP: "Verification code sent successfully!",
-  VERIFY_OTP: "Code verified successfully!",
-  RESET_PASSWORD: "Password reset successfully!",
-} as const;
-
-// ===== HOOK =====
 export const useForgotPassword = () => {
   /**
    * Mutation for requesting OTP
-   * Backend must enforce:
-   * - Rate limiting (e.g., max 3 requests per hour per email)
-   * - Email validation
-   * - OTP expiry (e.g., 5-10 minutes)
+   * Sends verification code to the provided email address
    */
-  const requestOtpMutation = useMutation<
-    ApiSuccessResponse,
-    AxiosError,
-    string
-  >({
+  const requestOtpMutation = useMutation({
     mutationFn: (email: string) => forgotPasswordService.getOtp(email),
-    onSuccess: (data) => {
-      devLog("OTP requested successfully", { hasData: !!data });
+    onSuccess: (data: SuccessResponse) => {
+      toast.success(data.message || "OTP sent successfully!");
     },
-    onError: (error) => {
-      devError("OTP request failed", {
-        status: error.response?.status,
-      });
+    onError: (error: ErrorResponse) => {
+      toast.error(error.response?.data?.message || "Failed to send OTP");
     },
   });
 
   /**
    * Mutation for verifying OTP
-   * Backend must enforce:
-   * - Max attempts limit (e.g., 5 attempts per OTP)
-   * - OTP expiry validation
-   * - Account lockout after max attempts
+   * Validates the OTP code against the email
    */
-  const verifyOtpMutation = useMutation<
-    ApiSuccessResponse,
-    AxiosError,
-    VerifyOtpParams
-  >({
-    mutationFn: ({ email, otp }: VerifyOtpParams) =>
+  const verifyOtpMutation = useMutation({
+    mutationFn: ({ email, otp }: { email: string; otp: string }) =>
       forgotPasswordService.verifyOtp(email, otp),
-    onSuccess: (data) => {
-      devLog("OTP verified successfully", { hasData: !!data });
+    onSuccess: (data: SuccessResponse) => {
+      toast.success(data.message || "OTP verified!");
     },
-    onError: (error) => {
-      devError("OTP verification failed", {
-        status: error.response?.status,
-      });
+    onError: (error: ErrorResponse) => {
+      toast.error(error.response?.data?.message || "Invalid OTP");
     },
   });
 
   /**
    * Mutation for resetting password
-   * Backend must enforce:
-   * - Strong password requirements
-   * - OTP re-validation
-   * - Single-use OTP tokens
-   * - Password history checks
+   * Updates user's password after successful OTP verification
    */
-  const resetPasswordMutation = useMutation<
-    ApiSuccessResponse,
-    AxiosError,
-    ResetPasswordParams
-  >({
-    mutationFn: (params: ResetPasswordParams) =>
+  const resetPasswordMutation = useMutation({
+    mutationFn: (params: {
+      email: string;
+      otp: string;
+      password: string;
+      confirmPassword: string;
+    }) =>
       forgotPasswordService.resetPassword(
         params.email,
         params.otp,
         params.password,
         params.confirmPassword,
       ),
-    onSuccess: (data) => {
-      devLog("Password reset successfully", { hasData: !!data });
+    onSuccess: (data: SuccessResponse) => {
+      toast.success(data.message || "Password reset successfully!");
     },
-    onError: (error) => {
-      devError("Password reset failed", {
-        status: error.response?.status,
-      });
+    onError: (error: ErrorResponse) => {
+      toast.error(error.response?.data?.message || "Failed to reset password");
     },
   });
 
   /**
-   * Request OTP for email
-   * Returns structured result for component to handle UI feedback
+   * Wrapper function for requesting OTP
+   * Returns a Promise that resolves to boolean indicating success
    */
-  const requestOtp = async (email: string): Promise<OperationResult> => {
+  const requestOtp = async (email: string): Promise<boolean> => {
     try {
-      const response = await requestOtpMutation.mutateAsync(email);
-      return {
-        success: true,
-        message: response.message || SUCCESS_MESSAGES.REQUEST_OTP,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: getErrorMessage(error, ERROR_MESSAGES.REQUEST_OTP),
-      };
+      await requestOtpMutation.mutateAsync(email);
+      return true;
+    } catch {
+      return false;
     }
   };
 
   /**
-   * Verify OTP code
-   * Returns structured result for component to handle UI feedback
+   * Wrapper function for verifying OTP
+   * Returns a Promise that resolves to boolean indicating success
    */
-  const verifyOtp = async (
-    email: string,
-    otp: string,
-  ): Promise<OperationResult> => {
+  const verifyOtp = async (email: string, otp: string): Promise<boolean> => {
     try {
-      const response = await verifyOtpMutation.mutateAsync({ email, otp });
-      return {
-        success: true,
-        message: response.message || SUCCESS_MESSAGES.VERIFY_OTP,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: getErrorMessage(error, ERROR_MESSAGES.VERIFY_OTP),
-      };
+      await verifyOtpMutation.mutateAsync({ email, otp });
+      return true;
+    } catch {
+      return false;
     }
   };
 
   /**
-   * Reset password with verified OTP
-   * Returns structured result for component to handle UI feedback
+   * Wrapper function for resetting password
+   * Returns a Promise that resolves to boolean indicating success
    */
   const resetPassword = async (
     email: string,
     otp: string,
     password: string,
     confirmPassword: string,
-  ): Promise<OperationResult> => {
+  ): Promise<boolean> => {
     try {
-      const response = await resetPasswordMutation.mutateAsync({
+      await resetPasswordMutation.mutateAsync({
         email,
         otp,
         password,
         confirmPassword,
       });
-      return {
-        success: true,
-        message: response.message || SUCCESS_MESSAGES.RESET_PASSWORD,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: getErrorMessage(error, ERROR_MESSAGES.RESET_PASSWORD),
-      };
+      return true;
+    } catch {
+      return false;
     }
   };
 
@@ -253,66 +123,54 @@ export const useForgotPassword = () => {
    * Reset all mutation states
    * Useful when navigating away or restarting the flow
    */
-  const resetState = () => {
-    requestOtpMutation.reset();
-    verifyOtpMutation.reset();
-    resetPasswordMutation.reset();
-  };
+  // const resetState = () => {
+  //   requestOtpMutation.reset();
+  //   verifyOtpMutation.reset();
+  //   resetPasswordMutation.reset();
+  // };
 
   /**
    * Determine current step based on mutation states
    */
-  const getCurrentStep = (): ForgotPasswordStep => {
-    if (resetPasswordMutation.isSuccess) {
-      return ForgotPasswordStep.COMPLETED;
-    }
-    if (verifyOtpMutation.isSuccess) {
-      return ForgotPasswordStep.RESET_PASSWORD;
-    }
-    if (requestOtpMutation.isSuccess) {
-      return ForgotPasswordStep.VERIFY_OTP;
-    }
-    return ForgotPasswordStep.REQUEST_OTP;
-  };
+  // const getCurrentStep = (): ForgotPasswordStep => {
+  //   if (resetPasswordMutation.isSuccess) {
+  //     return ForgotPasswordStep.COMPLETED;
+  //   }
+  //   if (verifyOtpMutation.isSuccess) {
+  //     return ForgotPasswordStep.RESET_PASSWORD;
+  //   }
+  //   if (requestOtpMutation.isSuccess) {
+  //     return ForgotPasswordStep.VERIFY_OTP;
+  //   }
+  //   return ForgotPasswordStep.REQUEST_OTP;
+  // };
 
   return {
-    // Action methods - return OperationResult for component to handle UI
+    // Async wrapper functions that return Promises
     requestOtp,
     verifyOtp,
     resetPassword,
-    resetState,
 
-    // Current step in the flow
-    currentStep: getCurrentStep(),
-
-    // Combined loading state
+    // Combined loading state - true if any mutation is in progress
     isLoading:
       requestOtpMutation.isPending ||
       verifyOtpMutation.isPending ||
       resetPasswordMutation.isPending,
 
-    // Granular loading states for each step
-    loadingStates: {
-      isRequestingOtp: requestOtpMutation.isPending,
-      isVerifyingOtp: verifyOtpMutation.isPending,
-      isResettingPassword: resetPasswordMutation.isPending,
-    },
+    // Individual mutation states for granular control
+    isRequestingOtp: requestOtpMutation.isPending,
+    isVerifyingOtp: verifyOtpMutation.isPending,
+    isResettingPassword: resetPasswordMutation.isPending,
 
-    // Success states for each step
-    successStates: {
-      otpRequested: requestOtpMutation.isSuccess,
-      otpVerified: verifyOtpMutation.isSuccess,
-      passwordReset: resetPasswordMutation.isSuccess,
-    },
+    // Success state for password reset (used to show success UI)
+    resetSuccess: resetPasswordMutation.isSuccess,
 
-    // Error states (for advanced error handling if needed)
-    errorStates: {
-      requestOtpError: requestOtpMutation.error,
-      verifyOtpError: verifyOtpMutation.error,
-      resetPasswordError: resetPasswordMutation.error,
-    },
+    // Error states from TanStack Query
+    requestOtpError: requestOtpMutation.error,
+    verifyOtpError: verifyOtpMutation.error,
+    resetPasswordError: resetPasswordMutation.error,
 
-    // Raw mutations (for advanced usage like checking mutation data)
+    // Raw mutation objects for advanced usage
     mutations: {
       requestOtp: requestOtpMutation,
       verifyOtp: verifyOtpMutation,

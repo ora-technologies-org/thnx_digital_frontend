@@ -1,24 +1,33 @@
-import { useQuery } from '@tanstack/react-query';
-import { giftCardService } from '../services/giftCardService';
+import { useQuery } from "@tanstack/react-query";
+import { giftCardService } from "../services/giftCardService";
 
 export const useGiftCards = () => {
   return useQuery({
-    queryKey: ['giftCards'],
+    queryKey: ["giftCards"],
     queryFn: giftCardService.getMyGiftCards,
   });
 };
 
 export const useGiftCard = (id: string) => {
   return useQuery({
-    queryKey: ['giftCard', id],
+    queryKey: ["giftCard", id],
     queryFn: () => giftCardService.getGiftCard(id),
     enabled: !!id,
   });
 };
 
+export const useMerchantGiftCards = (userId: string) => {
+  return useQuery({
+    queryKey: ["giftCards", userId],
+    queryFn: () => giftCardService.getGiftCards(userId),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useActiveGiftCards = () => {
   return useQuery({
-    queryKey: ['activeGiftCards'],
+    queryKey: ["activeGiftCards"],
     queryFn: giftCardService.getActiveGiftCards,
   });
 };

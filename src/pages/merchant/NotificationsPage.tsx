@@ -27,10 +27,13 @@ const NotificationsPage: React.FC = () => {
   } = useNotifications({ limit: 20 });
 
   // Connect to socket for real-time updates
-  const { isConnected, connectionStatus } = useNotificationSocket({
+  const { isConnected } = useNotificationSocket({
     enabled: true,
   });
-  console.log("", connectionStatus);
+
+  // Fixed: Changed connectionStatus to isConnected
+  console.log("Socket connection status:", isConnected);
+
   const hasNotifications = notifications.length > 0;
   const hasUnread = notifications.some((n) => !n.isRead);
 
@@ -65,7 +68,7 @@ const NotificationsPage: React.FC = () => {
               <button
                 onClick={() => refresh()}
                 disabled={isFetching}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw
                   className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`}
@@ -77,7 +80,7 @@ const NotificationsPage: React.FC = () => {
                 <button
                   onClick={() => markAllAsRead()}
                   disabled={isMarkingAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isMarkingAllAsRead ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

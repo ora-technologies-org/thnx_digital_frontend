@@ -1,43 +1,60 @@
-import React from 'react';
-import { Download, Share2, Printer, Mail } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../shared/components/ui/Card';
-import { Button } from '../../../shared/components/ui/Button';
-import { Badge } from '../../../shared/components/ui/Badge';
-import type { PurchasedGiftCard } from '../types/purchase.types';
-import { formatCurrency, formatDate, downloadFile } from '../../../shared/utils/helpers';
+import React from "react";
+import { Download, Share2, Printer, Mail } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../shared/components/ui/Card";
+import { Button } from "../../../shared/components/ui/Button";
+import { Badge } from "../../../shared/components/ui/Badge";
+import type { PurchasedGiftCard } from "../types/purchase.types";
+import {
+  formatCurrency,
+  formatDate,
+  downloadFile,
+} from "../../../shared/utils/helpers";
 
 interface QRCodeDisplayProps {
   purchase: PurchasedGiftCard;
 }
 
 export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ purchase }) => {
+  /**
+   * Downloads the QR code image to user's device
+   */
   const handleDownload = () => {
     downloadFile(purchase.qrCodeImage, `gift-card-${purchase.qrCode}.png`);
   };
-
+  /**
+   * Shares QR code using native share API (mobile) or falls back to download
+   */
   const handleShare = async () => {
     if (navigator.share) {
       try {
         // Convert base64 to blob
         const base64Response = await fetch(purchase.qrCodeImage);
         const blob = await base64Response.blob();
-        const file = new File([blob], 'gift-card.png', { type: 'image/png' });
+        const file = new File([blob], "gift-card.png", { type: "image/png" });
 
         await navigator.share({
-          title: 'My Gift Card',
+          title: "My Gift Card",
           text: `Gift Card Balance: ${formatCurrency(purchase.currentBalance)}`,
           files: [file],
         });
       } catch (error) {
-        console.log('Share cancelled or failed');
+        console.log("Share cancelled or failed", error);
       }
     } else {
       handleDownload();
     }
   };
-
+  /**
+   * Opens a new window with printable gift card voucher
+   * Creates a clean, printer-friendly HTML document
+   */
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -105,7 +122,9 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ purchase }) => {
         </div>
 
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg mb-6">
-          <p className="text-sm text-gray-600 text-center mb-2">Current Balance</p>
+          <p className="text-sm text-gray-600 text-center mb-2">
+            Current Balance
+          </p>
           <p className="text-4xl font-bold text-green-600 text-center">
             {formatCurrency(purchase.currentBalance)}
           </p>
@@ -126,7 +145,9 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ purchase }) => {
           </div>
           <div className="flex justify-between py-2 border-b border-gray-200">
             <span className="text-gray-600">Expires:</span>
-            <span className="font-medium">{formatDate(purchase.expiresAt)}</span>
+            <span className="font-medium">
+              {formatDate(purchase.expiresAt)}
+            </span>
           </div>
         </div>
 
@@ -151,8 +172,9 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ purchase }) => {
 
         <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
           <p className="text-sm text-yellow-800">
-            <strong>Important:</strong> Save this QR code! You can use it multiple times at any{' '}
-            {purchase.merchant.businessName} location until the balance reaches ₹0.
+            <strong>Important:</strong> Save this QR code! You can use it
+            multiple times at any {purchase.merchant.businessName} location
+            until the balance reaches ₹0.
           </p>
         </div>
       </CardContent>

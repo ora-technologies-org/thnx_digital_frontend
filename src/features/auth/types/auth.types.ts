@@ -3,9 +3,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'USER' | 'MERCHANT' | 'ADMIN';
+  role: "USER" | "MERCHANT" | "ADMIN";
   isVerified: boolean;
   merchantProfile?: MerchantProfile;
+  isFirstTime?: boolean;
 }
 
 export interface MerchantProfile {
@@ -26,7 +27,7 @@ export interface RegisterData {
   password: string;
   name: string;
   phone?: string;
-  businessName: string;
+  businessName?: string;
   businessType?: string;
   businessCategory?: string;
   city?: string;

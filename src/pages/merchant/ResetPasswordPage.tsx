@@ -1,8 +1,9 @@
+// src/pages/ResetPasswordPage.tsx - RESET PASSWORD PAGE! 🔐
+
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, CheckCircle, Gift, Eye, EyeOff, Check } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
@@ -11,23 +12,11 @@ import { MagneticButton } from "../../shared/components/animated/MagneticButton"
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useForgotPassword } from "@/features/merchant/hooks/useForgotPssword";
 
-// Password validation with strength requirements
-const resetPasswordSchema = z
-  .object({
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+import {
+  resetPasswordSchema,
+  passwordRequirements,
+  type ResetPasswordFormData,
+} from "@/shared/utils/merchant";
 
 /**
  * Reset password with new password
@@ -36,7 +25,7 @@ export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Get email and OTP from previous one
+  // Get email and OTP from previous page
   const email = location.state?.email || "";
   const otp = location.state?.otp || "";
 
@@ -47,25 +36,10 @@ export const ResetPasswordPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
 
-  // Password strength requirements for visual feedback
-  const requirements = [
-    {
-      label: "At least 8 characters long",
-      test: (pwd: string) => pwd.length >= 8,
-    },
-    {
-      label: "Contains at least one uppercase letter",
-      test: (pwd: string) => /[A-Z]/.test(pwd),
-    },
-    {
-      label: "Contains at least one lowercase letter",
-      test: (pwd: string) => /[a-z]/.test(pwd),
-    },
-    {
-      label: "Contains at least one number",
-      test: (pwd: string) => /[0-9]/.test(pwd),
-    },
-  ];
+  // Debug: Log received state
+  React.useEffect(() => {
+    console.log("Reset Password Page - Received state:", { email, otp });
+  }, [email, otp]);
 
   const {
     register,
@@ -78,7 +52,7 @@ export const ResetPasswordPage: React.FC = () => {
 
   const password = useWatch({
     control,
-    name: "password",
+    name: "newPassword",
   });
 
   // Update password value for requirements checker
@@ -86,7 +60,7 @@ export const ResetPasswordPage: React.FC = () => {
     setPasswordValue(password || "");
   }, [password]);
 
-  /**setResetSuccess
+  /**
    * Submit new password to API
    */
   const onSubmit = async (data: ResetPasswordFormData) => {
@@ -99,14 +73,14 @@ export const ResetPasswordPage: React.FC = () => {
     console.log("Submitting reset password with:", {
       email,
       otp,
-      password: data.password,
+      password: data.newPassword,
       confirmPassword: data.confirmPassword,
     });
 
     const success = await resetPassword(
       email,
       otp,
-      data.password,
+      data.newPassword,
       data.confirmPassword,
     );
 
@@ -206,10 +180,9 @@ export const ResetPasswordPage: React.FC = () => {
                     label="New Password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    error={errors.password?.message}
-                    {...register("password")}
+                    error={errors.newPassword?.message}
+                    {...register("newPassword")}
                     className="transition-all focus:scale-[1.02] pr-12"
-                    icon={<Lock className="w-5 h-5 text-gray-400" />}
                   />
                   <button
                     type="button"
@@ -238,7 +211,6 @@ export const ResetPasswordPage: React.FC = () => {
                     error={errors.confirmPassword?.message}
                     {...register("confirmPassword")}
                     className="transition-all focus:scale-[1.02] pr-12"
-                    icon={<Lock className="w-5 h-5 text-gray-400" />}
                   />
                   <button
                     type="button"
@@ -262,7 +234,7 @@ export const ResetPasswordPage: React.FC = () => {
                 >
                   <p className="font-medium mb-3">Password requirements:</p>
                   <ul className="space-y-2">
-                    {requirements.map((req, index) => {
+                    {passwordRequirements.map((req, index) => {
                       const isMet = req.test(passwordValue);
                       return (
                         <motion.li

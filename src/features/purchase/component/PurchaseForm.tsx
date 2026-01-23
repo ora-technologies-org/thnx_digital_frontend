@@ -1,14 +1,14 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Input } from '../../../shared/components/ui/Input';
-import { Button } from '../../../shared/components/ui/Button';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Input } from "../../../shared/components/ui/Input";
+import { Button } from "../../../shared/components/ui/Button";
 
 const purchaseSchema = z.object({
-  customerName: z.string().min(2, 'Name must be at least 2 characters'),
-  customerEmail: z.string().email('Invalid email address'),
-  customerPhone: z.string().min(10, 'Phone must be at least 10 digits'),
+  customerName: z.string().min(2, "Name must be at least 2 characters"),
+  customerEmail: z.string().email("Invalid email address"),
+  customerPhone: z.string().min(10, "Phone must be at least 10 digits"),
   paymentMethod: z.string().optional(),
   transactionId: z.string().optional(),
 });
@@ -26,6 +26,9 @@ export const PurchaseForm: React.FC<PurchaseFormProps> = ({
   isLoading = false,
   giftCardPrice,
 }) => {
+  // Generate the default transaction ID safely
+  const [defaultTransactionId] = React.useState(() => "TXN" + Date.now());
+
   const {
     register,
     handleSubmit,
@@ -33,8 +36,8 @@ export const PurchaseForm: React.FC<PurchaseFormProps> = ({
   } = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
-      paymentMethod: 'UPI',
-      transactionId: 'TXN' + Date.now(),
+      paymentMethod: "UPI",
+      transactionId: defaultTransactionId,
     },
   });
 
@@ -49,7 +52,7 @@ export const PurchaseForm: React.FC<PurchaseFormProps> = ({
         label="Full Name"
         placeholder="John Doe"
         error={errors.customerName?.message}
-        {...register('customerName')}
+        {...register("customerName")}
       />
 
       <Input
@@ -57,7 +60,7 @@ export const PurchaseForm: React.FC<PurchaseFormProps> = ({
         type="email"
         placeholder="your@email.com"
         error={errors.customerEmail?.message}
-        {...register('customerEmail')}
+        {...register("customerEmail")}
       />
 
       <Input
@@ -65,7 +68,7 @@ export const PurchaseForm: React.FC<PurchaseFormProps> = ({
         type="tel"
         placeholder="+919876543210"
         error={errors.customerPhone?.message}
-        {...register('customerPhone')}
+        {...register("customerPhone")}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -73,14 +76,14 @@ export const PurchaseForm: React.FC<PurchaseFormProps> = ({
           label="Payment Method"
           placeholder="UPI, Card, etc."
           error={errors.paymentMethod?.message}
-          {...register('paymentMethod')}
+          {...register("paymentMethod")}
         />
 
         <Input
           label="Transaction ID (Optional)"
           placeholder="TXN123456"
           error={errors.transactionId?.message}
-          {...register('transactionId')}
+          {...register("transactionId")}
         />
       </div>
 

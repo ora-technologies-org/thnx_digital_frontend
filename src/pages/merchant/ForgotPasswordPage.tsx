@@ -1,3 +1,4 @@
+// src/features/auth/pages/ForgotPasswordPage.tsx
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -8,40 +9,44 @@ import { Mail, ArrowLeft, Gift } from "lucide-react";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
-
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useForgotPassword } from "@/features/merchant/hooks/useForgotPssword";
+import { forgotPasswordSchema } from "@/shared/utils/merchant";
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
-});
+// Email validation schema
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
+/**
+ *Collect email and send OTP
+ */
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
+
   const { requestOtp, isLoading } = useForgotPassword();
 
+  // React Hook Form for validation
   const {
     register,
     handleSubmit,
     formState: { errors },
-  
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
+  /**
+   * Send OTP to email and navigate to verification page
+   */
   const onSubmit = async (data: ForgotPasswordFormData) => {
     const success = await requestOtp(data.email);
     if (success) {
-      // Automatically navigate to verify OTP page after successful OTP request
+      // Pass email to next page via route state
       navigate("/verify-otp", { state: { email: data.email } });
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
       <motion.div
         className="absolute top-20 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
         animate={{
@@ -65,7 +70,7 @@ export const ForgotPasswordPage: React.FC = () => {
         animate="visible"
         variants={staggerContainer}
       >
-        {/* Header */}
+        {/* Header with icon and title */}
         <motion.div variants={fadeInUp} className="text-center mb-8">
           <motion.div
             className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-xl"
@@ -98,6 +103,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 password.
               </motion.p>
 
+              {/* Email input field */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -110,10 +116,10 @@ export const ForgotPasswordPage: React.FC = () => {
                   error={errors.email?.message}
                   {...register("email")}
                   className="transition-all focus:scale-[1.02]"
-                  icon={<Mail className="w-5 h-5 text-gray-400" />}
                 />
               </motion.div>
 
+              {/* Submit button with loading state from React Query */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -148,6 +154,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 </MagneticButton>
               </motion.div>
 
+              {/* Back to login link */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -166,7 +173,7 @@ export const ForgotPasswordPage: React.FC = () => {
           </Card>
         </motion.div>
 
-        {/* Help Link */}
+        {/* Support link */}
         <motion.div variants={fadeInUp} className="mt-6 text-center">
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
             <div className="p-4">

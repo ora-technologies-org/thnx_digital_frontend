@@ -1,68 +1,46 @@
-// src/pages/auth/LoginPage.tsx
-import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion, useReducedMotion, Variant } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import {
   LogIn,
   Mail,
   Lock,
   ArrowRight,
   Gift,
-  AlertCircle,
   Eye,
   EyeOff,
+  AlertTriangle,
+  AlertCircle,
 } from "lucide-react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { Card } from "../../shared/components/ui/Card";
 import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
 import { useAuth } from "../../features/auth/hooks/useAuth";
+import { useAppSelector } from "../../app/hooks";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
+import { loginSchema } from "@/shared/utils/register";
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 // ===== CONSTANTS =====
+const FEATURE_FLAGS = {
+  ENABLE_REMEMBER_ME: true,
+  ENABLE_GOOGLE_LOGIN: true,
+  ENABLE_ONE_TAP: false,
+};
+
 const ROUTES = {
   FORGOT_PASSWORD: "/forgot-password",
   REGISTER: "/register",
   BROWSE: "/browse",
-} as const;
+};
 
-const VALIDATION_RULES = {
-  PASSWORD_MIN_LENGTH: 8,
-  PASSWORD_PATTERN: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
-  EMAIL_MAX_LENGTH: 254,
-} as const;
-
-const FEATURE_FLAGS = {
-  ENABLE_GOOGLE_LOGIN: import.meta.env.VITE_ENABLE_GOOGLE_LOGIN !== "false",
-  ENABLE_ONE_TAP: import.meta.env.VITE_ENABLE_GOOGLE_ONE_TAP === "true",
-  ENABLE_REMEMBER_ME: import.meta.env.VITE_ENABLE_REMEMBER_ME !== "false",
-} as const;
-
-// ===== VALIDATION SCHEMA =====
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Invalid email address")
-    .max(VALIDATION_RULES.EMAIL_MAX_LENGTH, "Email is too long")
-    .transform((val) => val.trim().toLowerCase()),
-  password: z
-    .string()
-    .min(
-      VALIDATION_RULES.PASSWORD_MIN_LENGTH,
-      `Password must be at least ${VALIDATION_RULES.PASSWORD_MIN_LENGTH} characters`,
-    )
-    .regex(
-      VALIDATION_RULES.PASSWORD_PATTERN,
-      "Password must contain uppercase, lowercase, number, and special character",
-    ),
-  rememberMe: z.boolean().optional(),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+// ===== HELPER FUNCTIONS =====
+const getAnimationVariants = (variant: Variants) => variant;
 
 // ===== HOOKS =====
 const useCapsLockDetection = () => {
@@ -87,15 +65,46 @@ const useCapsLockDetection = () => {
   return isCapsLockOn;
 };
 
+const useReducedMotion = () => {
+  // Use useMemo to calculate initial state only once
+  const initialMotionPreference = useMemo(() => {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  const [shouldReduceMotion, setShouldReduceMotion] = useState(
+    initialMotionPreference,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const handleChange = (event: MediaQueryListEvent) => {
+      setShouldReduceMotion(event.matches);
+    };
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  return shouldReduceMotion;
+};
+
 // ===== MAIN COMPONENT =====
 export const LoginPage: React.FC = () => {
-  const { login, loginWithGoogle, loadingStates } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const isCapsLockOn = useCapsLockDetection();
   const shouldReduceMotion = useReducedMotion();
-  const emailInputRef = useRef<HTMLInputElement>(null);
+  const { login, loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const {
+    isAuthenticated,
+    user,
+    error: authError,
+    loading,
+  } = useAppSelector((state) => state.auth);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     register,
@@ -110,74 +119,84 @@ export const LoginPage: React.FC = () => {
     },
   });
 
-  // Destructure email register to handle ref properly
+  // Get register props for email field
   const { ref: emailRegisterRef, ...emailRegisterProps } = register("email");
 
-  // Auto-focus email field on mount
+  // Derive loading states
+  const loadingStates = {
+    isLoggingIn: loading,
+  };
+  const isFormLoading = loading || isGoogleLoading;
+
+  // ==================== AUTO REDIRECT AFTER LOGIN ====================
   useEffect(() => {
-    emailInputRef.current?.focus();
-  }, []);
+    if (isAuthenticated && user) {
+      // ✅ CHECK FOR FIRST-TIME LOGIN
+      if (user.isFirstTime === true) {
+        console.log(
+          "🔐 First-time login detected, redirecting to change password",
+        );
+        navigate("/change-password", {
+          replace: true,
+          state: { isFirstTime: true },
+        });
+        return; // Stop further execution
+      }
 
-  // Clear auth error when form validation errors change
-  // We use a ref to track the previous errors to avoid unnecessary effect runs
-  const prevErrorsRef = useRef(errors);
-  useEffect(() => {
-    if (prevErrorsRef.current !== errors && authError) {
-      setAuthError(null);
-    }
-    prevErrorsRef.current = errors;
-  }, [errors, authError]);
+      // Get the location user was trying to access before being redirected to login
+      const from = location.state?.from?.pathname;
+      const search = location.state?.from?.search || "";
 
-  const onSubmit = async (data: LoginFormData) => {
-    setAuthError(null);
-
-    try {
-      await login({
-        email: data.email,
-        password: data.password,
+      console.log("🔓 User authenticated, preparing redirect:", {
+        from,
+        search,
+        userRole: user.role,
+        isFirstTime: user.isFirstTime,
+        fullPath: from && search ? `${from}${search}` : from,
       });
 
-      // Note: Remember me logic should be handled in the auth hook
-      // storing refresh token appropriately based on this flag
-    } catch (err) {
-      console.error("Login error:", err);
-      setAuthError(
-        "Login failed. Please check your credentials and try again.",
-      );
+      // If user came from a protected route (like /merchant/scan?qr=XXX)
+      if (from && from !== "/login") {
+        const redirectPath = search ? `${from}${search}` : from;
+        console.log("↩️ Redirecting back to protected route:", redirectPath);
+        navigate(redirectPath, { replace: true });
+      } else {
+        // Default redirect based on role
+        console.log("🏠 No previous route, redirecting to default dashboard");
+        if (user.role === "MERCHANT") {
+          navigate("/merchant/dashboard", { replace: true });
+        } else if (user.role === "ADMIN") {
+          navigate("/admin/dashboard", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      }
     }
+  }, [isAuthenticated, user, navigate, location]);
+
+  const onSubmit = (data: LoginFormData) => {
+    login(data);
   };
 
+  // Google Login Handlers
   const handleGoogleSuccess = async (
     credentialResponse: CredentialResponse,
   ) => {
-    if (!credentialResponse.credential) {
-      setAuthError("Google login failed. Please try again.");
-      return;
-    }
-
-    setIsGoogleLoading(true);
-    setAuthError(null);
-
     try {
-      await loginWithGoogle(credentialResponse.credential);
-    } catch (err) {
-      console.error("Google login error:", err);
-      setAuthError("Google login failed. Please try again.");
+      setIsGoogleLoading(true);
+      if (loginWithGoogle && credentialResponse.credential) {
+        await loginWithGoogle(credentialResponse.credential);
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
     } finally {
       setIsGoogleLoading(false);
     }
   };
 
   const handleGoogleError = () => {
-    setAuthError("Google login failed. Please try again.");
+    console.error("Google login failed");
     setIsGoogleLoading(false);
-  };
-
-  const isFormLoading = loadingStates.isLoggingIn || isGoogleLoading;
-
-  // Animation variants that respect reduced motion
-  const getAnimationVariants = (variant: Variant) => {
-    return shouldReduceMotion ? {} : variant;
   };
 
   return (
@@ -297,52 +316,46 @@ export const LoginPage: React.FC = () => {
                 initial={shouldReduceMotion ? {} : { opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
+                className="relative"
               >
-                <div className="relative">
-                  <Input
-                    label="Password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    error={errors.password?.message}
-                    {...register("password")}
-                    disabled={isFormLoading}
-                    autoComplete="current-password"
-                    className="transition-all pr-12"
-                    icon={
-                      <Lock
-                        className="w-5 h-5 text-gray-400"
-                        aria-hidden="true"
-                      />
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
-                    disabled={isFormLoading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" aria-hidden="true" />
-                    ) : (
-                      <Eye className="w-5 h-5" aria-hidden="true" />
-                    )}
-                  </button>
-                </div>
-
-                {/* Caps Lock Warning */}
+                <Input
+                  label="Password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  error={errors.password?.message}
+                  {...register("password")}
+                  disabled={isFormLoading}
+                  autoComplete="current-password"
+                  className="transition-all focus:scale-[1.02] pr-12"
+                  icon={
+                    <Lock
+                      className="w-5 h-5 text-gray-400"
+                      aria-hidden="true"
+                    />
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-[38px] text-gray-400 hover:text-gray-600 transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
                 {isCapsLockOn && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-1 text-sm text-amber-600 flex items-center gap-1"
-                    role="alert"
+                    className="flex items-center gap-2 mt-2 text-amber-600 text-sm"
                   >
-                    <AlertCircle className="w-4 h-4" aria-hidden="true" />
-                    Caps Lock is on
-                  </motion.p>
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Caps Lock is on</span>
+                  </motion.div>
                 )}
               </motion.div>
 

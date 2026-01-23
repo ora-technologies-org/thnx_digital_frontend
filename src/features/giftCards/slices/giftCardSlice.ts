@@ -1,16 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { GiftCard } from '../types/giftCard.types';
-
-interface GiftCardState {
-  giftCards: GiftCard[];
-  selectedGiftCard: GiftCard | null;
-  isLoading: boolean;
-  error: string | null;
-  filters: {
-    search: string;
-    status: 'all' | 'active' | 'inactive' | 'expired';
-  };
-}
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { GiftCard, GiftCardState } from "../types/giftCard.types";
 
 const initialState: GiftCardState = {
   giftCards: [],
@@ -18,13 +7,13 @@ const initialState: GiftCardState = {
   isLoading: false,
   error: null,
   filters: {
-    search: '',
-    status: 'all',
+    search: "",
+    status: "all",
   },
 };
 
 const giftCardSlice = createSlice({
-  name: 'giftCards',
+  name: "giftCards",
   initialState,
   reducers: {
     setGiftCards: (state, action: PayloadAction<GiftCard[]>) => {
@@ -39,7 +28,9 @@ const giftCardSlice = createSlice({
       state.giftCards.unshift(action.payload);
     },
     updateGiftCard: (state, action: PayloadAction<GiftCard>) => {
-      const index = state.giftCards.findIndex((card) => card.id === action.payload.id);
+      const index = state.giftCards.findIndex(
+        (card) => card.id === action.payload.id,
+      );
       if (index !== -1) {
         state.giftCards[index] = action.payload;
       }
@@ -48,7 +39,9 @@ const giftCardSlice = createSlice({
       }
     },
     removeGiftCard: (state, action: PayloadAction<string>) => {
-      state.giftCards = state.giftCards.filter((card) => card.id !== action.payload);
+      state.giftCards = state.giftCards.filter(
+        (card) => card.id !== action.payload,
+      );
       if (state.selectedGiftCard?.id === action.payload) {
         state.selectedGiftCard = null;
       }
@@ -63,7 +56,10 @@ const giftCardSlice = createSlice({
     setSearchFilter: (state, action: PayloadAction<string>) => {
       state.filters.search = action.payload;
     },
-    setStatusFilter: (state, action: PayloadAction<'all' | 'active' | 'inactive' | 'expired'>) => {
+    setStatusFilter: (
+      state,
+      action: PayloadAction<"all" | "active" | "inactive" | "expired">,
+    ) => {
       state.filters.status = action.payload;
     },
     clearFilters: (state) => {
@@ -92,16 +88,18 @@ export const {
 export default giftCardSlice.reducer;
 
 // Selectors
-export const selectAllGiftCards = (state: { giftCards: GiftCardState }) => 
+export const selectAllGiftCards = (state: { giftCards: GiftCardState }) =>
   state.giftCards.giftCards;
 
-export const selectSelectedGiftCard = (state: { giftCards: GiftCardState }) => 
+export const selectSelectedGiftCard = (state: { giftCards: GiftCardState }) =>
   state.giftCards.selectedGiftCard;
 
-export const selectGiftCardFilters = (state: { giftCards: GiftCardState }) => 
+export const selectGiftCardFilters = (state: { giftCards: GiftCardState }) =>
   state.giftCards.filters;
 
-export const selectFilteredGiftCards = (state: { giftCards: GiftCardState }) => {
+export const selectFilteredGiftCards = (state: {
+  giftCards: GiftCardState;
+}) => {
   const { giftCards, filters } = state.giftCards;
   let filtered = [...giftCards];
 
@@ -111,22 +109,22 @@ export const selectFilteredGiftCards = (state: { giftCards: GiftCardState }) => 
     filtered = filtered.filter(
       (card) =>
         card.title.toLowerCase().includes(search) ||
-        card.description?.toLowerCase().includes(search)
+        card.description?.toLowerCase().includes(search),
     );
   }
 
   // Apply status filter
-  if (filters.status !== 'all') {
+  if (filters.status !== "all") {
     const now = new Date();
     filtered = filtered.filter((card) => {
       const isExpired = new Date(card.expiryDate) < now;
-      
+
       switch (filters.status) {
-        case 'active':
+        case "active":
           return card.isActive && !isExpired;
-        case 'inactive':
+        case "inactive":
           return !card.isActive;
-        case 'expired':
+        case "expired":
           return isExpired;
         default:
           return true;
