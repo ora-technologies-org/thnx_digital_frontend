@@ -13,14 +13,20 @@ import { jwtDecode } from "jwt-decode";
 import { changePassword } from "@/features/admin/services/resetPasswordService";
 import AdminLayout from "@/shared/components/layout/AdminLayout";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import {
-  fetchProfile,
-  clearUpdateSuccess,
-  clearError,
-  updateProfile,
-} from "@/features/auth/slices/adminprofileSlice";
+// import {
+//   fetchProfile,
+//   clearUpdateSuccess,
+//   clearError,
+//   updateProfile,
+// } from "@/features/auth/slices/adminprofileSlice";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
+import {
+  clearError,
+  clearUpdateSuccess,
+  fetchProfile,
+  updateProfile,
+} from "@/features/auth/slices/adminProfileSlice";
 
 interface DecodedToken {
   email: string;
