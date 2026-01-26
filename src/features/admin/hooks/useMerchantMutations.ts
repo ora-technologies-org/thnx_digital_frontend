@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { merchantService } from "../services/merchantService";
-import type { MerchantUser } from "@/features/admin/api/admin.api";
+// import type { MerchantUser } from "@/features/admin/api/admin.api";
 
 // CRITICAL FIX: Import the same query keys used in useAdmin
 import { adminQueryKeys } from "./useAdmin";
@@ -49,52 +49,92 @@ export const useMerchants = () => {
     refetchOnMount: true,
   });
 };
-
 export const useUpdateMerchant = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<
-    UpdateMerchantResponse,
-    ApiError,
-    { merchantId: string; formData: CreateMerchantForm }
-  >({
-    mutationFn: ({ merchantId, formData }) =>
-      merchantService.updateMerchant(merchantId, formData),
-    onSuccess: (data, variables) => {
-      console.log("✅ Update Success:", data);
-      console.log("✅ Updated Merchant ID:", variables.merchantId);
+  type UpdateMutationVariables = {
+    merchantId: string;
+    formData: CreateMerchantForm;
+  };
 
-      const updatedMerchant = data?.data?.merchantId || data?.merchant;
+  return useMutation<UpdateMerchantResponse, ApiError, UpdateMutationVariables>(
+    {
+      mutationFn: ({ merchantId, formData }) =>
+        merchantService.updateMerchant(merchantId, formData),
+      onSuccess: (data, variables) => {
+        console.log("✅ Update Success:", data);
+        console.log("✅ Updated Merchant ID:", variables.merchantId);
 
-      if (updatedMerchant) {
-        console.log("✅ Updated Merchant Data:", updatedMerchant);
+        const updatedMerchantId = data?.data?.merchantId;
 
-        queryClient.setQueryData<MerchantUser[]>(
-          adminQueryKeys.merchants(),
-          (oldData) => {
-            if (!oldData) return oldData;
-            console.log("🔄 Updating merchant in cache...");
-            return oldData.map((merchant) =>
-              merchant.id === updatedMerchant.id ? updatedMerchant : merchant,
-            );
-          },
-        );
+        if (updatedMerchantId) {
+          console.log("✅ Updated Merchant ID:", updatedMerchantId);
 
-        queryClient.invalidateQueries({
-          queryKey: adminQueryKeys.merchants(),
-          refetchType: "active",
-        });
-        queryClient.invalidateQueries({
-          queryKey: adminQueryKeys.pendingMerchants(),
-          refetchType: "active",
-        });
+          queryClient.invalidateQueries({
+            queryKey: adminQueryKeys.merchants(),
+            refetchType: "active",
+          });
+          queryClient.invalidateQueries({
+            queryKey: adminQueryKeys.pendingMerchants(),
+            refetchType: "active",
+          });
 
-        console.log("🔄 Forcing refetch after update...");
-        queryClient.refetchQueries({
-          queryKey: adminQueryKeys.merchants(),
-          type: "active",
-        });
-      }
+          console.log("🔄 Forcing refetch after update...");
+          queryClient.refetchQueries({
+            queryKey: adminQueryKeys.merchants(),
+            type: "active",
+          });
+        }
+      },
     },
-  });
+  );
 };
+
+// export const useUpdateMerchant = () => {
+//   const queryClient = useQueryClient();
+
+//   return useMutation<
+//     UpdateMerchantResponse,
+//     ApiError,
+//     { merchantId: string; formData: CreateMerchantForm }
+//   >({
+//     mutationFn: ({ merchantId, formData }) =>
+//       merchantService.updateMerchant(merchantId, formData),
+//     onSuccess: (data, variables) => {
+//       console.log("✅ Update Success:", data);
+//       console.log("✅ Updated Merchant ID:", variables.merchantId);
+
+//       const updatedMerchant = data?.data?.merchantId || data?.merchant;
+
+//       if (updatedMerchant) {
+//         console.log("✅ Updated Merchant Data:", updatedMerchant);
+
+//         queryClient.setQueryData<MerchantUser[]>(
+//           adminQueryKeys.merchants(),
+//           (oldData) => {
+//             if (!oldData) return oldData;
+//             console.log("🔄 Updating merchant in cache...");
+//             return oldData.map((merchant) =>
+//               merchant.id === updatedMerchant.id ? updatedMerchant : merchant,
+//             );
+//           },
+//         );
+
+//         queryClient.invalidateQueries({
+//           queryKey: adminQueryKeys.merchants(),
+//           refetchType: "active",
+//         });
+//         queryClient.invalidateQueries({
+//           queryKey: adminQueryKeys.pendingMerchants(),
+//           refetchType: "active",
+//         });
+
+//         console.log("🔄 Forcing refetch after update...");
+//         queryClient.refetchQueries({
+//           queryKey: adminQueryKeys.merchants(),
+//           type: "active",
+//         });
+//       }
+//     },
+//   });
+// };

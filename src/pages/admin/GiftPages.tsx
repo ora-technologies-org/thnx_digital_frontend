@@ -31,6 +31,7 @@ import {
   filterCardsByPrice,
   getPaginationNumbers,
   getStatsData,
+  type PriceFilter,
 } from "@/shared/utils/admin";
 
 // Import unified types
@@ -710,7 +711,7 @@ const MerchantGiftCardsPage = ({
 }) => {
   const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [priceFilter, setPriceFilter] = useState("all");
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
 
   const { data, error, refetch, isLoading } = useQuery({
     queryKey: ["merchant-gift-cards", merchant.userId],
@@ -718,7 +719,10 @@ const MerchantGiftCardsPage = ({
     enabled: !!merchant.userId,
   });
 
-  const filteredCards = filterCardsByPrice(data?.giftCards || [], priceFilter);
+  const filteredCards = filterCardsByPrice(
+    (data?.giftCards || []) as GiftCard[],
+    priceFilter,
+  );
 
   if (error) {
     return (
@@ -779,7 +783,7 @@ const MerchantGiftCardsPage = ({
             </span>
             <select
               value={priceFilter}
-              onChange={(e) => setPriceFilter(e.target.value)}
+              onChange={(e) => setPriceFilter(e.target.value as PriceFilter)}
               className="px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none text-sm sm:text-base"
             >
               <option value="all">All Prices</option>
