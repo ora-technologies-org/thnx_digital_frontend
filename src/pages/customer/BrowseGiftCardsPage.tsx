@@ -1,25 +1,23 @@
 // src/pages/customer/BrowseGiftCardsPage.tsx - CUSTOMER PURCHASE PAGE! 🛍️
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ShoppingCart, Gift, Search, Filter } from 'lucide-react';
-import { useGiftCards } from '../../features/giftCards/hooks/useGiftCards';
-import { Spinner } from '../../shared/components/ui/Spinner';
-import type { GiftCard } from '../../features/giftCards/types/giftCard.types';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Gift, Search } from "lucide-react";
+import { useGiftCards } from "../../features/giftCards/hooks/useGiftCards";
+import { Spinner } from "../../shared/components/ui/Spinner";
+import type { GiftCard } from "../../features/giftCards/types/giftCard.types";
 
-import { CustomerGiftCardCard } from '@/features/giftCards/components/CustomerGiftCardCard';
-import { PurchaseModal } from '@/features/purchase/component/PurchaseModal';
-
-
+import { CustomerGiftCardCard } from "@/features/giftCards/components/CustomerGiftCardCard";
+import { PurchaseModal } from "@/features/purchase/component/PurchaseModal";
 
 export const BrowseGiftCardsPage: React.FC = () => {
   const { data, isLoading } = useGiftCards();
   const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const giftCards = data?.data.giftCards || [];
 
-  const filteredCards = giftCards.filter(card => {
+  const filteredCards = giftCards.filter((card) => {
     if (!searchQuery) return card.isActive;
     return (
       card.isActive &&
@@ -98,12 +96,12 @@ export const BrowseGiftCardsPage: React.FC = () => {
           >
             <Gift className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {searchQuery ? 'No gift cards found' : 'No gift cards available'}
+              {searchQuery ? "No gift cards found" : "No gift cards available"}
             </h3>
             <p className="text-gray-600">
               {searchQuery
-                ? 'Try adjusting your search'
-                : 'Check back soon for new gift cards'}
+                ? "Try adjusting your search"
+                : "Check back soon for new gift cards"}
             </p>
           </motion.div>
         ) : (
@@ -115,10 +113,7 @@ export const BrowseGiftCardsPage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 + index * 0.05 }}
               >
-                <CustomerGiftCardCard
-                  giftCard={card}
-                  onBuyNow={handleBuyNow}
-                />
+                <CustomerGiftCardCard giftCard={card} onBuyNow={handleBuyNow} />
               </motion.div>
             ))}
           </div>

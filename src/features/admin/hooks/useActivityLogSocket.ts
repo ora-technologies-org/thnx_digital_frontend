@@ -118,9 +118,6 @@
 // };
 
 // export default useActivityLogSocket;
-// src/features/admin/hooks/useActivityLogSocket.ts
-
-// src/features/admin/hooks/useActivityLogSocket.ts
 
 // src/features/admin/hooks/useActivityLogSocket.ts
 
@@ -163,8 +160,8 @@ export const useActivityLogSocket = (
   const reconnect = useCallback(() => {
     const token = localStorage.getItem("accessToken");
     if (token) {
-      setConnectionStatus("connecting");
-      setError(null);
+      setSocketStatus("connecting");
+      setSocketError(null);
       disconnectSocket();
       connectSocket(token);
     }
@@ -175,8 +172,8 @@ export const useActivityLogSocket = (
       disconnectSocket();
       // Defer state updates to avoid synchronous setState in effect
       const timeoutId = setTimeout(() => {
-        setIsConnected(false);
-        setConnectionStatus("disconnected");
+        setSocketConnected(false);
+        setSocketStatus("disconnected");
       }, 0);
 
       return () => clearTimeout(timeoutId);
@@ -229,7 +226,6 @@ export const useActivityLogSocket = (
     }
 
     return () => {
-      clearTimeout(connectingTimeoutId);
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);

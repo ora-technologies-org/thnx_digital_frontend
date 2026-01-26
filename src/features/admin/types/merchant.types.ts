@@ -1,9 +1,11 @@
+import { GradientDirection } from "@/shared/types/giftCard.types";
+
 export interface GiftCard {
   id: string;
   merchantId: string;
   title: string;
   description?: string;
-  price: string;
+  price: number;
   balance?: number;
   cardNumber?: string;
   status: string;
@@ -80,7 +82,7 @@ export interface MerchantSetting {
   merchantId: string;
   primaryColor?: string;
   secondaryColor?: string;
-  gradientDirection?: string;
+  gradientDirection?: GradientDirection;
   fontFamily?: string;
   [key: string]: unknown;
 }
@@ -112,11 +114,7 @@ export interface GetMerchantsParams {
   page?: number;
   limit?: number;
   search?: string;
-  profileStatus?:
-    | "PENDING_VERIFICATION"
-    | "VERIFIED"
-    | "REJECTED"
-    | "INCOMPLETE";
+  status?: "PENDING_VERIFICATION" | "VERIFIED" | "REJECTED" | "INCOMPLETE";
   active?: boolean;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
@@ -135,6 +133,7 @@ export interface CreateMerchantResponse {
 
 export interface UpdateMerchantResponse {
   success: boolean;
+
   data: {
     merchantId: string;
     email: string;

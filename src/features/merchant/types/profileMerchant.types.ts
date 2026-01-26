@@ -141,6 +141,67 @@ export interface FormDataEntry {
   profileId?: string | number;
 }
 
+// ===== TYPES =====
+export interface CreateMerchantData {
+  email: string;
+  password: string;
+  name: string;
+  phone: string;
+  businessName: string;
+  businessRegistrationNumber: string;
+  taxId: string;
+  businessType: string;
+  businessCategory: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  businessPhone: string;
+  businessEmail: string;
+  website: string;
+  description: string;
+  bankName: string;
+  accountNumber: string;
+  accountHolderName: string;
+  ifscCode: string;
+  swiftCode: string;
+}
+
+export interface MerchantResponse {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  role: string;
+  isVerified: boolean;
+  businessProfile: {
+    businessName: string;
+    businessRegistrationNumber: string;
+    taxId: string;
+    businessType: string;
+    businessCategory: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    businessPhone: string;
+    businessEmail: string;
+    website: string;
+    description: string;
+  };
+  bankDetails: {
+    bankName: string;
+    accountNumber: string;
+    accountHolderName: string;
+    ifscCode: string;
+    swiftCode: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Error message structure for mutations
  */

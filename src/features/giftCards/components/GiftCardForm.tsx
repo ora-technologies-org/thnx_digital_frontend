@@ -51,7 +51,7 @@ export const GiftCardForm: React.FC<GiftCardFormProps> = ({
     if (initialData) {
       setValue("title", initialData.title);
       setValue("description", initialData.description || "");
-      setValue("price", parseFloat(initialData.price));
+      setValue("price", initialData.price);
       setValue("expiryDate", initialData.expiryDate.split("T")[0]);
     }
   }, [initialData, setValue]);

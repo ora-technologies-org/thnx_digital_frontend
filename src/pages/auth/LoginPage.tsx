@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, Variants } from "framer-motion";
@@ -24,7 +24,12 @@ import { useAppSelector } from "../../app/hooks";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { loginSchema } from "@/shared/utils/register";
 
-type LoginFormData = z.infer<typeof loginSchema>;
+// Extend the login schema to include rememberMe
+const extendedLoginSchema = loginSchema.extend({
+  rememberMe: z.boolean().optional(),
+});
+
+type LoginFormData = z.infer<typeof extendedLoginSchema>;
 
 // ===== CONSTANTS =====
 const FEATURE_FLAGS = {
@@ -100,7 +105,7 @@ export const LoginPage: React.FC = () => {
     isAuthenticated,
     user,
     error: authError,
-    loading,
+    isLoading: loading,
   } = useAppSelector((state) => state.auth);
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -111,7 +116,7 @@ export const LoginPage: React.FC = () => {
     handleSubmit,
     formState: { errors },
   } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(extendedLoginSchema),
     defaultValues: {
       email: "",
       password: "",
@@ -122,11 +127,9 @@ export const LoginPage: React.FC = () => {
   // Get register props for email field
   const { ref: emailRegisterRef, ...emailRegisterProps } = register("email");
 
-  // Derive loading states
-  const loadingStates = {
-    isLoggingIn: loading,
-  };
-  const isFormLoading = loading || isGoogleLoading;
+  // Derive loading states - safely check if loading exists
+  const isLoading = loading ?? false;
+  const isFormLoading = isLoading || isGoogleLoading;
 
   // ==================== AUTO REDIRECT AFTER LOGIN ====================
   useEffect(() => {
@@ -174,7 +177,8 @@ export const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, user, navigate, location]);
 
-  const onSubmit = (data: LoginFormData) => {
+  // Type-safe submit handler
+  const onSubmit: SubmitHandler<LoginFormData> = (data) => {
     login(data);
   };
 
@@ -401,13 +405,9 @@ export const LoginPage: React.FC = () => {
                   className="w-full"
                   type="submit"
                   disabled={isFormLoading}
-                  aria-label={
-                    loadingStates.isLoggingIn
-                      ? "Logging in, please wait"
-                      : "Login"
-                  }
+                  aria-label={isLoading ? "Logging in, please wait" : "Login"}
                 >
-                  {loadingStates.isLoggingIn ? (
+                  {isLoading ? (
                     <>
                       <motion.div
                         animate={shouldReduceMotion ? {} : { rotate: 360 }}

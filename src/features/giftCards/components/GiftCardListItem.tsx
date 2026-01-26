@@ -13,12 +13,14 @@ import {
   XCircle,
   ShoppingBag,
 } from "lucide-react";
-import type { GiftCard as GiftCardType } from "../types/giftCard.types";
-import type { GiftCardSettings } from "@/features/merchant/slices/giftCardSlice";
+import type {
+  GiftCardSettings,
+  GiftCard as GiftCardType,
+} from "../types/giftCard.types";
 
 export interface GiftCardListItemProps {
   giftCard: GiftCardType;
-  settings?: GiftCardSettings;
+  settings?: Partial<GiftCardSettings>;
   onEdit?: () => void;
   onDelete?: () => void;
   onDuplicate?: () => void;
@@ -254,7 +256,7 @@ export const GiftCardListItem: React.FC<GiftCardListItemProps> = ({
                 <div className="min-w-0">
                   <p className="text-xs text-blue-700 font-medium">Price</p>
                   <p className="text-sm font-bold text-blue-900 truncate">
-                    ₹{parseFloat(giftCard.price).toLocaleString()}
+                    ₹{giftCard.price.toLocaleString()}
                   </p>
                 </div>
               </div>

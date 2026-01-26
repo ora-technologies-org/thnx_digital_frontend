@@ -4,21 +4,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "../../../shared/components/ui/Input";
 import { Button } from "../../../shared/components/ui/Button";
-
-const purchaseSchema = z.object({
-  customerName: z.string().min(2, "Name must be at least 2 characters"),
-  customerEmail: z.string().email("Invalid email address"),
-  customerPhone: z.string().min(10, "Phone must be at least 10 digits"),
-  paymentMethod: z.string().optional(),
-  transactionId: z.string().optional(),
-});
+import { purchaseSchema } from "@/shared/utils/merchant";
 
 type PurchaseFormData = z.infer<typeof purchaseSchema>;
 
 interface PurchaseFormProps {
   onSubmit: (data: PurchaseFormData) => void;
   isLoading?: boolean;
-  giftCardPrice?: string;
+  giftCardPrice?: string | number;
 }
 
 export const PurchaseForm: React.FC<PurchaseFormProps> = ({
@@ -41,11 +34,17 @@ export const PurchaseForm: React.FC<PurchaseFormProps> = ({
     },
   });
 
+  // Convert price to string for display
+  const displayPrice =
+    typeof giftCardPrice === "number"
+      ? giftCardPrice.toString()
+      : giftCardPrice || "0";
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg mb-6">
         <p className="text-sm text-gray-600">Total Amount</p>
-        <p className="text-3xl font-bold text-blue-600">₹{giftCardPrice}</p>
+        <p className="text-3xl font-bold text-blue-600">₹{displayPrice}</p>
       </div>
 
       <Input

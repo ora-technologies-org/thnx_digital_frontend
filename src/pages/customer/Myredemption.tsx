@@ -1,7 +1,7 @@
-// GiftCardRedemption.jsx
+// GiftCardRedemption.tsx
 // Main component for displaying gift card redemption details
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, ReactElement } from "react";
 import {
   Gift,
   User,
@@ -23,15 +23,17 @@ import {
   getQRCodeFromURL,
   formatCurrency,
   formatDate,
+  GiftCardData,
+  StatusType,
 } from "./utils/giftcardutils";
 import { Header } from "@/shared/components/layout/Header";
 import { Spinner } from "@/shared/components/ui/Spinner";
 
 export default function GiftCardRedemption() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [qrCode, setQrCode] = useState("");
+  const [data, setData] = useState<GiftCardData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string>("");
 
   useEffect(() => {
     const urlQRCode = getQRCodeFromURL();
@@ -46,35 +48,41 @@ export default function GiftCardRedemption() {
     loadData(urlQRCode);
   }, []);
 
-  const loadData = async (qrCodeParam) => {
+  const loadData = async (qrCodeParam: string): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
       const result = await GiftCardService.fetchByQRCode(qrCodeParam);
 
-      if (result.success) {
-        setData(result.data);
+      if (
+        result &&
+        typeof result === "object" &&
+        "merchantData" in result &&
+        "giftcardHistory" in result
+      ) {
+        setData(result as GiftCardData);
       } else {
-        setError(result.message || "Failed to load gift card data");
+        setError("Invalid data format received from server");
       }
     } catch (err) {
-      setError(
-        err.message ||
-          "Failed to fetch gift card data. Please check the URL and try again.",
-      );
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch gift card data. Please check the URL and try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = (): void => {
     if (qrCode) {
       loadData(qrCode);
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: StatusType): string => {
     switch (status?.toUpperCase()) {
       case "ACTIVE":
         return "bg-emerald-100 text-emerald-700 border border-emerald-200";
@@ -89,7 +97,7 @@ export default function GiftCardRedemption() {
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: StatusType): ReactElement => {
     switch (status?.toUpperCase()) {
       case "ACTIVE":
         return <CheckCircle className="w-4 h-4" />;
@@ -193,11 +201,11 @@ export default function GiftCardRedemption() {
 
   const { merchantData, giftcardHistory } = data;
   const totalRedeemed = giftcardHistory.redemptions.reduce(
-    (sum, r) => sum + parseFloat(r.amount),
+    (sum, r) => sum + parseFloat(r.amount.toString()),
     0,
   );
   const usagePercentage = (
-    (totalRedeemed / parseFloat(giftcardHistory.purchaseAmount)) *
+    (totalRedeemed / parseFloat(giftcardHistory.purchaseAmount.toString())) *
     100
   ).toFixed(1);
 

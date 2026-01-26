@@ -1,13 +1,27 @@
-// src/utils/landingPageUtils.ts - LANDING PAGE UTILITIES! 📄
+// src/shared/utils/Landing.ts
 
 /**
  * Section data types
  */
 export interface SectionItem {
-  [key: string]: string | number | string[] | Record<string, unknown>;
+  [key: string]:
+    | string
+    | number
+    | string[]
+    | Record<string, unknown>
+    | boolean
+    | undefined;
 }
 
 export interface ItemsSection {
+  [key: string]:
+    | string
+    | number
+    | string[]
+    | Record<string, unknown>
+    | boolean
+    | undefined
+    | SectionItem[];
   title?: string;
   subtitle?: string;
   items: SectionItem[];
@@ -15,9 +29,36 @@ export interface ItemsSection {
 
 export type ArraySection = SectionItem[];
 
-export type ObjectSection = Record<string, unknown>;
+export type ObjectSection = {
+  [key: string]:
+    | string
+    | number
+    | string[]
+    | Record<string, unknown>
+    | boolean
+    | undefined;
+};
 
-export type SectionData = ItemsSection | ArraySection | ObjectSection;
+// Union type that accepts any landing page section structure
+export type SectionData =
+  | ItemsSection
+  | ArraySection
+  | ObjectSection
+  | Record<string, unknown>;
+
+/**
+ * Helper to convert any landing page section to SectionData
+ */
+export const toSectionData = <T>(data: T): SectionData => {
+  return data as unknown as SectionData;
+};
+
+/**
+ * Helper to convert SectionData back to specific type
+ */
+export const fromSectionData = <T>(data: SectionData): T => {
+  return data as unknown as T;
+};
 
 /**
  * Empty templates for different section types
@@ -121,7 +162,11 @@ export const formatValueForDisplay = (value: unknown): string => {
       .join(", ");
   }
 
-  if (typeof value === "string" || typeof value === "number") {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return String(value);
   }
 

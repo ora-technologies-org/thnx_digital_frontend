@@ -18,7 +18,7 @@ const initialFormData: CreateMerchantForm = {
   businessRegistrationNumber: "",
   taxId: "",
   businessType: "",
-  merchant: "",
+
   businessCategory: "",
 
   // Business Address

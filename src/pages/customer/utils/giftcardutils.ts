@@ -42,7 +42,7 @@ export const getQRCodeFromURL = () => {
  * @param {string} dateString - ISO date string
  * @returns {string} - Formatted date string
  */
-export const formatDate = (dateString) => {
+export const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -51,15 +51,57 @@ export const formatDate = (dateString) => {
     minute: "2-digit",
   });
 };
-
 /**
  * Format currency amount
  * @param {string|number} amount - Amount to format
  * @returns {string} - Formatted currency string
  */
-export const formatCurrency = (amount) => {
-  return `Rs ${parseFloat(amount).toLocaleString("en-US", {
+export const formatCurrency = (amount: string | number): string => {
+  const value = typeof amount === "string" ? parseFloat(amount) : amount;
+
+  return `Rs ${value.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 };
+// Type definitions
+interface Redemption {
+  amount: string | number;
+  redeemedAt: string;
+  notes?: string;
+  balanceBefore: string | number;
+  balanceAfter: string | number;
+}
+
+interface GiftCardHistory {
+  purchaseAmount: string | number;
+  currentBalance: string | number;
+  redemptions: Redemption[];
+  status: string;
+  paymentStatus: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  qrCode: string;
+  paymentMethod: string;
+  purchasedAt: string;
+  expiresAt: string;
+  lastUsedAt?: string;
+}
+
+interface MerchantData {
+  businessName: string;
+  merchantName: string;
+}
+
+export interface GiftCardData {
+  merchantData: MerchantData;
+  giftcardHistory: GiftCardHistory;
+}
+
+export type StatusType =
+  | "ACTIVE"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "PENDING"
+  | string;

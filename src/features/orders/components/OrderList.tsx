@@ -1,506 +1,340 @@
-// src/features/orders/components/OrdersList.tsx - WITH CREATE ORDER BUTTON! 🎯
-import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  Filter,
-  Download,
-  RefreshCw,
-  Eye,
-  Plus,
-  ShoppingBag,
-  DollarSign,
-  CheckCircle,
-  Clock,
-  User,
-  Mail,
-  Phone,
-  Package,
-} from "lucide-react";
-import { Button } from "../../../shared/components/ui/Button";
-import { Spinner } from "../../../shared/components/ui/Spinner";
-import { Badge } from "../../../shared/components/ui/Badge";
-import { useOrders } from "../hooks/useOrders";
-import { useCreateOrder } from "../hooks/useCreateOrder";
+// src/features/orders/api/orders.api.ts - COMPLETE FIXED VERSION
 
-import { CreateOrderModal } from "./CreateOrderModal";
-import type { Order, CreateOrderData } from "../types/order.types";
-import { OrderDetailModal } from "./OrderModal";
+import axios from "axios";
+import type {
+  OrdersResponse,
+  Order,
+  PurchaseVerification,
+  CreateOrderData,
+  PaymentStatus,
+} from "../types/order.types";
 
-type SortOption = "newest" | "oldest" | "amount-high" | "amount-low";
-type FilterOption = "all" | "completed" | "pending" | "failed";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
-export const OrdersList: React.FC = () => {
-  const { data, isLoading, refetch } = useOrders();
-  const createOrderMutation = useCreateOrder();
+// Helper to get auth token
+const getAuthToken = () => {
+  return localStorage.getItem("accessToken") || "";
+};
 
-  // UI State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
-  const [filterBy, setFilterBy] = useState<FilterOption>("all");
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // Memoize orders to prevent unnecessary re-renders
-  const orders = useMemo(() => data?.orders || [], [data?.orders]);
-
-  // Statistics
-  const stats = useMemo(() => {
-    const total = orders.length;
-    const completed = orders.filter(
-      (order) => order.status === "completed",
-    ).length;
-    const totalRevenue = orders
-      .filter((order) => order.status === "completed")
-      .reduce((sum, order) => sum + parseFloat(order.amount || "0"), 0);
-    const pending = orders.filter((order) => order.status === "pending").length;
-
-    return { total, completed, totalRevenue, pending };
-  }, [orders]);
-
-  // Filtered and sorted orders
-  const processedOrders = useMemo(() => {
-    let filtered = orders;
-
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (order) =>
-          order.customer?.name
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          order.customer?.email
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          order.giftCard?.title
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          order.orderId?.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
-
-    if (filterBy !== "all") {
-      filtered = filtered.filter((order) => order.status === filterBy);
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0).getTime();
-      const dateB = new Date(b.createdAt || 0).getTime();
-      const amountA = parseFloat(a.amount || "0");
-      const amountB = parseFloat(b.amount || "0");
-
-      if (sortBy === "newest") return dateB - dateA;
-      if (sortBy === "oldest") return dateA - dateB;
-      if (sortBy === "amount-high") return amountB - amountA;
-      if (sortBy === "amount-low") return amountA - amountB;
-      return 0;
-    });
-
-    return sorted;
-  }, [orders, searchQuery, filterBy, sortBy]);
-
-  const handleCreateOrder = (formData: CreateOrderData) => {
-    createOrderMutation.mutate(formData, {
-      onSuccess: () => {
-        setShowCreateModal(false);
-        refetch();
-      },
-    });
-  };
-
-  const handleViewDetails = (order: Order) => {
-    setSelectedOrder(order);
-    setShowDetailsModal(true);
-  };
-
-  const handleExport = () => {
-    if (orders.length === 0) return;
-
-    const csvContent = [
-      [
-        "Order ID",
-        "Customer Name",
-        "Email",
-        "Gift Card",
-        "Amount",
-        "Status",
-        "Date",
-      ],
-      ...orders.map((order) => [
-        order.orderId || "",
-        order.customer?.name || "",
-        order.customer?.email || "",
-        order.giftCard?.title || "",
-        order.amount || "0",
-        order.status || "",
-        order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "",
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `orders-${new Date().toISOString().split("T")[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge variant="success">Completed</Badge>;
-      case "pending":
-        return <Badge variant="warning">Pending</Badge>;
-      case "failed":
-        return <Badge variant="danger">Failed</Badge>;
-      default:
-        return <Badge variant="default">{status}</Badge>;
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner size="lg" />
-      </div>
-    );
+// Helper function to validate and convert payment status
+const normalizePaymentStatus = (status: string): PaymentStatus | undefined => {
+  const upperStatus = status.toUpperCase();
+  if (
+    upperStatus === "COMPLETED" ||
+    upperStatus === "PENDING" ||
+    upperStatus === "FAILED"
+  ) {
+    return upperStatus as PaymentStatus;
   }
+  // Default to COMPLETED if status is unknown but exists
+  return status ? "COMPLETED" : undefined;
+};
 
-  return (
-    <div className="space-y-6">
-      {/* Statistics Cards */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-      >
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <ShoppingBag className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {stats.total}
-          </h3>
-          <p className="text-sm text-gray-600">Total Orders</p>
-        </div>
+// Query parameters interface
+export interface OrdersQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  status?: string;
+}
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <span className="text-green-600 text-sm font-medium">
-              {stats.total > 0
-                ? Math.round((stats.completed / stats.total) * 100)
-                : 0}
-              %
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {stats.completed}
-          </h3>
-          <p className="text-sm text-gray-600">Completed</p>
-        </div>
+interface ApiOrder {
+  id: string;
+  giftCardId: string;
+  qrCode: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  purchaseAmount: string;
+  currentBalance: string;
+  status: "ACTIVE" | "USED" | "EXPIRED";
+  paymentStatus: string;
+  paymentMethod: string;
+  transactionId: string;
+  purchasedAt: string;
+  expiresAt: string;
+  lastUsedAt: string | null;
+  giftCard: {
+    id: string;
+    title: string;
+    price: string;
+  };
+}
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            ₹{stats.totalRevenue.toFixed(2)}
-          </h3>
-          <p className="text-sm text-gray-600">Total Revenue</p>
-        </div>
+interface ApiResponse {
+  success: boolean;
+  message: string;
+  data:
+    | {
+        data: ApiOrder[];
+        pagination: {
+          total: number;
+          page: number;
+          limit: number;
+          totalPages: number;
+        };
+        filters: {
+          search: string | null;
+          sortBy: string;
+          sortOrder: string;
+        };
+      }
+    | ApiOrder[];
+}
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-1">
-            {stats.pending}
-          </h3>
-          <p className="text-sm text-gray-600">Pending</p>
-        </div>
-      </motion.div>
+export interface CreateOrderResponse {
+  success: boolean;
+  message: string;
+  data: {
+    id: string;
+    code: string;
+    amount: number;
+    isRedeemed: boolean;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    paymentMethod: string;
+    transactionId: string;
+    giftCardId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
 
-      {/* Controls Bar */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-white rounded-xl shadow-sm p-4 border border-gray-200"
-      >
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by customer, email, order ID, or gift card..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
+export const ordersApi = {
+  // Get all purchases/orders with pagination and filters
+  getOrders: async (params?: OrdersQueryParams): Promise<OrdersResponse> => {
+    try {
+      // Build query params object
+      const queryParams: Record<string, string> = {};
 
-          {/* Actions */}
-          <div className="flex gap-2 flex-wrap">
-            {/* CREATE ORDER BUTTON */}
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Order
-            </Button>
+      if (params?.page) queryParams.page = params.page.toString();
+      if (params?.limit) queryParams.limit = params.limit.toString();
+      if (params?.search) queryParams.search = params.search;
+      if (params?.sortBy) queryParams.sortBy = params.sortBy;
+      if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
+      if (params?.status && params.status !== "all") {
+        queryParams.status = params.status;
+      }
 
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                showFilters
-                  ? "bg-blue-50 border-blue-300 text-blue-700"
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
+      // Set default sortOrder if no params
+      if (!params || Object.keys(queryParams).length === 0) {
+        queryParams.sortOrder = "desc";
+      }
 
-            <button
-              onClick={() => refetch()}
-              className="p-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </button>
+      const url = `${API_BASE_URL}merchants/orders`;
 
-            <button
-              onClick={handleExport}
-              disabled={orders.length === 0}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
-          </div>
-        </div>
+      console.log("Fetching orders from:", url);
 
-        {/* Filters Panel */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="mt-4 pt-4 border-t border-gray-200"
-            >
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    value={filterBy}
-                    onChange={(e) =>
-                      setFilterBy(e.target.value as FilterOption)
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Orders</option>
-                    <option value="completed">Completed</option>
-                    <option value="pending">Pending</option>
-                    <option value="failed">Failed</option>
-                  </select>
-                </div>
+      const response = await axios.get<ApiResponse>(url, {
+        params: queryParams,
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sort By
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="amount-high">Amount: High to Low</option>
-                    <option value="amount-low">Amount: Low to High</option>
-                  </select>
-                </div>
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
 
-                {(searchQuery || filterBy !== "all" || sortBy !== "newest") && (
-                  <div className="flex items-end">
-                    <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setFilterBy("all");
-                        setSortBy("newest");
-                      }}
-                      className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Clear All Filters
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+      const apiResponse = response.data;
 
-      {/* Orders Table */}
-      {processedOrders.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-200"
-        >
-          <ShoppingBag className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {searchQuery || filterBy !== "all"
-              ? "No orders found"
-              : "No orders yet"}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {searchQuery || filterBy !== "all"
-              ? "Try adjusting your search or filters"
-              : "Create your first order to get started"}
-          </p>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Order
-          </Button>
-        </motion.div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="hidden lg:block overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Order ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Gift Card
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {processedOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {order.orderId || "N/A"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm font-medium text-gray-900">
-                            {order.customer?.name || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Mail className="w-3 h-3" />
-                          {order.customer?.email || "N/A"}
-                        </div>
-                        {order.customer?.phone && (
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                            <Phone className="w-3 h-3" />
-                            {order.customer.phone}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {order.giftCard?.title || "N/A"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-gray-900">
-                        ₹{parseFloat(order.amount || "0").toFixed(2)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(order.status || "pending")}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600">
-                        {order.createdAt
-                          ? new Date(order.createdAt).toLocaleDateString()
-                          : "N/A"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewDetails(order)}
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      console.log("API Response:", apiResponse);
+      console.log("API Response.data type:", typeof apiResponse.data);
+      console.log(
+        "Is API Response.data an array?",
+        Array.isArray(apiResponse.data),
+      );
 
-      {/* Create Order Modal */}
-      <CreateOrderModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateOrder}
-      />
+      // Check if response has the expected structure
+      if (!apiResponse.data) {
+        throw new Error("Invalid API response structure - missing data");
+      }
 
-      {/* Order Details Modal */}
-      {selectedOrder && (
-        <OrderDetailModal
-          order={selectedOrder}
-          isOpen={showDetailsModal}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedOrder(null);
-          }}
-        />
-      )}
-    </div>
-  );
+      // Handle different possible response structures
+      let ordersArray: ApiOrder[] = [];
+      let paginationData = {
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      };
+
+      // Check if data is directly an array
+      if (Array.isArray(apiResponse.data)) {
+        ordersArray = apiResponse.data;
+        paginationData.total = ordersArray.length;
+      }
+      // Check if data has nested data property
+      else if (
+        typeof apiResponse.data === "object" &&
+        "data" in apiResponse.data
+      ) {
+        ordersArray = apiResponse.data.data || [];
+        paginationData = {
+          total: apiResponse.data.pagination?.total || ordersArray.length,
+          page: apiResponse.data.pagination?.page || 1,
+          limit: apiResponse.data.pagination?.limit || 10,
+          totalPages: apiResponse.data.pagination?.totalPages || 1,
+        };
+      }
+
+      if (!Array.isArray(ordersArray)) {
+        console.error("Orders data is not an array:", ordersArray);
+        throw new Error("Invalid API response - data is not an array");
+      }
+
+      console.log("Orders array length:", ordersArray.length);
+
+      // Transform API response to match our Order type
+      const orders: Order[] = ordersArray.map(
+        (item: ApiOrder): Order => ({
+          id: item.id,
+          orderId: item.qrCode,
+          qrCode: item.qrCode,
+          status: item.status,
+
+          // Customer fields (flattened)
+          customerName: item.customerName,
+          customerEmail: item.customerEmail,
+          customerPhone: item.customerPhone,
+          customer: {
+            id: item.id,
+            name: item.customerName,
+            email: item.customerEmail,
+            phone: item.customerPhone,
+          },
+
+          // Amounts
+          purchaseAmount: parseFloat(item.purchaseAmount),
+          currentBalance: parseFloat(item.currentBalance),
+          amount: parseFloat(item.purchaseAmount),
+
+          // Payment info
+          paymentMethod: item.paymentMethod,
+          paymentStatus: normalizePaymentStatus(item.paymentStatus),
+          transactionId: item.transactionId,
+
+          // Dates
+          createdAt: item.purchasedAt,
+          purchasedAt: item.purchasedAt,
+          expiresAt: item.expiresAt,
+          usedAt: item.lastUsedAt ?? undefined,
+        }),
+      );
+
+      return {
+        orders,
+        pagination: {
+          total: paginationData.total,
+          page: paginationData.page,
+          limit: paginationData.limit,
+          totalPages: paginationData.totalPages,
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      throw error;
+    }
+  },
+
+  // Verify purchase by QR code
+  verifyPurchase: async (qrCode: string): Promise<PurchaseVerification> => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}purchases/qr/${qrCode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const data = response.data;
+
+      return {
+        isValid: true,
+        purchase: {
+          id: data.id,
+          code: data.code,
+          customerName: data.customerName,
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone,
+          giftCard: {
+            id: data.giftCardId,
+            title: data.giftCard?.title || "Gift Card",
+            price: data.amount || data.giftCard?.price,
+          },
+          amount: data.amount,
+          paymentMethod: data.paymentMethod,
+          transactionId: data.transactionId,
+          isRedeemed: data.isRedeemed,
+          redeemedAt: data.redeemedAt,
+          createdAt: data.createdAt,
+        },
+      };
+    } catch (error) {
+      console.error("Error verifying purchase:", error);
+
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return {
+          isValid: false,
+          error: "Purchase not found",
+        };
+      }
+
+      return {
+        isValid: false,
+        error: error instanceof Error ? error.message : "Verification failed",
+      };
+    }
+  },
+
+  createOrder: async (data: CreateOrderData): Promise<CreateOrderResponse> => {
+    try {
+      const response = await axios.post<CreateOrderResponse>(
+        `${API_BASE_URL}purchases/gift-cards/${data.giftCardId}`,
+        {
+          customerName: data.customerName,
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone,
+          paymentMethod: data.paymentMethod,
+          transactionId: data.transactionId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Error creating order:", error);
+      throw error;
+    }
+  },
+
+  // Mark purchase as redeemed
+  redeemPurchase: async (purchaseId: string): Promise<void> => {
+    try {
+      await axios.post(
+        `${API_BASE_URL}purchases/${purchaseId}/redeem`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    } catch (error) {
+      console.error("Error redeeming purchase:", error);
+      throw error;
+    }
+  },
 };

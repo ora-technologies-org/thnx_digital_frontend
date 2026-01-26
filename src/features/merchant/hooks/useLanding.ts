@@ -282,6 +282,9 @@ interface ErrorResponse {
 /**
  * Hook to update landing page using React Query - UPDATED VERSION
  */
+/**
+ * Hook to update landing page using React Query - UPDATED VERSION
+ */
 export const useUpdateLandingPageMutation = () => {
   const queryClient = useQueryClient();
 
@@ -298,19 +301,21 @@ export const useUpdateLandingPageMutation = () => {
     },
     onMutate: async (newData) => {
       await queryClient.cancelQueries({ queryKey: ["landingPage"] });
-      const previousData = queryClient.getQueryData(["landingPage"]);
+      const previousData = queryClient.getQueryData<LandingPageData>([
+        "landingPage",
+      ]);
 
-      queryClient.setQueryData(["landingPage"], (old) => {
+      queryClient.setQueryData<LandingPageData>(["landingPage"], (old) => {
         if (!old) return old;
-        const updated = { ...old };
+        const updated = { ...old } as LandingPageData;
         const { section, data, index } = newData;
 
         if (index !== undefined && Array.isArray(updated[section])) {
           const newArray = [...(updated[section] as unknown[])];
           newArray[index] = data;
-          updated[section] = newArray;
+          (updated[section] as unknown[]) = newArray;
         } else {
-          updated[section] = data;
+          (updated as Record<string, unknown>)[section] = data;
         }
         return updated;
       });

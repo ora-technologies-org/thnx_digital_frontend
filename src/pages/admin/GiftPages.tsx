@@ -18,7 +18,6 @@ import {
 import { merchantService } from "@/features/admin/services/merchantService";
 import { AdminLayout } from "@/shared/components/layout/AdminLayout";
 import { Button } from "@/shared/components/ui/Button";
-
 import {
   statusConfig,
   statsConfig,
@@ -34,9 +33,28 @@ import {
   getStatsData,
 } from "@/shared/utils/admin";
 
+// Import unified types
+import type {
+  Merchant,
+  MerchantStatus,
+  GiftCard,
+  GiftCardDisplayProps,
+  GiftCardModalProps,
+  MerchantCardProps,
+  PaginationProps,
+  StatsCardsProps,
+} from "@/features/giftCards/types/giftCard.types";
+
 // Status Badge Component
-const StatusBadge = ({ status, className = "" }) => {
-  const config = statusConfig[status] || statusConfig.VERIFIED;
+const StatusBadge = ({
+  status,
+  className = "",
+}: {
+  status: MerchantStatus;
+  className?: string;
+}) => {
+  const config =
+    statusConfig[status as keyof typeof statusConfig] ?? statusConfig.VERIFIED;
   const IconComponent = config.icon;
 
   return (
@@ -50,7 +68,7 @@ const StatusBadge = ({ status, className = "" }) => {
 };
 
 // Active Badge Component
-const ActiveBadge = ({ isActive }) => (
+const ActiveBadge = ({ isActive }: { isActive?: boolean }) => (
   <span
     className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold shadow-sm ${
       isActive
@@ -63,7 +81,11 @@ const ActiveBadge = ({ isActive }) => (
 );
 
 // Pagination Component
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const Pagination: React.FC<PaginationProps> = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}) => {
   const pageNumbers = getPaginationNumbers(currentPage, totalPages);
 
   return (
@@ -84,7 +106,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         ) : (
           <button
             key={page}
-            onClick={() => onPageChange(page)}
+            onClick={() => onPageChange(page as number)}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
               currentPage === page
                 ? "bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg"
@@ -135,7 +157,13 @@ const MerchantCardSkeleton = () => (
 );
 
 // Error Message Component
-const ErrorMessage = ({ message, onRetry }) => (
+const ErrorMessage = ({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -157,7 +185,7 @@ const ErrorMessage = ({ message, onRetry }) => (
 );
 
 // Merchant Card Component
-const MerchantCard = ({ merchant, onClick }) => {
+const MerchantCard: React.FC<MerchantCardProps> = ({ merchant, onClick }) => {
   const displayName = getDisplayName(merchant);
   const initial = getInitial(displayName);
   const status = merchant.profileStatus || "INCOMPLETE";
@@ -223,8 +251,16 @@ const MerchantCard = ({ merchant, onClick }) => {
 };
 
 // Gift Card Display Component
-const GiftCardDisplay = ({ giftCard, settings, onClick }) => {
+const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
+  giftCard,
+  settings,
+  onClick,
+}) => {
   const cardSettings = settings || getDefaultCardSettings();
+
+  // Ensure we have valid color values
+  const primaryColor = cardSettings.primaryColor || "#8b5cf6";
+  const secondaryColor = cardSettings.secondaryColor || "#6366f1";
 
   return (
     <motion.div
@@ -236,7 +272,7 @@ const GiftCardDisplay = ({ giftCard, settings, onClick }) => {
       <div
         className="relative w-full h-44 sm:h-48 lg:h-52 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-5 lg:p-6 flex flex-col justify-between text-white"
         style={{
-          background: `linear-gradient(to bottom right, ${cardSettings.primaryColor}, ${cardSettings.secondaryColor})`,
+          background: `linear-gradient(to bottom right, ${primaryColor}, ${secondaryColor})`,
         }}
       >
         <div className="flex justify-between items-start">
@@ -276,10 +312,20 @@ const GiftCardDisplay = ({ giftCard, settings, onClick }) => {
 };
 
 // Gift Card Modal
-const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
+const GiftCardModal: React.FC<GiftCardModalProps> = ({
+  isOpen,
+  onClose,
+  card,
+  settings,
+}) => {
   if (!card) return null;
 
   const daysUntilExpiry = calculateDaysUntilExpiry(card.expiryDate);
+  const cardSettings = settings || getDefaultCardSettings();
+
+  // Ensure we have valid color values
+  const primaryColor = cardSettings.primaryColor || "#8b5cf6";
+  const secondaryColor = cardSettings.secondaryColor || "#6366f1";
 
   return (
     <AnimatePresence>
@@ -317,7 +363,7 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
               <div
                 className="rounded-xl p-6 text-white"
                 style={{
-                  background: `linear-gradient(to bottom right, ${settings?.primaryColor || "#8B5CF6"}, ${settings?.secondaryColor || "#6366F1"})`,
+                  background: `linear-gradient(to bottom right, ${primaryColor}, ${secondaryColor})`,
                 }}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -382,7 +428,7 @@ const GiftCardModal = ({ isOpen, onClose, card, settings }) => {
 };
 
 // Stats Cards Component
-const StatsCards = ({ statusCounts, total }) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ statusCounts, total }) => {
   const stats = getStatsData(statusCounts, total);
 
   return (
@@ -416,7 +462,7 @@ const StatsCards = ({ statusCounts, total }) => {
                 </p>
                 {percentage && (
                   <p
-                    className={`text-xs ${config.percentColor} font-medium mt-0.5 sm:mt-1`}
+                    className={`text-xs ${config.textColor} font-medium mt-0.5 sm:mt-1`}
                   >
                     {percentage} of total
                   </p>
@@ -438,9 +484,11 @@ const StatsCards = ({ statusCounts, total }) => {
 // Merchants Page
 const MerchantsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMerchant, setSelectedMerchant] = useState(null);
+  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<MerchantStatus | "">("");
   const [activeFilter, setActiveFilter] = useState("");
   const itemsPerPage = 9;
 
@@ -457,18 +505,24 @@ const MerchantsPage = () => {
         page: currentPage,
         limit: itemsPerPage,
         search: searchTerm || undefined,
-        profileStatus: statusFilter || undefined,
+        status: statusFilter || undefined,
         active: activeFilter === "" ? undefined : activeFilter === "true",
       }),
   });
 
-  const handlePageChange = (page) => {
+  const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSearch = (value) => {
+  const handleSearch = (value: string) => {
     setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value as "" | MerchantStatus;
+    setStatusFilter(value);
     setCurrentPage(1);
   };
 
@@ -530,7 +584,7 @@ const MerchantsPage = () => {
                 disabled={data === undefined}
                 className="px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl hover:border-gray-300 transition-all shadow-sm flex items-center gap-2 sm:gap-3"
               >
-                <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-600`} />
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                 <span className="font-medium text-gray-700 text-sm sm:text-base">
                   Refresh
                 </span>
@@ -571,10 +625,7 @@ const MerchantsPage = () => {
 
                     <select
                       value={statusFilter}
-                      onChange={(e) => {
-                        setStatusFilter(e.target.value);
-                        setCurrentPage(1);
-                      }}
+                      onChange={handleStatusChange}
                       className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none text-sm sm:text-base"
                     >
                       <option value="">All Status</option>
@@ -650,8 +701,14 @@ const MerchantsPage = () => {
 };
 
 // Merchant Gift Cards Page
-const MerchantGiftCardsPage = ({ merchant, onBack }) => {
-  const [selectedCard, setSelectedCard] = useState(null);
+const MerchantGiftCardsPage = ({
+  merchant,
+  onBack,
+}: {
+  merchant: Merchant;
+  onBack: () => void;
+}) => {
+  const [selectedCard, setSelectedCard] = useState<GiftCard | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [priceFilter, setPriceFilter] = useState("all");
 
@@ -701,7 +758,7 @@ const MerchantGiftCardsPage = ({ merchant, onBack }) => {
               {merchant.businessEmail || merchant.user?.email}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              <StatusBadge status={merchant.profileStatus} />
+              <StatusBadge status={merchant.profileStatus || "INCOMPLETE"} />
               <ActiveBadge isActive={merchant.user?.isActive} />
               {merchant.businessCategory && (
                 <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">

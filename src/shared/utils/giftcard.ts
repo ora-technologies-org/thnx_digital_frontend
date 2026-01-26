@@ -1,6 +1,6 @@
 // src/utils/giftCardUtils.ts - GIFT CARD UTILITIES! 🎁
 
-import type { GradientDirection } from "@/features/merchant/slices/giftCardSlice";
+import { GradientDirection } from "../types/giftCard.types";
 
 /**
  * Font option interface

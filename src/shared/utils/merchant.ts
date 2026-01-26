@@ -19,7 +19,13 @@ export interface StatusConfig {
   avatarBg: string;
   glow: string;
 }
-
+export const purchaseSchema = z.object({
+  customerName: z.string().min(2, "Name must be at least 2 characters"),
+  customerEmail: z.string().email("Invalid email address"),
+  customerPhone: z.string().min(10, "Phone must be at least 10 digits"),
+  paymentMethod: z.string().min(1, "Payment method is required"),
+  transactionId: z.string().min(1, "Transaction ID is required"),
+});
 /**
  * Get status configuration based on merchant profile status
  * Returns styling and icons for different merchant statuses

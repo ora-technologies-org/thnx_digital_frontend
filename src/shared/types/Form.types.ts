@@ -121,7 +121,6 @@ export interface CreateMerchantForm
   password: string;
   name: string;
   phone: string;
-  merchant: string;
 
   // Optional Fields
   giftCardLimit?: number;

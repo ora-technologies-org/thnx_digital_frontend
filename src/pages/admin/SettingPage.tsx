@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   User,
@@ -18,9 +18,13 @@ import {
   clearUpdateSuccess,
   clearError,
   updateProfile,
-} from "@/features/auth/slices/adminprofileSlice";
+} from "@/features/auth/slices/adminProfileSlice";
 import { Button } from "@/shared/components/ui/Button";
 import { Modal } from "@/shared/components/ui/Modal";
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
 interface DecodedToken {
   email: string;
@@ -40,14 +44,32 @@ interface ResponseModalData {
   onConfirm?: () => void;
 }
 
+// Profile interface - adjust this based on your actual profile structure
+interface UserProfile {
+  id?: string;
+  email?: string;
+  name?: string;
+  phone?: string;
+  bio?: string;
+  [key: string]: unknown;
+}
+
 export const AdminSettingPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const {
-    profile,
+    profile: rawProfile,
     loading: profileLoading,
     error: profileError,
     updateSuccess,
   } = useAppSelector((state) => state.profile);
+
+  // Type-safe profile accessor with fallback
+  const profile = useMemo(() => {
+    if (typeof rawProfile === "object" && rawProfile !== null) {
+      return rawProfile as UserProfile;
+    }
+    return null;
+  }, [rawProfile]);
 
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
@@ -372,7 +394,6 @@ export const AdminSettingPage: React.FC = () => {
         confirmPassword: String(passwordData.confirmPassword),
       };
 
-      // Use changePassword function directly instead of passwordService
       const response = await changePassword(payload);
 
       openResponseModal("success", "Success!", response.message, () => {

@@ -786,7 +786,7 @@ export const AllMerchantsPage: React.FC = () => {
     status: filterStatus === "all" ? undefined : filterStatus,
     search: debouncedSearch || undefined,
     sortBy,
-    order: "desc",
+    sortOrder: "desc",
   });
 
   // DEBUG: Log pagination changes

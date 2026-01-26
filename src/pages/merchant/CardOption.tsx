@@ -172,15 +172,18 @@ export const GiftCardBuilder: React.FC = () => {
   );
 
   const savedSettings = useMemo(() => {
-    return (
-      giftCardSettings?.settings || {
-        primaryColor: "#F54927",
-        secondaryColor: "#46368A",
-        gradientDirection: "TOP_RIGHT" as GradientDirection,
-        fontFamily: "Inter",
-        amount: AMOUNT_SLIDER_CONFIG.default,
-      }
-    );
+    const settings = giftCardSettings?.settings || {
+      primaryColor: "#F54927",
+      secondaryColor: "#46368A",
+      gradientDirection: "TOP_RIGHT" as GradientDirection,
+      fontFamily: "Inter",
+    };
+
+    // Ensure amount is always defined
+    return {
+      ...settings,
+      amount: settings.amount ?? AMOUNT_SLIDER_CONFIG.default,
+    };
   }, [giftCardSettings?.settings]);
 
   // Local state for temporary/unsaved changes (for live preview)
