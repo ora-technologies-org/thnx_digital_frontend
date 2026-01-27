@@ -1,6 +1,6 @@
 // src/pages/ChangePasswordPage.tsx - CHANGE PASSWORD PAGE! 🔐
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +11,8 @@ import { Input } from "../../shared/components/ui/Input";
 import { MagneticButton } from "../../shared/components/animated/MagneticButton";
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useChangePassword } from "@/features/merchant/hooks/usechangePassword";
+import { useAppDispatch } from "@/app/hooks";
+import { logout } from "@/features/auth/slices/authSlice";
 
 import {
   changePasswordSchema,
@@ -24,6 +26,7 @@ import {
 export const ChangePasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const { changePassword, isLoading, changeSuccess } = useChangePassword();
 
   // Check if this is first-time login
@@ -33,7 +36,6 @@ export const ChangePasswordPage: React.FC = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [newPasswordValue, setNewPasswordValue] = useState("");
 
   const {
     register,
@@ -45,15 +47,45 @@ export const ChangePasswordPage: React.FC = () => {
     defaultValues: {},
   });
 
-  const newPassword = useWatch({
+  // Watch the newPassword field directly for password requirements checker
+  const newPasswordValue = useWatch({
     control,
     name: "newPassword",
+    defaultValue: "",
   });
 
-  // Update password value for requirements checker
-  React.useEffect(() => {
-    setNewPasswordValue(newPassword || "");
-  }, [newPassword]);
+  // 🚨 CRITICAL: Prevent back navigation for first-time users
+  useEffect(() => {
+    if (isFirstTime) {
+      console.log("🔒 First-time user detected - blocking back navigation");
+
+      // Handle browser back button
+      const handlePopState = (e: PopStateEvent) => {
+        e.preventDefault();
+        console.log("⛔ Back button blocked for first-time user");
+
+        // Log user out and redirect to login
+        dispatch(logout());
+        navigate("/login", {
+          replace: true,
+          state: {
+            message:
+              "You must change your password before accessing your account.",
+          },
+        });
+      };
+
+      // Add the event listener
+      window.addEventListener("popstate", handlePopState);
+
+      // Push an extra history entry to prevent accidental back
+      window.history.pushState(null, "", window.location.pathname);
+
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+      };
+    }
+  }, [isFirstTime, navigate, dispatch]);
 
   /**
    * Submit password change to API
@@ -78,6 +110,26 @@ export const ChangePasswordPage: React.FC = () => {
    */
   const handleGoToLogin = () => {
     navigate("/login", { replace: true });
+  };
+
+  /**
+   * Handle cancel button - logout first-time users, allow others to go back
+   */
+  const handleCancel = () => {
+    if (isFirstTime) {
+      // First-time users must be logged out
+      dispatch(logout());
+      navigate("/login", {
+        replace: true,
+        state: {
+          message:
+            "You must change your password before accessing your account.",
+        },
+      });
+    } else {
+      // Regular users can go back
+      navigate(-1);
+    }
   };
 
   return (
@@ -329,22 +381,20 @@ export const ChangePasswordPage: React.FC = () => {
                   </MagneticButton>
                 </motion.div>
 
-                {/* Cancel button - only show if not first time */}
-                {!isFirstTime && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8 }}
+                {/* Cancel button - Shows for all users but behaves differently */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                >
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    className="w-full text-center text-gray-600 hover:text-gray-900 transition-colors"
                   >
-                    <button
-                      type="button"
-                      onClick={() => navigate(-1)}
-                      className="w-full text-center text-gray-600 hover:text-gray-900 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </motion.div>
-                )}
+                    {isFirstTime ? "Logout" : "Cancel"}
+                  </button>
+                </motion.div>
               </form>
             ) : (
               // Success message after password change

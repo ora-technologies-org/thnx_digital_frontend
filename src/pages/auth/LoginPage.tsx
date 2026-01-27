@@ -110,6 +110,8 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
+  // Add a ref to track if we've shown the password change message
+  const hasShownPasswordChangeRef = useRef(false);
 
   const {
     register,
@@ -134,7 +136,8 @@ export const LoginPage: React.FC = () => {
   // ==================== AUTO REDIRECT AFTER LOGIN ====================
   useEffect(() => {
     if (isAuthenticated && user) {
-      // ✅ CHECK FOR FIRST-TIME LOGIN
+      // 🚨 CRITICAL: CHECK FOR FIRST-TIME LOGIN FIRST
+      // First-time users MUST change password - no exceptions
       if (user.isFirstTime === true) {
         console.log(
           "🔐 First-time login detected, redirecting to change password",
@@ -143,7 +146,7 @@ export const LoginPage: React.FC = () => {
           replace: true,
           state: { isFirstTime: true },
         });
-        return; // Stop further execution
+        return; // Stop all further execution - no dashboard access!
       }
 
       // Get the location user was trying to access before being redirected to login
@@ -176,6 +179,28 @@ export const LoginPage: React.FC = () => {
       }
     }
   }, [isAuthenticated, user, navigate, location]);
+
+  // Display success message if redirected after password change
+  useEffect(() => {
+    const passwordChanged = location.state?.passwordChanged;
+    const message = location.state?.message;
+
+    if (passwordChanged && message && !hasShownPasswordChangeRef.current) {
+      hasShownPasswordChangeRef.current = true;
+      console.log("✅", message);
+
+      // Auto-dismiss the success message after 5 seconds
+      const timer = setTimeout(() => {
+        // Clear the location state to remove the message
+        navigate(location.pathname, {
+          replace: true,
+          state: {},
+        });
+      }, 5000); // 5 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, location.pathname, navigate]);
 
   // Type-safe submit handler
   const onSubmit: SubmitHandler<LoginFormData> = (data) => {
@@ -259,6 +284,29 @@ export const LoginPage: React.FC = () => {
             Login to your merchant account
           </p>
         </motion.div>
+
+        {/* Success Message after Password Change */}
+        {location.state?.passwordChanged && location.state?.message && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            role="alert"
+            aria-live="polite"
+            className="mb-4"
+          >
+            <Card className="bg-green-50 border-2 border-green-200">
+              <div className="p-4 flex items-start gap-3">
+                <AlertCircle
+                  className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                <p className="text-sm text-green-800">
+                  {location.state.message}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Global Error Message */}
         {authError && (

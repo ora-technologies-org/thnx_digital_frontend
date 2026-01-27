@@ -1,8 +1,7 @@
 // src/shared/components/layout/AdminLayout.tsx - WITH PROFILE DROPDOWN
-
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Users,
@@ -19,6 +18,9 @@ import {
   X,
   UserPlus,
   ChevronDown,
+  Mail,
+  MessageSquare,
+  FileEdit,
 } from "lucide-react";
 import { usePendingMerchants } from "../../../features/admin/hooks/useAdmin";
 import NotificationBell from "../notifications/NotificationBell";
@@ -81,20 +83,20 @@ const getNavigation = (pendingCount: number) => [
   {
     name: "Contact us",
     href: "/admin/contact-us",
-    icon: Activity,
-    gradient: "from-cyan-500 to-cyan-600",
+    icon: Mail,
+    gradient: "from-sky-500 to-sky-600",
   },
   {
     name: "Support Tickets",
     href: "/admin/support-tickets",
-    icon: Activity,
-    gradient: "from-cyan-500 to-cyan-600",
+    icon: MessageSquare,
+    gradient: "from-violet-500 to-violet-600",
   },
   {
     name: "Update Landing",
     href: "/admin/update",
-    icon: Activity,
-    gradient: "from-cyan-500 to-cyan-600",
+    icon: FileEdit,
+    gradient: "from-amber-500 to-amber-600",
   },
 ];
 
@@ -111,6 +113,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     page: 1,
     limit: 100, // Get all pending to show accurate count
   });
+
   const pendingCount = pendingMerchantsResponse?.merchants?.length || 0;
 
   // Get navigation with dynamic badge
@@ -166,115 +169,79 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200">
       {/* Desktop Sidebar */}
-      <motion.div
-        initial={false}
-        animate={{ width: isCollapsed ? "80px" : "280px" }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="hidden lg:flex flex-col bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white shadow-2xl relative"
+      <aside
+        className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white transition-all duration-300 z-30 hidden lg:flex flex-col shadow-2xl ${
+          isCollapsed ? "w-20" : "w-72"
+        }`}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-gray-800">
-          <AnimatePresence mode="wait">
-            {!isCollapsed ? (
-              <motion.div
-                key="expanded"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+        <div className="p-6 border-b border-gray-700/50">
+          {!isCollapsed ? (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-xl font-bold">T</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                   Admin Panel
                 </h1>
-                <p className="text-sm text-gray-400 mt-1">Thnx Digital</p>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="collapsed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex justify-center"
-              >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center font-bold text-lg">
-                  A
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <p className="text-xs text-gray-400">Thnx Digital</p>
+              </div>
+            </div>
+          ) : (
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto shadow-lg">
+              <span className="text-xl font-bold">A</span>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {navigation.map((item, index) => {
+        <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
+          {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             return (
-              <motion.div
+              <Link
                 key={item.name}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
+                to={item.href}
+                className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  isCollapsed ? "justify-center" : ""
+                } ${
+                  isActive
+                    ? `bg-gradient-to-r ${item.gradient} shadow-lg scale-105`
+                    : "text-gray-300 hover:bg-gray-800 hover:text-white hover:scale-102"
+                }`}
               >
-                <Link
-                  to={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative group ${
-                    isActive
-                      ? "bg-gradient-to-r " + item.gradient + " shadow-lg"
-                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-gradient-to-r from-white/10 to-white/5 rounded-xl"
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 30,
-                      }}
-                    />
+                {isActive && (
+                  <motion.div
+                    layoutId="activeNav"
+                    className="absolute inset-0 bg-white/10 rounded-xl"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <div className="relative flex items-center gap-3 w-full">
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {/* Badge on collapsed icon */}
+                  {item.badge && isCollapsed && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg">
+                      {item.badge > 99 ? "99+" : item.badge}
+                    </span>
                   )}
-                  <div className="relative">
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {/* Badge on collapsed icon */}
-                    {item.badge && isCollapsed && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
-                      >
+                  <div className="flex items-center justify-between flex-1">
+                    {!isCollapsed && (
+                      <span className="font-medium">{item.name}</span>
+                    )}
+                    {/* Badge on expanded */}
+                    {item.badge && !isCollapsed && (
+                      <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
                         {item.badge > 99 ? "99+" : item.badge}
-                      </motion.span>
+                      </span>
                     )}
                   </div>
-                  <AnimatePresence>
-                    {!isCollapsed && (
-                      <motion.span
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: "auto" }}
-                        exit={{ opacity: 0, width: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="font-medium whitespace-nowrap overflow-hidden"
-                      >
-                        {item.name}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                  {/* Badge on expanded */}
-                  {item.badge && !isCollapsed && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="ml-auto min-w-[24px] h-6 px-2 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
-                    >
-                      {item.badge > 99 ? "99+" : item.badge}
-                    </motion.span>
-                  )}
-                </Link>
-              </motion.div>
+                </div>
+              </Link>
             );
           })}
         </nav>
@@ -285,17 +252,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           className="absolute -right-3 top-20 w-6 h-6 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-lg transition-colors"
         >
           {isCollapsed ? (
-            <ChevronRight className="w-4 h-4 text-white" />
+            <ChevronRight className="w-4 h-4" />
           ) : (
-            <ChevronLeft className="w-4 h-4 text-white" />
+            <ChevronLeft className="w-4 h-4" />
           )}
         </button>
-      </motion.div>
+      </aside>
 
       {/* Mobile Menu Button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
-        <motion.button
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-3 bg-gray-900 text-white rounded-xl shadow-lg relative"
         >
@@ -306,106 +272,93 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           )}
           {/* Show badge on mobile menu button when closed */}
           {!isMobileMenuOpen && pendingCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg">
               {pendingCount > 99 ? "99+" : pendingCount}
             </span>
           )}
-        </motion.button>
+        </button>
       </div>
 
       {/* Mobile Sidebar */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-            />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white shadow-2xl z-50 flex flex-col"
-            >
-              {/* Logo */}
-              <div className="p-6 border-b border-gray-800">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  Admin Panel
-                </h1>
-                <p className="text-sm text-gray-400 mt-1">Thnx Digital</p>
-              </div>
-
-              {/* Navigation */}
-              <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                {navigation.map((item) => {
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                        isActive
-                          ? "bg-gradient-to-r " + item.gradient + " shadow-lg"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                      }`}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span className="font-medium">{item.name}</span>
-                      {item.badge && (
-                        <motion.span
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="ml-auto min-w-[24px] h-6 px-2 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center"
-                        >
-                          {item.badge > 99 ? "99+" : item.badge}
-                        </motion.span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {/* Top Bar */}
-        <div className="bg-white border-b border-gray-200 px-8 py-4 shadow-sm sticky top-0 z-30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* Spacer for mobile menu button */}
-              <div className="lg:hidden w-12" />
-              <div className="hidden lg:block w-64">
-                <input
-                  type="search"
-                  placeholder="Search..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
+      {isMobileMenuOpen && (
+        <>
+          <div
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+          />
+          <aside className="lg:hidden fixed left-0 top-0 h-screen w-72 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white z-50 shadow-2xl">
+            {/* Logo */}
+            <div className="p-6 border-b border-gray-700/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-xl font-bold">T</span>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    Admin Panel
+                  </h1>
+                  <p className="text-xs text-gray-400">Thnx Digital</p>
+                </div>
               </div>
             </div>
+
+            {/* Navigation */}
+            <nav className="px-3 py-6 space-y-2 overflow-y-auto h-[calc(100vh-100px)]">
+              {navigation.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                      isActive
+                        ? "bg-gradient-to-r " + item.gradient + " shadow-lg"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="font-medium flex-1">{item.name}</span>
+                    {item.badge && (
+                      <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                        {item.badge > 99 ? "99+" : item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+          </aside>
+        </>
+      )}
+
+      {/* Main Content */}
+      <div
+        className={`transition-all duration-300 ${
+          isCollapsed ? "lg:ml-20" : "lg:ml-72"
+        }`}
+      >
+        {/* Top Bar */}
+        <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+          <div className="px-4 lg:px-8 py-4 flex items-center justify-between">
+            {/* Spacer for mobile menu button */}
+            <div className="lg:hidden w-12" />
+
+            <div className="flex-1" />
+
             <div className="flex items-center gap-4">
               {/* Notifications with dynamic badge */}
-
               <NotificationBell />
 
               {/* User Profile Dropdown */}
               <div className="relative" ref={dropdownRef}>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button
                   onClick={() =>
                     setIsProfileDropdownOpen(!isProfileDropdownOpen)
                   }
                   className="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
                     A
                   </div>
                   <div className="hidden sm:block text-left">
@@ -421,57 +374,45 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                       isProfileDropdownOpen ? "rotate-180" : ""
                     }`}
                   />
-                </motion.button>
+                </button>
 
                 {/* Dropdown Menu */}
-                <AnimatePresence>
-                  {isProfileDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50"
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900">
+                        Admin User
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        admin@thnxdigital.com
+                      </p>
+                    </div>
+
+                    <Link
+                      to="/admin/settings"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      <div className="p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
-                        <p className="text-sm font-semibold text-gray-900">
-                          Admin User
-                        </p>
-                        <p className="text-xs text-gray-600 truncate">
-                          admin@thnxdigital.com
-                        </p>
-                      </div>
+                      <Settings className="w-4 h-4" />
+                      <span className="text-sm font-medium">Settings</span>
+                    </Link>
 
-                      <div className="py-2">
-                        <Link
-                          to="/admin/settings"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span className="text-sm font-medium">Settings</span>
-                        </Link>
-                      </div>
-
-                      <div className="border-t border-gray-100">
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors w-full"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span className="text-sm font-medium">Logout</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="text-sm font-medium">Logout</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Page Content */}
-        <div className="p-6 lg:p-8">{children}</div>
+        <main className="p-4 lg:p-8">{children}</main>
       </div>
     </div>
   );
