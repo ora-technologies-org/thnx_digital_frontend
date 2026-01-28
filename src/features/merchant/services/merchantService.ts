@@ -1,73 +1,15 @@
 import api from "@/shared/utils/api";
 import { AxiosResponse } from "axios";
-
-// ===== TYPES =====
-export interface CreateMerchantData {
-  email: string;
-  password: string;
-  name: string;
-  phone: string;
-  businessName: string;
-  businessRegistrationNumber: string;
-  taxId: string;
-  businessType: string;
-  businessCategory: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  businessPhone: string;
-  businessEmail: string;
-  website: string;
-  description: string;
-  bankName: string;
-  accountNumber: string;
-  accountHolderName: string;
-  ifscCode: string;
-  swiftCode: string;
-}
-
-export interface MerchantResponse {
-  id: string;
-  email: string;
-  name: string;
-  phone: string;
-  role: string;
-  isVerified: boolean;
-  businessProfile: {
-    businessName: string;
-    businessRegistrationNumber: string;
-    taxId: string;
-    businessType: string;
-    businessCategory: string;
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-    businessPhone: string;
-    businessEmail: string;
-    website: string;
-    description: string;
-  };
-  bankDetails: {
-    bankName: string;
-    accountNumber: string;
-    accountHolderName: string;
-    ifscCode: string;
-    swiftCode: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+import {
+  CreateMerchantData,
+  MerchantResponse,
+} from "../types/profileMerchant.types";
 
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
 }
-
 // ===== SERVICE =====
 export const merchantService = {
   /**

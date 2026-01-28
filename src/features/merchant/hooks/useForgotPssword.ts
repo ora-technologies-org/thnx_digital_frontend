@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { forgotPasswordService } from "../services/forgotPasswordService";
+import toast from "react-hot-toast";
 
 // Define error response type
 interface ErrorResponse {

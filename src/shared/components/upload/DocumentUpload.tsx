@@ -1,4 +1,4 @@
-// src/shared/components/upload/DocumentUpload.tsx
+// src/shared/components/upload/DocumentUpload.tsx - FIXED
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +14,7 @@ import {
 import toast from "react-hot-toast";
 import { FileRejection } from "react-dropzone";
 
-const cn = (...classes: (string | undefined | false)[]) => {
+const cn = (...classes: (string | undefined | false | null)[]) => {
   return classes.filter(Boolean).join(" ");
 };
 
@@ -27,8 +27,8 @@ interface DocumentUploadProps {
   value?: File | null;
   onChange: (file: File | null) => void;
   helperText?: string;
-  existingDocumentUrl?: string; // NEW: URL of existing document for edit mode
-  existingDocumentName?: string; // NEW: Name of existing document for edit mode
+  existingDocumentUrl?: string;
+  existingDocumentName?: string;
 }
 
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({
@@ -133,9 +133,11 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   };
 
   const hasError = error || uploadError;
-
-  // Check if we have an existing document but no new upload
   const hasExistingDocument = existingDocumentUrl && !value;
+
+  // Get dropzone props and separate event handlers from other props
+  const rootProps = getRootProps();
+  const { onClick, onKeyDown, onFocus, onBlur, ...otherRootProps } = rootProps;
 
   return (
     <div className="w-full">
@@ -198,10 +200,13 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         </motion.div>
       )}
 
-      {/* Upload Area - Only show if no existing document or we have a new upload */}
-
-      <motion.div
-        {...getRootProps()}
+      {/* Upload Area */}
+      <div
+        {...otherRootProps}
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        onBlur={onBlur}
         className={cn(
           "relative border-2 border-dashed rounded-xl p-6 transition-all cursor-pointer",
           isDragActive && !hasError && "border-blue-500 bg-blue-50",
@@ -212,8 +217,6 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             "border-gray-300 hover:border-blue-400 hover:bg-gray-50",
           value && !hasError && "border-green-500 bg-green-50",
         )}
-        whileHover={{ scale: value ? 1 : 1.02 }}
-        whileTap={{ scale: 0.98 }}
       >
         <input {...getInputProps()} />
 
@@ -292,7 +295,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
 
       {/* Helper Text or Error */}
       <AnimatePresence mode="wait">

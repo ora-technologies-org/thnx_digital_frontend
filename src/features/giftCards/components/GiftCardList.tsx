@@ -35,6 +35,7 @@ import type {
 import { GiftCardDisplay } from "./GiftCardDisplay";
 import { GiftCardListItem } from "./GiftCardListItem";
 import { useGiftCardSettings } from "@/features/merchant/hooks/useGiftCardSetting";
+import { getErrorMessage } from "@/shared/utils/errorhandling";
 
 // Type definitions for view modes, sorting and filtering options
 type ViewMode = "grid" | "list";
@@ -288,7 +289,7 @@ export const EnhancedGiftCardList: React.FC = () => {
         (card) =>
           card.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           card.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          card.price.toLowerCase().includes(searchQuery),
+          card.price.toString().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -318,10 +319,8 @@ export const EnhancedGiftCardList: React.FC = () => {
         return (
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
-      if (sortBy === "price-high")
-        return parseFloat(b.price) - parseFloat(a.price);
-      if (sortBy === "price-low")
-        return parseFloat(a.price) - parseFloat(b.price);
+      if (sortBy === "price-high") return b.price - a.price;
+      if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "expiry")
         return (
           new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime()
@@ -338,11 +337,11 @@ export const EnhancedGiftCardList: React.FC = () => {
    */
   const handleCreate = (formData: CreateGiftCardData) => {
     createMutation.mutate(formData, {
-      onSuccess: (response) => {
+      onSuccess: () => {
         showNotification(
           "success",
           "Gift Card Created",
-          response?.message || "Gift card created successfully!",
+          "Gift card created successfully!",
           false,
           () => {
             createModal.close();
@@ -354,18 +353,9 @@ export const EnhancedGiftCardList: React.FC = () => {
         createModal.close();
         refetch();
       },
-      onError: (error: AxiosError<{ message?: string }>) => {
-        showNotification(
-          "error",
-          "Creation Failed",
-          error.response?.data?.message ||
-            error.message ||
-            "Failed to create gift card. Please try again.",
-          true, // Show actions for errors
-          undefined,
-          "Try Again",
-          false, // Don't auto-close error messages with actions
-        );
+      onError: (error: unknown) => {
+        const errorMessage = getErrorMessage(error);
+        showNotification("error", "Creation Failed", errorMessage);
       },
     });
   };
@@ -389,11 +379,11 @@ export const EnhancedGiftCardList: React.FC = () => {
     updateMutation.mutate(
       { id: selectedCard.id, data: formData },
       {
-        onSuccess: (response) => {
+        onSuccess: () => {
           showNotification(
             "success",
             "Gift Card Updated",
-            response?.message || "Gift card updated successfully!",
+            "Gift card updated successfully!", // Just use a static message
             false,
             () => {
               editModal.close();
@@ -430,11 +420,11 @@ export const EnhancedGiftCardList: React.FC = () => {
    */
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id, {
-      onSuccess: (response) => {
+      onSuccess: () => {
         showNotification(
           "success",
           "Gift Card Deleted",
-          response?.message || "Gift card deleted successfully!",
+          "Gift card deleted successfully!",
           false,
           () => {
             refetch();
@@ -445,12 +435,11 @@ export const EnhancedGiftCardList: React.FC = () => {
         refetch();
         closeDeleteConfirm();
       },
-      onError: (error: AxiosError<{ message?: string }>) => {
+      onError: (error: unknown) => {
         showNotification(
           "error",
           "Deletion Failed",
-          error.response?.data?.message ||
-            error.message ||
+          getErrorMessage(error) ||
             "Failed to delete gift card. Please try again.",
           true, // Show actions for errors
           undefined,
@@ -470,16 +459,16 @@ export const EnhancedGiftCardList: React.FC = () => {
     const duplicateData = {
       title: `${card.title} (Copy)`,
       description: card.description,
-      price: parseFloat(card.price),
+      price: card.price,
       expiryDate: card.expiryDate,
       isActive: card.isActive,
     };
     createMutation.mutate(duplicateData, {
-      onSuccess: (response) => {
+      onSuccess: () => {
         showNotification(
           "success",
           "Gift Card Duplicated",
-          response?.message || "Gift card duplicated successfully!",
+          "Gift card duplicated successfully!",
           false,
           () => {
             refetch();
@@ -489,13 +478,12 @@ export const EnhancedGiftCardList: React.FC = () => {
         );
         refetch();
       },
-      onError: (error: AxiosError<{ message?: string }>) => {
+      onError: (error: unknown) => {
+        const errorMessage = getErrorMessage(error);
         showNotification(
           "error",
           "Duplication Failed",
-          error.response?.data?.message ||
-            error.message ||
-            "Failed to duplicate gift card. Please try again.",
+          errorMessage,
           true, // Show actions for errors
           undefined,
           "Try Again",

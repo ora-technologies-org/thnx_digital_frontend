@@ -1,30 +1,69 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { MainLayout } from '../../shared/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../shared/components/ui/Card';
-import { PurchaseForm } from '../../features/purchase/component/PurchaseForm';
-// import { QRCodeDisplay } from '../../features/purchase/components/QRCodeDisplay';
-import { QRCodeDisplay } from '../../features/purchase/component/QRCodeDisplay';
-import { useGiftCard } from '../../features/giftCards/hooks/useGiftCards';
-import { usePurchaseGiftCard } from '../../features/purchase/hooks/usePurchaseGiftCard';
-import { Spinner } from '../../shared/components/ui/Spinner';
-import type { PurchaseData, PurchasedGiftCard } from '../../features/purchase/types/purchase.types';
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
+import { MainLayout } from "../../shared/components/layout/MainLayout";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../shared/components/ui/Card";
+import { PurchaseForm } from "../../features/purchase/component/PurchaseForm";
+import { QRCodeDisplay } from "../../features/purchase/component/QRCodeDisplay";
+import { useGiftCard } from "../../features/giftCards/hooks/useGiftCards";
+import { usePurchaseGiftCard } from "../../features/purchase/hooks/usePurchaseGiftCard";
+import { Spinner } from "../../shared/components/ui/Spinner";
+import type {
+  PurchaseData,
+  PurchasedGiftCard,
+} from "../../features/purchase/types/purchase.types";
 
 export const PurchasePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { data: giftCard, isLoading } = useGiftCard(id || '');
+  const { data: giftCard, isLoading } = useGiftCard(id || "");
   const purchaseMutation = usePurchaseGiftCard();
-  const [purchasedCard, setPurchasedCard] = useState<PurchasedGiftCard | null>(null);
+  const [purchasedCard, setPurchasedCard] = useState<PurchasedGiftCard | null>(
+    null,
+  );
 
   const handlePurchase = (data: PurchaseData) => {
     if (id) {
       purchaseMutation.mutate(
-        { giftCardId: id, data },
+        {
+          giftCardId: id,
+          ...data,
+        },
         {
           onSuccess: (response) => {
-            setPurchasedCard(response);
+            // Map the response to PurchasedGiftCard format
+            const purchasedGiftCard: PurchasedGiftCard = {
+              id: response.id,
+
+              qrCode: response.qrCode || response.code || "",
+              qrCodeImage: response.qrCode || response.code || "",
+              customerName: response.customerName,
+              customerEmail: response.customerEmail,
+              customerPhone: response.customerPhone,
+              currentBalance: parseFloat(response.amount),
+              initialAmount: parseFloat(response.amount),
+              expiresAt: response.createdAt, // Use createdAt as fallback
+              isRedeemed: response.isRedeemed,
+              createdAt: response.createdAt,
+              giftCard: {
+                id: id,
+                title: giftCard?.title || "",
+                description: giftCard?.description || "",
+                price: giftCard?.price || 0,
+              },
+              merchant: {
+                id: giftCard?.merchantId || "",
+                businessName:
+                  giftCard?.merchant?.merchantProfile?.businessName ||
+                  "Unknown Merchant",
+              },
+            };
+            setPurchasedCard(purchasedGiftCard);
           },
-        }
+        },
       );
     }
   };
@@ -76,7 +115,7 @@ export const PurchasePage: React.FC = () => {
                     <p className="text-sm text-gray-600 mb-2">Merchant</p>
                     <p className="font-semibold">
                       {giftCard.merchant?.merchantProfile?.businessName ||
-                        giftCard.merchant?.name}
+                        "Unknown Merchant"}
                     </p>
                   </div>
 
@@ -105,8 +144,8 @@ export const PurchasePage: React.FC = () => {
               <CardContent>
                 <PurchaseForm
                   onSubmit={handlePurchase}
-                  isLoading={purchaseMutation.isLoading}
-                  giftCardPrice={giftCard.price}
+                  isLoading={purchaseMutation.isPending}
+                  giftCardPrice={giftCard.price.toString()}
                 />
               </CardContent>
             </Card>

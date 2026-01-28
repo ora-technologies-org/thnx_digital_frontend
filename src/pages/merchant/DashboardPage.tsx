@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Gift,
@@ -20,11 +21,30 @@ import { DashboardLayout } from "../../shared/components/layout/DashboardLayout"
 import { ProfileIncompleteAlert } from "../../shared/components/alerts/ProfileIncompleteAlert";
 import { CompleteProfileModal } from "../../shared/components/modals/CompleteProfileModal";
 import { useProfileStatus } from "../../features/merchant/hooks/useProfileStatus";
+import { useAppSelector } from "@/app/hooks";
 
 import { fadeInUp, staggerContainer } from "../../shared/utils/animations";
 import { useDashboardStats } from "@/features/merchant/hooks/useDahboard";
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+
+  // 🚨 CRITICAL: Get user from Redux to check first-time status
+  const { user } = useAppSelector((state) => state.auth);
+
+  // 🚨 CRITICAL: Redirect first-time users immediately
+  useEffect(() => {
+    if (user?.isFirstTime === true) {
+      console.log(
+        "🔐 DASHBOARD: First-time user detected, redirecting to change password",
+      );
+      navigate("/change-password", {
+        replace: true,
+        state: { isFirstTime: true },
+      });
+    }
+  }, [user, navigate]);
+
   // Hook to get profile status and permissions
   const { status, canCreateGiftCards, canEdit, rejectionReason, isLoading } =
     useProfileStatus();
@@ -212,6 +232,11 @@ export const DashboardPage: React.FC = () => {
   const formatNumber = (value: number): string => {
     return value.toLocaleString("en-IN");
   };
+
+  // 🚨 CRITICAL: Don't render dashboard for first-time users
+  if (user?.isFirstTime === true) {
+    return null; // Return null while redirecting
+  }
 
   // Show loading spinner while fetching profile status
   if (isLoading) {

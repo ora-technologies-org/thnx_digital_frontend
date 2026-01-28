@@ -12,8 +12,8 @@ import {
   X,
   CheckCircle,
 } from "lucide-react";
-import { RedemptionHistory } from "@/features/Redemption/Services/redemptionService";
-import { getOrderStatusColor } from "@/shared/utils/helpers";
+
+import { RedemptionHistory } from "../types/redeem.types";
 
 interface RedemptionDetailsModalProps {
   isOpen: boolean;
@@ -45,6 +45,34 @@ export const RedemptionDetailsModal: React.FC<RedemptionDetailsModalProps> = ({
   const getStatusIcon = () => {
     return <CheckCircle className="w-5 h-5 text-green-600" />;
   };
+
+  // Determine status based on balance and expiry
+  const getGiftCardStatus = () => {
+    const currentBalance = parseFloat(
+      redemption.purchasedGiftCard.currentBalance,
+    );
+    const isExpired =
+      new Date(redemption.purchasedGiftCard.expiresAt) < new Date();
+
+    if (currentBalance <= 0) return "USED";
+    if (isExpired) return "EXPIRED";
+    return "ACTIVE";
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "USED":
+        return "bg-gray-100 text-gray-800";
+      case "EXPIRED":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-blue-100 text-blue-800";
+    }
+  };
+
+  const giftCardStatus = getGiftCardStatus();
 
   return (
     <AnimatePresence>
@@ -105,9 +133,9 @@ export const RedemptionDetailsModal: React.FC<RedemptionDetailsModalProps> = ({
                         Gift Card Status
                       </div>
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getOrderStatusColor(redemption.purchasedGiftCard.status)}`}
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${getStatusColor(giftCardStatus)}`}
                       >
-                        {redemption.purchasedGiftCard.status.replace("_", " ")}
+                        {giftCardStatus.replace("_", " ")}
                       </span>
                     </div>
                   </div>

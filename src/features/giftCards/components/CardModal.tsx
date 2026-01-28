@@ -1,11 +1,12 @@
 import React from "react";
 import "./Modal.css";
-import { GiftCard } from "../types/giftCard.types";
+import { GiftCard, GiftCardSettings } from "../types/giftCard.types";
 
-interface GiftCardModalProps {
+export interface GiftCardModalProps {
   isOpen: boolean;
   onClose: () => void;
   card: GiftCard;
+  settings: GiftCardSettings;
 }
 
 const GiftCardModal: React.FC<GiftCardModalProps> = ({
@@ -42,7 +43,7 @@ const GiftCardModal: React.FC<GiftCardModalProps> = ({
             <div className="detail-item">
               <label>Price</label>
               <div className="detail-value price-value">
-                ₹{parseFloat(card.price).toLocaleString()}
+                ₹{card.price.toLocaleString()}
               </div>
             </div>
 

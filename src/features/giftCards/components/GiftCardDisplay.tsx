@@ -6,8 +6,10 @@ import { useAppSelector } from "@/app/hooks";
 import {
   GiftCardDisplayProps,
   GiftCardDisplaySettings,
+  MerchantSetting,
 } from "../types/giftCard.types";
 import { getGradientDirectionCSS } from "@/shared/utils/giftcard";
+import { GradientDirection } from "@/shared/types/giftCard.types";
 
 export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
   giftCard,
@@ -24,13 +26,25 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
     (state: RootState) => state.giftCardSettings.settings,
   );
 
-  // ✅ Use prop settings if provided, otherwise use Redux settings
-  const cardSettings: GiftCardDisplaySettings = propSettings || {
-    primaryColor: reduxSettings.primaryColor,
-    secondaryColor: reduxSettings.secondaryColor,
-    gradientDirection: reduxSettings.gradientDirection,
-    fontFamily: reduxSettings.fontFamily,
+  const getCardSettings = (
+    propSettings: GiftCardDisplaySettings | MerchantSetting | undefined,
+    reduxSettings: MerchantSetting,
+  ): GiftCardDisplaySettings => {
+    return {
+      primaryColor:
+        propSettings?.primaryColor ?? reduxSettings.primaryColor ?? "#000000", // fallback
+      secondaryColor:
+        propSettings?.secondaryColor ??
+        reduxSettings.secondaryColor ??
+        "#FFFFFF",
+      gradientDirection: (propSettings?.gradientDirection ??
+        reduxSettings.gradientDirection) as GradientDirection,
+      fontFamily:
+        propSettings?.fontFamily ?? reduxSettings.fontFamily ?? "inherit",
+    };
   };
+
+  const cardSettings = getCardSettings(propSettings, reduxSettings);
 
   const handleCardClick = () => {
     if (clickable && onEdit) {
@@ -77,7 +91,11 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
         <div
           className="relative rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8 flex flex-col justify-between text-white overflow-hidden"
           style={{
-            background: `linear-gradient(${getGradientDirectionCSS(cardSettings.gradientDirection)}, ${cardSettings.primaryColor}, ${cardSettings.secondaryColor})`,
+            background: `linear-gradient(
+  ${getGradientDirectionCSS(cardSettings.gradientDirection ?? "TOP_RIGHT")},
+  ${cardSettings.primaryColor},
+  ${cardSettings.secondaryColor}
+)`,
             fontFamily: cardSettings.fontFamily,
           }}
         >
@@ -85,7 +103,11 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
           <div
             className="absolute -inset-1 rounded-xl sm:rounded-2xl opacity-75 blur-2xl -z-10"
             style={{
-              background: `linear-gradient(${getGradientDirectionCSS(cardSettings.gradientDirection)}, ${cardSettings.primaryColor}, ${cardSettings.secondaryColor})`,
+              background: `linear-gradient(
+  ${getGradientDirectionCSS(cardSettings.gradientDirection ?? "TOP_RIGHT")},
+  ${cardSettings.primaryColor},
+  ${cardSettings.secondaryColor}
+)`,
             }}
           />
 
@@ -133,7 +155,7 @@ export const GiftCardDisplay: React.FC<GiftCardDisplayProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               className="text-3xl sm:text-4xl md:text-5xl lg:text-4xl font-bold"
             >
-              ₹{parseFloat(giftCard.price).toLocaleString()}
+              ₹{giftCard.price.toLocaleString()}
             </motion.p>
           </div>
 

@@ -1,16 +1,14 @@
-// src/features/purchases/components/PurchaseModal.tsx - CUSTOMER DETAILS FORM! 📝
+// src/features/purchases/components/PurchaseModal.tsx - FIXED TYPES! 📝
 import React, { useState } from "react";
-
 import { User, CreditCard, ShoppingBag, CheckCircle } from "lucide-react";
 import { Modal } from "../../../shared/components/ui/Modal";
 import { Input } from "../../../shared/components/ui/Input";
 import { Button } from "../../../shared/components/ui/Button";
 import { usePurchaseGiftCard } from "../hooks/usePurchaseGiftCard";
-// import { PurchaseSuccessModal } from './PurchaseSuccessModal';
-import type { GiftCard } from "../../giftCards/types/giftCard.types";
-import type { PurchaseFormData } from "../types/purchase.types";
-
 import { PurchaseSuccessModal } from "./PurchaseSuccessModal";
+import type { GiftCard } from "../../giftCards/types/giftCard.types";
+import type { PurchaseFormData, Purchase } from "../types/purchase.types";
+
 interface PurchaseModalProps {
   giftCard: GiftCard;
   isOpen: boolean;
@@ -39,19 +37,17 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
 
   const [errors, setErrors] = useState<Partial<PurchaseFormData>>({});
   const [showSuccess, setShowSuccess] = useState(false);
-  const [purchaseResult, setPurchaseResult] = useState<unknown>(null);
+  const [purchaseResult, setPurchaseResult] = useState<Purchase | null>(null);
 
   const purchaseMutation = usePurchaseGiftCard();
 
-  // Mutation to handle gift card purchase
   const handleChange = (field: keyof PurchaseFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error for this field
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
-  // Form validation
+
   const validateForm = (): boolean => {
     const newErrors: Partial<PurchaseFormData> = {};
 
@@ -80,7 +76,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  // Form submission handler
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -94,18 +90,29 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
         ...formData,
       });
 
-      setPurchaseResult(result);
+      // Transform the API response to match the Purchase type
+      // Purchase type only has: id, transactionId, amount, status, code, qrCode, createdAt
+      const purchase: Purchase = {
+        id: result.id,
+        transactionId: result.transactionId,
+        amount: parseFloat(result.amount),
+        status: result.isRedeemed ? "completed" : "pending",
+        code: result.code,
+        qrCode: result.code || result.qrCode,
+        createdAt: result.createdAt,
+      };
+
+      setPurchaseResult(purchase);
       setShowSuccess(true);
     } catch (error) {
       console.error("Purchase failed:", error);
       alert("Purchase failed. Please try again.");
     }
   };
-  // Success modal close handler
+
   const handleSuccessClose = () => {
     setShowSuccess(false);
     onClose();
-    // Reset form
     setFormData({
       customerName: "",
       customerEmail: "",
@@ -136,7 +143,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg">
               <span className="text-gray-700">{giftCard.title}</span>
               <span className="text-2xl font-bold text-gray-900">
-                ₹{parseFloat(giftCard.price).toFixed(2)}
+                ₹{giftCard.price.toFixed(2)}
               </span>
             </div>
           </div>
@@ -268,7 +275,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                   <div className="flex justify-between">
                     <span className="font-semibold text-gray-900">Total</span>
                     <span className="text-2xl font-bold text-gray-900">
-                      ₹{parseFloat(giftCard.price).toFixed(2)}
+                      ₹{giftCard.price.toFixed(2)}
                     </span>
                   </div>
                 </div>

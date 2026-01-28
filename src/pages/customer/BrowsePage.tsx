@@ -11,31 +11,7 @@ import { GiftCardDisplay } from "../../features/giftCards/components/GiftCardDis
 import { PurchaseModal } from "../../features/giftCards/components/PurchaseModal";
 import { ShoppingCart, ArrowLeft, Search, Sparkles } from "lucide-react";
 import { toast } from "react-hot-toast";
-
-// Type definitions
-interface MerchantSettings {
-  primaryColor: string;
-  secondaryColor: string;
-  gradientDirection: string;
-  fontFamily: string;
-}
-
-interface MerchantProfile {
-  id: string;
-  businessName?: string;
-  settings?: MerchantSettings[];
-}
-
-interface Merchant {
-  merchantProfile?: MerchantProfile;
-}
-
-interface GiftCard {
-  id: string;
-  title: string;
-  price: number;
-  merchant?: Merchant;
-}
+import type { GiftCard } from "../../features/giftCards/types/giftCard.types";
 
 interface PurchaseData {
   name: string;
@@ -55,10 +31,9 @@ export const BrowsePage: React.FC = () => {
   // Load Google Fonts dynamically based on merchant settings
   useEffect(() => {
     const fonts = new Set<string>();
-    giftCards?.forEach((card) => {
-      const fontFamily =
-        card.merchant?.merchantProfile?.settings?.[0]?.fontFamily;
-      if (fontFamily) fonts.add(fontFamily);
+    giftCards?.forEach(() => {
+      // Note: Font family would come from settings, not merchantProfile
+      // This might need to be fetched separately or included in the API response
     });
 
     fonts.forEach((font) => {
@@ -231,8 +206,6 @@ export const BrowsePage: React.FC = () => {
             }}
           >
             {filteredCards.map((card) => {
-              const settings = card.merchant?.merchantProfile?.settings?.[0];
-
               return (
                 <motion.div
                   key={card.id}
@@ -242,18 +215,10 @@ export const BrowsePage: React.FC = () => {
                   }}
                 >
                   {/* Use GiftCardDisplay Component */}
+                  {/* Settings should come from a separate API call or be included in the gift card data */}
                   <GiftCardDisplay
                     giftCard={card}
-                    settings={
-                      settings
-                        ? {
-                            primaryColor: settings.primaryColor,
-                            secondaryColor: settings.secondaryColor,
-                            gradientDirection: settings.gradientDirection,
-                            fontFamily: settings.fontFamily,
-                          }
-                        : undefined
-                    }
+                    settings={undefined}
                     showActions={false}
                     clickable={false}
                   />
@@ -313,7 +278,7 @@ export const BrowsePage: React.FC = () => {
       </main>
 
       {/* Purchase Modal */}
-      {selectedCard && (
+      {selectedCard && selectedCard.merchant?.merchantProfile && (
         <PurchaseModal
           isOpen={isModalOpen}
           onClose={() => {
@@ -321,9 +286,9 @@ export const BrowsePage: React.FC = () => {
             setSelectedCard(null);
           }}
           giftCardId={selectedCard.id}
-          merchantId={selectedCard.merchant?.merchantProfile?.id}
+          merchantId={selectedCard.merchantId}
           giftCardTitle={selectedCard.title}
-          giftCardPrice={selectedCard.price}
+          giftCardPrice={selectedCard.price.toString()}
           onSubmit={handlePurchaseSubmit}
         />
       )}

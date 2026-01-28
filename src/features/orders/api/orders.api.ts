@@ -1,4 +1,4 @@
-// src/features/orders/api/orders.api.ts - FIXED VERSION WITH AXIOS
+// src/features/orders/api/orders.api.ts - COMPLETE FIXED VERSION
 
 import axios from "axios";
 import type {
@@ -6,6 +6,7 @@ import type {
   Order,
   PurchaseVerification,
   CreateOrderData,
+  PaymentStatus,
 } from "../types/order.types";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
@@ -13,6 +14,20 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 // Helper to get auth token
 const getAuthToken = () => {
   return localStorage.getItem("accessToken") || "";
+};
+
+// Helper function to validate and convert payment status
+const normalizePaymentStatus = (status: string): PaymentStatus | undefined => {
+  const upperStatus = status.toUpperCase();
+  if (
+    upperStatus === "COMPLETED" ||
+    upperStatus === "PENDING" ||
+    upperStatus === "FAILED"
+  ) {
+    return upperStatus as PaymentStatus;
+  }
+  // Default to COMPLETED if status is unknown but exists
+  return status ? "COMPLETED" : undefined;
 };
 
 // Query parameters interface
@@ -66,7 +81,7 @@ interface ApiResponse {
           sortOrder: string;
         };
       }
-    | ApiOrder[]; // Support both nested and flat array structures
+    | ApiOrder[];
 }
 
 export interface CreateOrderResponse {
@@ -174,46 +189,50 @@ export const ordersApi = {
       console.log("Orders array length:", ordersArray.length);
 
       // Transform API response to match our Order type
-      const orders: Order[] = ordersArray.map((item: ApiOrder) => ({
-        id: item.id,
-        orderId: item.qrCode,
-
-        customer: {
+      const orders: Order[] = ordersArray.map(
+        (item: ApiOrder): Order => ({
           id: item.id,
-          name: item.customerName,
-          email: item.customerEmail,
-          phone: item.customerPhone,
-        },
+          orderId: item.qrCode,
+          qrCode: item.qrCode,
+          status: item.status,
 
-        giftCard: {
-          id: item.giftCardId,
-          title: item.giftCard.title,
-          description: undefined,
-          price: parseFloat(item.giftCard.price),
-          code: item.qrCode,
-        },
+          // Customer fields (flattened)
+          customerName: item.customerName,
+          customerEmail: item.customerEmail,
+          customerPhone: item.customerPhone,
+          customer: {
+            id: item.id,
+            name: item.customerName,
+            email: item.customerEmail,
+            phone: item.customerPhone,
+          },
 
-        quantity: 1,
-        amount: parseFloat(item.purchaseAmount),
-        currentBalance: parseFloat(item.currentBalance),
-        status: item.status,
+          // Amounts
+          purchaseAmount: parseFloat(item.purchaseAmount),
+          currentBalance: parseFloat(item.currentBalance),
+          amount: parseFloat(item.purchaseAmount),
 
-        paymentMethod: item.paymentMethod,
-        paymentStatus: item.paymentStatus,
-        transactionId: item.transactionId,
+          // Payment info
+          paymentMethod: item.paymentMethod,
+          paymentStatus: normalizePaymentStatus(item.paymentStatus),
+          transactionId: item.transactionId,
 
-        createdAt: item.purchasedAt,
-        updatedAt: item.purchasedAt,
-        expiresAt: item.expiresAt,
-        completedAt: item.lastUsedAt,
-      }));
+          // Dates
+          createdAt: item.purchasedAt,
+          purchasedAt: item.purchasedAt,
+          expiresAt: item.expiresAt,
+          usedAt: item.lastUsedAt ?? undefined,
+        }),
+      );
 
       return {
         orders,
-        total: paginationData.total,
-        page: paginationData.page,
-        limit: paginationData.limit,
-        totalPages: paginationData.totalPages,
+        pagination: {
+          total: paginationData.total,
+          page: paginationData.page,
+          limit: paginationData.limit,
+          totalPages: paginationData.totalPages,
+        },
       };
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -260,7 +279,6 @@ export const ordersApi = {
     } catch (error) {
       console.error("Error verifying purchase:", error);
 
-      // Check if it's a 404 error
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         return {
           isValid: false,

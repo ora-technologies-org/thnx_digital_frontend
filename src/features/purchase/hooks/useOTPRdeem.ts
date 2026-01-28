@@ -1,4 +1,4 @@
-// src/hooks/useOTPRedeem.ts - Custom Hook for OTP-based Redemption Flow
+// src/hooks/useOTPRedeem.ts - Custom Hook for OTP-based Redemption Flow - FIXED
 import { useState, useCallback } from "react";
 import OTPService from "../services/otpService";
 import VerifyService from "../services/VerifyService";
@@ -163,7 +163,39 @@ export const useOTPRedeem = (): UseOTPRedeemReturn => {
     async (qrCode: string): Promise<PurchasesData | null> => {
       try {
         const result = await VerifyService.verifyQRCode(qrCode);
-        return result.data as PurchasesData;
+
+        // Check if result.data has the expected structure
+        if (!result.data) {
+          return null;
+        }
+
+        // Cast through unknown first to handle type incompatibility
+        // Then transform to the expected structure
+        const rawData = result.data as unknown as {
+          currentBalance?: number | string;
+          redemptions?: Array<{
+            id: string;
+            redeemedAmount: number;
+            redeemedAt: string;
+            locationName?: string;
+          }>;
+        };
+
+        const purchasesData: PurchasesData = {
+          balance:
+            typeof rawData.currentBalance === "string"
+              ? parseFloat(rawData.currentBalance)
+              : rawData.currentBalance || 0,
+          recentRedemptions: (rawData.redemptions || []).map((r) => ({
+            id: r.id,
+            itemName: r.locationName || "Gift Card Redemption",
+            date: r.redeemedAt,
+            amount: r.redeemedAmount.toString(),
+            status: "success" as const,
+          })),
+        };
+
+        return purchasesData;
       } catch (error) {
         console.error("Refresh error:", error);
         return null;

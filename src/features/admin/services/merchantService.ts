@@ -34,8 +34,7 @@ export const merchantService = {
     if (params?.page) queryParams.append("page", params.page.toString());
     if (params?.limit) queryParams.append("limit", params.limit.toString());
     if (params?.search) queryParams.append("search", params.search);
-    if (params?.profileStatus)
-      queryParams.append("profileStatus", params.profileStatus);
+    if (params?.status) queryParams.append("profileStatus", params.status);
     if (params?.active !== undefined)
       queryParams.append("active", params.active.toString());
     if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
