@@ -4,23 +4,25 @@ import path from "path";
 
 export default defineConfig({
   plugins: [react()],
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
   server: {
     port: 8081,
     open: true,
   },
+
+  // ✅ esbuild options go here (Vite 5+)
+  esbuild: {
+    drop: ["console", "debugger"],
+    legalComments: "none",
+  },
+
   build: {
-    // Remove console.log and debugger statements in production
     minify: "esbuild",
-    terserOptions: {
-      compress: {
-        drop_console: true, // remove console.* calls
-        drop_debugger: true, // remove debugger statements
-      },
-    },
   },
 });
